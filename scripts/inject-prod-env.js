@@ -107,6 +107,14 @@ const maptilerKey = process.env.PROD_MAPTILER_API_KEY || '';
 const ga4MeasurementId = process.env.PROD_GA4_MEASUREMENT_ID || '';
 const clarityProjectId = process.env.PROD_CLARITY_PROJECT_ID || '';
 
+// OBRS-1838: the Cloud Map ID that AdvancedMarkerElement requires on the public
+// route map. Optional for the same reason as maptilerKey - a missing Map ID
+// costs markers, not a payment - but unlike maptilerKey its absence is NOT
+// self-announcing: the map still draws, only the pins are gone. Provision
+// PROD_MAPS_MAP_ID from prod's OWN Cloud project; SIT's Map ID is scoped to
+// obrs-497907 and will not resolve against a prod key.
+const mapsMapId = process.env.PROD_MAPS_MAP_ID || '';
+
 // JSON.stringify, not string interpolation: a value containing a quote or a newline
 // would otherwise emit a file that is either broken or, worse, silently valid TS
 // holding the wrong value.
@@ -116,6 +124,7 @@ export const prodEnv = {
   omisePublicKey: ${JSON.stringify(values.omisePublicKey)},
   promptpayId: ${JSON.stringify(values.promptpayId)},
   mapsApiKey: ${JSON.stringify(values.mapsApiKey)},
+  mapsMapId: ${JSON.stringify(mapsMapId)},
   googleClientId: ${JSON.stringify(values.googleClientId)},
   maptilerKey: ${JSON.stringify(maptilerKey)},
   ga4MeasurementId: ${JSON.stringify(ga4MeasurementId)},

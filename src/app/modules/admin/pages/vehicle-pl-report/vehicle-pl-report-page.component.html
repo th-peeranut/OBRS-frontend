@@ -56,6 +56,15 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
         <p class="admin-muted">{{ 'ADMIN.VEHICLE_PL_REPORT.CARD.REVENUE' | translate }}</p>
         @if (!isLoading) {
           <p class="admin-big-number">{{ formatMoney(totals?.revenue ?? '0.00') }}</p>
+          <!-- OBRS-1726: the delta names the DATES it is against, never "last month". The
+          filter above takes an arbitrary range, so a calendar word would be false on most of
+          them - and a reader has no way to check it. -->
+          <p class="admin-muted vehicle-pl-sub-line vehicle-pl-delta" data-testid="pl-delta-revenue">
+            <span [class]="deltaTone(previous?.revenueChangePct, true)">
+              {{ deltaSign(previous?.revenueChangePct) }}{{ formatPct(previous?.revenueChangePct) }}
+            </span>
+            {{ 'ADMIN.VEHICLE_PL_REPORT.COMPARED_WITH' | translate:{ from: previous?.from, to: previous?.to } }}
+          </p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -72,6 +81,13 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
             {{ 'ADMIN.VEHICLE_PL_REPORT.OF_WHICH_VAT' | translate }}:
             {{ formatMoney(totals?.vat ?? '0.00') }}
           </p>
+          <!-- riseIsGood=false: on a cost, up is the bad direction. -->
+          <p class="admin-muted vehicle-pl-sub-line vehicle-pl-delta" data-testid="pl-delta-expenses">
+            <span [class]="deltaTone(previous?.expenseChangePct, false)">
+              {{ deltaSign(previous?.expenseChangePct) }}{{ formatPct(previous?.expenseChangePct) }}
+            </span>
+            {{ 'ADMIN.VEHICLE_PL_REPORT.COMPARED_WITH' | translate:{ from: previous?.from, to: previous?.to } }}
+          </p>
         }
         @if (isLoading) {
           <span class="admin-skeleton admin-skeleton--sm"></span>
@@ -85,6 +101,18 @@ Like the sibling reports' basis note this is NOT gated by contentState. -->
         @if (!isLoading) {
           <p class="admin-big-number" [class.vehicle-pl-negative]="isNegative(totals?.margin ?? '0.00')">
             {{ formatMoney(totals?.margin ?? '0.00') }}
+          </p>
+          <!-- OBRS-1726 AC-1: the percentage arrives already computed. A dash here means
+          there was no revenue to be a share of - NOT 0%. -->
+          <p class="admin-muted vehicle-pl-sub-line" data-testid="pl-margin-pct">
+            {{ 'ADMIN.VEHICLE_PL_REPORT.CARD.MARGIN_PCT' | translate }}:
+            {{ formatPct(totals?.marginPct) }}
+          </p>
+          <p class="admin-muted vehicle-pl-sub-line vehicle-pl-delta" data-testid="pl-delta-margin">
+            <span [class]="deltaTone(previous?.marginChangePct, true)">
+              {{ deltaSign(previous?.marginChangePct) }}{{ formatPct(previous?.marginChangePct) }}
+            </span>
+            {{ 'ADMIN.VEHICLE_PL_REPORT.COMPARED_WITH' | translate:{ from: previous?.from, to: previous?.to } }}
           </p>
         }
         @if (isLoading) {
@@ -234,6 +262,9 @@ palette would not follow the admin theme into dark mode. -->
           <thead>
             <tr>
               <th>{{ 'ADMIN.VEHICLE_PL_REPORT.COL.VEHICLE' | translate }}</th>
+              <!-- OBRS-1726: beside the money, not inside it. The header says "ran" because
+              this count excludes cancelled rounds, unlike the ranInPeriod badge on the row. -->
+              <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.TRIPS' | translate }}</th>
               <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.REVENUE' | translate }}</th>
               <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.EXPENSES' | translate }}</th>
               <!-- The cost breakdown, one column per category that actually has money in
@@ -249,6 +280,7 @@ palette would not follow the admin theme into dark mode. -->
               }
               <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.VAT' | translate }}</th>
               <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.MARGIN' | translate }}</th>
+              <th class="vehicle-pl-money">{{ 'ADMIN.VEHICLE_PL_REPORT.COL.MARGIN_PCT' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -256,6 +288,8 @@ palette would not follow the admin theme into dark mode. -->
               @for (row of skeletonRows; track $index) {
                 <tr class="admin-skeleton-row" aria-hidden="true">
                   <td><span class="admin-skeleton"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -282,6 +316,7 @@ palette would not follow the admin theme into dark mode. -->
                       <span class="admin-status is-warning vehicle-pl-badge">{{ coverageKey | translate }}</span>
                     }
                   </td>
+                  <td class="vehicle-pl-money" data-testid="pl-row-trips">{{ row.tripCount }}</td>
                   <td class="vehicle-pl-money">
                     {{ formatMoney(row.revenue) }}
                     @if (zeroRevenueReasonKey(row); as reasonKey) {
@@ -326,6 +361,10 @@ palette would not follow the admin theme into dark mode. -->
                   <td class="vehicle-pl-money">{{ formatMoney(row.vatTotal) }}</td>
                   <td class="vehicle-pl-money" [class.vehicle-pl-negative]="isNegative(row.margin)">
                     {{ formatMoney(row.margin) }}
+                  </td>
+                  <td class="vehicle-pl-money" data-testid="pl-row-margin-pct"
+                      [class.vehicle-pl-negative]="isNegative(row.marginPct ?? '0')">
+                    {{ formatPct(row.marginPct) }}
                   </td>
                 </tr>
                 @if (isExpanded(row)) {

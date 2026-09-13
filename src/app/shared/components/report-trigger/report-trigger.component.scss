@@ -1,0 +1,97 @@
+@import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens";
+
+// OBRS-1832. Two skins live here, and only for the shell that has no global
+// class to lend: the customer navbar styles its own controls inside an
+// ENCAPSULATED stylesheet, so `buttonClass="navbar-hamburger"` would arrive
+// unstyled. The staff/admin shell is the opposite case — `.admin-icon-btn` and
+// `.admin-nav-link` are global (src/styles/admin-theme.scss), so those two mount
+// points pass `buttonClass` instead and the rules below deliberately stand down
+// (see the template: the variant class is only applied when no class was given).
+//
+// Dark mode is declared HERE with `:host-context(body.is-dark)`, not in
+// dark-theme.scss — that file's own header says a `body.is-dark .x` rule cannot
+// out-specify an encapsulated component's rule, and `dark-override-effective.spec.ts`
+// is the gate that fails such a declaration for changing nothing.
+
+.report-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+
+  .material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-style: normal;
+    font-weight: $font-weight-regular;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+}
+
+// ── icon variant ────────────────────────────────────────────────────────────
+// Box copied from `.navbar-hamburger`, the control it now stands beside: the
+// two are the only round icon buttons on the customer bar and a 2px difference
+// between neighbours reads as a mistake. OBRS-640 pinned the 44×44 floor and
+// the circular radius (a rounded square loses its own corner probes).
+//
+// The BORDER is the one thing not copied from it. `.navbar-hamburger` carries
+// rgba(189,200,207,.6), which is 1.36:1 on a white bar -- under the 3:1 that
+// customer-contrast-gate.spec.ts holds a control's boundary to. The hamburger
+// is never measured (it is display:none at the gate's 1440px), this button is
+// visible at every width, and CONTRAST_ALLOW's sub-3:1 entries are all
+// "OBRS-772 accepted: labelled control" -- a reason an icon-only button cannot
+// borrow. $control-border / $dk-control-border are OBRS-772's own answer,
+// measured in _dark-tokens.scss at 4.03:1 on the dark card and 4.09:1 on the
+// dark page.
+.report-trigger--icon {
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  @include tap-target-min;
+  border: 1px solid $control-border;
+  border-radius: $radius-circle;
+  background: #fff;
+  color: #506068;
+  flex-shrink: 0;
+
+  .material-symbols-outlined { font-size: 22px; }
+
+  &:hover { background: rgba(77, 190, 239, 0.08); color: #005f7e; }
+}
+
+:host-context(body.is-dark) .report-trigger--icon {
+  background: $dk-bg-card;
+  border-color: $dk-control-border;
+  color: $dk-text-muted;
+
+  &:hover { background: rgba(75, 194, 247, 0.10); color: $dk-accent; }
+}
+
+// ── row variant ─────────────────────────────────────────────────────────────
+// Copied from `.navbar-mobile-link`, the rows it sits under in the mobile panel.
+.report-trigger--row {
+  width: 100%;
+  padding: 10px 8px;
+  border-radius: $radius-sm;
+  color: #3f4f57;
+  font-size: 15px;
+  font-weight: $font-weight-medium;
+  text-align: left;
+
+  .material-symbols-outlined { font-size: $font-size-lg; color: #506068; }
+
+  &:hover { background: rgba(77, 190, 239, 0.1); color: #005f7e; }
+}
+
+:host-context(body.is-dark) .report-trigger--row {
+  color: $dk-text;
+
+  .material-symbols-outlined { color: $dk-text-muted; }
+
+  &:hover { background: rgba(75, 194, 247, 0.10); color: $dk-accent; }
+}

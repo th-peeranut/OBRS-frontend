@@ -41,6 +41,8 @@ function vehicleRow(overrides: Partial<VehiclePlRowDto> = {}): VehiclePlRowDto {
     vatTotal: '84.00',
     expenseEntryCount: 3,
     margin: '3800.00',
+    tripCount: 22,
+    marginPct: '76.00',
     ...overrides,
   };
 }
@@ -66,6 +68,9 @@ function makeReport(overrides: Partial<VehiclePlReportDto> = {}): VehiclePlRepor
         vatTotal: '0.00',
         expenseEntryCount: 0,
         margin: '0.00',
+        // Never ran AND nothing entered - the row whose trip count is a real 0.
+        tripCount: 0,
+        marginPct: null,
       }),
       {
         kind: 'UNASSIGNED_REVENUE',
@@ -85,6 +90,8 @@ function makeReport(overrides: Partial<VehiclePlReportDto> = {}): VehiclePlRepor
         vatTotal: '0.00',
         expenseEntryCount: 0,
         margin: '700.00',
+        tripCount: 18,
+        marginPct: '100.00',
       },
       {
         kind: 'CENTRAL_EXPENSE',
@@ -106,6 +113,9 @@ function makeReport(overrides: Partial<VehiclePlReportDto> = {}): VehiclePlRepor
         vatTotal: '35.00',
         expenseEntryCount: 1,
         margin: '-500.00',
+        // No revenue on a CENTRAL_EXPENSE row, so the percentage is undefined.
+        tripCount: 0,
+        marginPct: null,
       },
     ],
     totals: {
@@ -115,6 +125,18 @@ function makeReport(overrides: Partial<VehiclePlReportDto> = {}): VehiclePlRepor
       margin: '4000.00',
       currency: 'THB',
       pendingExpenses: '250.00',
+      tripCount: 22,
+      marginPct: '70.17',
+    },
+    previous: {
+      from: '2026-07-01',
+      to: '2026-07-31',
+      revenue: '5000.00',
+      expenses: '2000.00',
+      margin: '3000.00',
+      revenueChangePct: '14.00',
+      expenseChangePct: '-15.00',
+      marginChangePct: '33.33',
     },
     ...overrides,
   };
@@ -346,6 +368,45 @@ describe('VehiclePlReportPageComponent (template rendering)', () => {
     fixture.detectChanges();
   }
 
+  // OBRS-1726: the class has to reach the DOM, not merely come back from the helper.
+  // Asserting deltaTone()'s return value alone is what let the first cut of this ship with
+  // `is-good`/`is-bad` defined nowhere in any stylesheet - right strings, no colour, green suite.
+  it('puts the delta tone on the rendered span, and reads a rise on expenses as bad', () => {
+    renderReport(makeReport());
+
+    const revenue = fixture.nativeElement.querySelector('[data-testid="pl-delta-revenue"] span');
+    const expenses = fixture.nativeElement.querySelector('[data-testid="pl-delta-expenses"] span');
+    const margin = fixture.nativeElement.querySelector('[data-testid="pl-delta-margin"] span');
+
+    // +14.00 on revenue and +33.33 on margin are good; -15.00 on expenses is ALSO good,
+    // because spending less is the favourable direction on that card.
+    expect(revenue.classList.contains('is-good')).toBeTrue();
+    expect(margin.classList.contains('is-good')).toBeTrue();
+    expect(expenses.classList.contains('is-good')).toBeTrue();
+    expect(revenue.textContent.trim()).toBe('+14.00%');
+    expect(expenses.textContent.trim()).toBe('-15.00%');
+  });
+
+  it('renders an undefined margin % as a dash in the table, never as 0.00%', () => {
+    renderReport(makeReport());
+
+    const cells: NodeListOf<HTMLElement> =
+      fixture.nativeElement.querySelectorAll('[data-testid="pl-row-margin-pct"]');
+    const texts = Array.from(cells).map((c) => c.textContent.trim());
+
+    // Row 2 is the quiet bus: no revenue, so no percentage can exist for it.
+    expect(texts).toEqual(['76.00%', '\u2014']);
+    expect(texts).not.toContain('0.00%');
+  });
+
+  it('renders the trip count column beside the money, with a real 0 on the bus that did not run', () => {
+    renderReport(makeReport());
+
+    const cells: NodeListOf<HTMLElement> =
+      fixture.nativeElement.querySelectorAll('[data-testid="pl-row-trips"]');
+    expect(Array.from(cells).map((c) => c.textContent.trim())).toEqual(['22', '0']);
+  });
+
   it('puts ONLY the vehicles in the fleet table (trackBy stays bound to the component)', () => {
     renderReport(makeReport());
 
@@ -542,7 +603,7 @@ describe('VehiclePlReportPageComponent (cost mix and margin ranking)', () => {
 
     expect(component.costColumns).toEqual(['FUEL', 'REPAIR', 'TOLL', 'TIRE']);
     expect(component.foldedColumnCount).toBe(2);
-    expect(component.columnCount).toBe(10); // the 5 fixed columns + 4 named + 1 folded
+    expect(component.columnCount).toBe(12); // the 7 fixed columns + 4 named + 1 folded
 
     const folded = component.costMix[component.costMix.length - 1];
     expect(folded.categoryKey).toBeNull();
@@ -651,6 +712,72 @@ describe('VehiclePlReportPageComponent (cost mix and margin ranking)', () => {
     expect(component.costMix).toEqual([]);
     expect(component.marginBars).toEqual([]);
     expect(component.costColumns).toEqual([]);
-    expect(component.columnCount).toBe(5);
+    // OBRS-1726 widened the fixed part of the table from 5 to 7 (trips, margin %).
+    expect(component.columnCount).toBe(7);
+  });
+
+  // OBRS-1726: the three display rules that decide whether this screen tells the truth
+  // about a figure it does not have. None of them computes anything - every percentage
+  // arrives from the server already rounded.
+  describe('margin % and the period-over-period deltas (OBRS-1726)', () => {
+    it('renders an undefined percentage as a dash, never as 0.00%', () => {
+      const component = mounted(makeReport());
+
+      // null is what the server sends when there was no revenue to be a share of, or no
+      // previous figure to change against. A 0.00% here would assert "broke even" /
+      // "held steady" about a period that had neither.
+      expect(component.formatPct(null)).toBe('\u2014');
+      expect(component.formatPct(undefined)).toBe('\u2014');
+      expect(component.formatPct('')).toBe('\u2014');
+      expect(component.formatPct('not-a-number')).toBe('\u2014');
+    });
+
+    it('formats a server percentage at 2 dp without doing arithmetic on it', () => {
+      const component = mounted(makeReport());
+
+      expect(component.formatPct('66.67')).toBe('66.67%');
+      expect(component.formatPct('-15.00')).toBe('-15.00%');
+      expect(component.formatPct('0')).toBe('0.00%');
+    });
+
+    it('colours a rise as GOOD on revenue and as BAD on expenses', () => {
+      const component = mounted(makeReport());
+
+      // The same +14.00 means opposite things on the two cards, which is why the caller
+      // passes which direction is favourable instead of the helper assuming "up is green".
+      expect(component.deltaTone('14.00', true)).toBe('is-good');
+      expect(component.deltaTone('14.00', false)).toBe('is-bad');
+      expect(component.deltaTone('-15.00', false)).toBe('is-good');
+      expect(component.deltaTone('-15.00', true)).toBe('is-bad');
+      // No movement and no figure at all are both "no tone" - neither is good news.
+      expect(component.deltaTone('0.00', true)).toBe('');
+      expect(component.deltaTone(null, true)).toBe('');
+    });
+
+    it('signs a rise explicitly so a delta cannot be read as an absolute figure', () => {
+      const component = mounted(makeReport());
+
+      expect(component.deltaSign('14.00')).toBe('+');
+      expect(component.deltaSign('-15.00')).toBe('');
+      expect(component.deltaSign(null)).toBe('');
+    });
+
+    it('exposes the compared window so the screen can print dates rather than a word', () => {
+      const component = mounted(makeReport());
+
+      expect(component.previous?.from).toBe('2026-07-01');
+      expect(component.previous?.to).toBe('2026-07-31');
+    });
+
+    it('carries the per-row trip count straight through, separate from ranInPeriod', () => {
+      const component = mounted(makeReport());
+
+      const vehicle = component.vehicleRows[0];
+      expect(vehicle.ranInPeriod).toBeTrue();
+      expect(vehicle.tripCount).toBe(22);
+      // The quiet second bus ran nothing, so the company figure is the first bus alone.
+      expect(component.vehicleRows[1].tripCount).toBe(0);
+      expect(component.totals?.tripCount).toBe(22);
+    });
   });
 });

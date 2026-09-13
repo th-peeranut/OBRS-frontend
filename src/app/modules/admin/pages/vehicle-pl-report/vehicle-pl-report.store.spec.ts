@@ -20,6 +20,18 @@ function report(overrides: Partial<VehiclePlReportDto> = {}): VehiclePlReportDto
       margin: '600.00',
       currency: 'THB',
       pendingExpenses: '50.00',
+      tripCount: 9,
+      marginPct: '66.67',
+    },
+    previous: {
+      from: '2026-07-10',
+      to: '2026-07-31',
+      revenue: '450.00',
+      expenses: '150.00',
+      margin: '300.00',
+      revenueChangePct: '100.00',
+      expenseChangePct: '100.00',
+      marginChangePct: '100.00',
     },
     ...overrides,
   };

@@ -198,7 +198,7 @@ test.describe('OBRS-775 malformed host boxes', () => {
       mk('x-probe-inline-child', 'display:inline', 'display:inline');
       // MUST NOT: out of flow, so the inline box is never split. Counting these
       // would have padded the allow-list with components that are not broken --
-      // `app-report-usability-fab` is exactly that case and is on the card's list.
+      // `app-report-usability-fab` was exactly that case (retired by OBRS-1832).
       mk('x-probe-absolute', 'display:inline', 'display:block;position:absolute');
       mk('x-probe-float', 'display:inline', 'display:block;float:left');
     });

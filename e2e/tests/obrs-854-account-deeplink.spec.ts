@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, Locator, Page, Route, test } from '@playwright/test';
 import { ANALYTICS_CONSENT_KEY } from '../support/analytics-consent';
-import { scrollToInstantly, stabilizeScrolling } from '../support/fab-occlusion';
+import { scrollToInstantly, stabilizeScrolling } from '../support/viewport-scroll';
 // The app's own constant, imported rather than copied. The file holds two string consts and
 // imports nothing, so this pulls no Angular into the spec's transform.
 import { PRIVACY_POLICY_VERSION } from '../../src/app/modules/privacy-policy/privacy-policy.version';

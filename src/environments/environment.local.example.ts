@@ -4,6 +4,8 @@
 // (see scripts/inject-sit-env.js), so this file only matters for `npm start` locally.
 export const localEnv = {
   mapsApiKey: '',
+  // OBRS-1838: only needed if you also set a real mapsApiKey above.
+  mapsMapId: '',
   googleClientId: '',
   // OBRS-424: optional — a blank value degrades to the MAP_UNAVAILABLE
   // placeholder (FleetMapPanelComponent.canShowMap), never a build failure.

@@ -1,11 +1,11 @@
 import { Page } from '@playwright/test';
-import { INTERACTIVE_SELECTOR, scrollToInstantly, stabilizeScrolling } from './fab-occlusion';
+import { INTERACTIVE_SELECTOR, scrollToInstantly, stabilizeScrolling } from './viewport-scroll';
 
 /**
  * OBRS-1372 — while the PDPA bar is up, can the visitor still REACH every control
  * on the page?
  *
- * WHY THIS ASKS A DIFFERENT QUESTION FROM `fab-occlusion.ts`
+ * WHY THIS ASKS A DIFFERENT QUESTION FROM THE RETIRED `fab-occlusion.ts`
  * That module asks "is there any scroll offset where this element loses its click",
  * which is the right question for the FAB: it is a small box in one corner, and an
  * element sitting under it at some offset is a defect because the user has no reason

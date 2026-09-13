@@ -10,7 +10,10 @@ import {
   expenseItemsTotal,
   toNullableNumber,
 } from '../expenses-page.mappers';
-import { DriverCashRepairBillItemReqDto } from '../../../../../shared/interfaces/driver-cash.interface';
+import {
+  DriverCashDaySettleRepairBillReqDto,
+  DriverCashRepairBillItemReqDto,
+} from '../../../../../shared/interfaces/driver-cash.interface';
 import {
   nonNegativeAmountValidator,
   positiveAmountValidator,
@@ -207,6 +210,40 @@ export function buildFieldRepairBillGroup(formBuilder: FormBuilder): FormGroup {
     payeeId: [null, [Validators.required]],
     items: formBuilder.array([buildItemGroup(formBuilder)], [Validators.minLength(1)]),
   });
+}
+
+/**
+ * OBRS-1803: the same field bill, rebuilt from a submission the server already holds — what makes
+ * the settlement screen open on the counter's own previous figures instead of on an empty form.
+ *
+ * <p>It lives beside the empty builder for that builder's own stated reason: the code that BUILDS
+ * the group and the code that fills it must not drift. Notice it goes through `buildItemGroup` per
+ * line rather than constructing controls of its own, so a validator added to a line is added here.
+ */
+export function buildFieldRepairBillGroupFrom(
+  formBuilder: FormBuilder,
+  bill: DriverCashDaySettleRepairBillReqDto
+): FormGroup {
+  const group = buildFieldRepairBillGroup(formBuilder);
+  group.patchValue({ payeeId: bill.payeeId });
+  const items = group.get('items') as FormArray;
+  items.clear();
+  for (const line of bill.items ?? []) {
+    const lineGroup = buildItemGroup(formBuilder);
+    lineGroup.patchValue({
+      partId: line.partId ?? null,
+      description: line.description ?? '',
+      quantity: line.quantity ?? null,
+      unit: line.unit ?? '',
+      unitPrice: line.unitPrice ?? null,
+      amount: line.amount ?? null,
+    });
+    items.push(lineGroup);
+  }
+  if (items.length === 0) {
+    items.push(buildItemGroup(formBuilder));
+  }
+  return group;
 }
 
 /**
