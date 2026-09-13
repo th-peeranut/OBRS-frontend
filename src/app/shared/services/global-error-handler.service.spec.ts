@@ -58,6 +58,48 @@ describe('GlobalErrorHandler', () => {
     expect(sessionStorage.getItem(GlobalErrorHandler.RELOAD_FLAG)).toBeNull();
   });
 
+  /**
+   * OBRS-1853: the flag stored an ISO timestamp that nothing ever read, so a session got one
+   * reload for its whole life. The tab this class exists for - a payment page left open for
+   * hours - meets a second deploy and got a console line and a dead button. The cooldown keeps
+   * the loop protection (a real loop re-fails within seconds) and recovers from a later deploy.
+   */
+  it('reloads again once the cooldown has passed', () => {
+    const error = new Error('ChunkLoadError: Loading chunk 7 failed');
+
+    handler.handleError(error);
+    expect(handler.reloads).toBe(1);
+
+    const stale = new Date(Date.now() - GlobalErrorHandler.RELOAD_COOLDOWN_MS - 1000);
+    sessionStorage.setItem(GlobalErrorHandler.RELOAD_FLAG, stale.toISOString());
+
+    handler.handleError(error);
+
+    expect(handler.reloads).toBe(2);
+  });
+
+  it('refuses a second reload inside the cooldown, however recent the first', () => {
+    const error = new Error('ChunkLoadError: Loading chunk 7 failed');
+    const recent = new Date(Date.now() - GlobalErrorHandler.RELOAD_COOLDOWN_MS + 60_000);
+    sessionStorage.setItem(GlobalErrorHandler.RELOAD_FLAG, recent.toISOString());
+
+    handler.handleError(error);
+
+    expect(handler.reloads).toBe(0);
+    expect(consoleError).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats an unparseable stored value as "just reloaded", then re-stamps it so the tab can recover', () => {
+    sessionStorage.setItem(GlobalErrorHandler.RELOAD_FLAG, 'true');
+
+    handler.handleError(new Error('ChunkLoadError: Loading chunk 7 failed'));
+
+    expect(handler.reloads).toBe(0);
+    // Left as 'true' it would refuse for the rest of the session, however long the tab lives.
+    const stamped = sessionStorage.getItem(GlobalErrorHandler.RELOAD_FLAG);
+    expect(Number.isNaN(Date.parse(stamped ?? ''))).toBeFalse();
+  });
+
   it('classifies only chunk-load shaped messages', () => {
     expect(GlobalErrorHandler.isStaleChunkError(new Error('ChunkLoadError: x'))).toBeTrue();
     expect(GlobalErrorHandler.isStaleChunkError('error loading dynamically imported module')).toBeTrue();

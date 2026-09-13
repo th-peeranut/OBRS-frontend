@@ -230,7 +230,10 @@ export class AccountPageComponent implements OnInit, OnDestroy {
         // anything else here would silently override the choice made there.
         preferredLocale: this.profile.preferredLocale,
       })
-      .pipe(takeUntil(this.destroy$))
+      // OBRS-1853: NO takeUntil here. This is a PUT. Unsubscribing aborts the XHR, so
+      // leaving the page mid-save would cancel a request the server may already have
+      // committed, and the user would never see success or failure. Same asymmetry the
+      // 30s timeout in error.interceptor.ts applies to GET/HEAD only, for the same reason.
       .subscribe({
         next: () => {
           this.isProfileSaving = false;
@@ -261,7 +264,8 @@ export class AccountPageComponent implements OnInit, OnDestroy {
 
     this.myAccountService
       .acceptCurrentPrivacyPolicy()
-      .pipe(takeUntil(this.destroy$))
+      // OBRS-1853: NO takeUntil — a POST recording PDPA consent. Aborting it client-side
+      // would leave the consent stored server-side with the user told nothing. See the PUT above.
       .subscribe({
       next: () => {
         this.isConsentSubmitting = false;

@@ -29,7 +29,11 @@ Full contract reference: `../OBRS-backend/docs/api/`
 - **After**: `409 { "code": 409, "errorCode": "PAYMENT_CHARGE_RECONCILIATION_REQUIRED", "message": "...wait a few minutes and try again..." }`
 
 ### Action required in frontend
-- [ ] Confirm the payment page's error path treats a `409` on the pay request like the `400` it handled before (the global `errorInterceptor` already surfaces the body message; check nothing keys on `status === 400` for this code).
+- [x] **Confirmed 2026-09-12 (OBRS-1853) — nothing to change.** `PAYMENT_CHARGE_RECONCILIATION_REQUIRED`
+  has 0 hits in `src/` and `e2e/`, and `src/app/modules/payment/**` + `payment.service.ts` branch on neither
+  HTTP status nor `errorCode`. The one `status === 400` in the app is `boarding-list.component.ts:620`
+  (boarding scan, unrelated). `api-error.ts` special-cases only 0/429/502/503/504, so a `409` falls through
+  to `extractApiErrorMessage` and the backend's own message reaches the customer verbatim.
 - [x] Register form: a `429` from the on-blur duplicate check does NOT block the form — `RegisterComponent.checkDuplicateData` already swallows errors, and `UserService` now sends both checks with `SKIP_GLOBAL_ERROR_ALERT` + `SKIP_GLOBAL_LOADING_ALERT` so the refusal is silent (2026-09-11).
 
 ### Still unfinished on backend
@@ -121,14 +125,18 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
-### [Frontend] 2026-09-11 — `Idempotency-Key` on `POST /api/bookings` (booking creation)
+### [Frontend] 2026-09-11 — `Idempotency-Key` on both booking-create endpoints
 
 <!-- contract-request
-card: production-readiness review 2026-09-11 (no Jira card yet)
+card: production-readiness review 2026-09-11 (review follow-up: OBRS-1853)
 status: open
 -->
 
-**Affected endpoint**: `POST /api/bookings` (`BookingController`, customer booking intake).
+**Affected endpoints**: `POST /api/bookings` (guest) **and `POST /api/private/bookings` (signed-in)** —
+`BookingService.createBooking` picks between them on `authService.isAuthenticated()`
+(`booking.service.ts:147-149`, ADR-0123 Decision 1). `/payment` sits behind `AuthGuard`, so the
+**signed-in** endpoint is the mainstream path; an idempotency guard on the guest one alone would
+leave the defect open for most customers.
 
 **Request type**: additive (R1) — accept an optional `Idempotency-Key` request header; no change to the
 request body or the response shape.
@@ -143,7 +151,7 @@ date), which closes the double-tap but not the network-retry case; only the serv
 ### What the frontend needs
 | Field / Change | Location | Reason |
 |---|---|---|
-| Accept `Idempotency-Key: <uuid>` on `POST /api/bookings`; same key within its TTL returns the **same** `201` body (`bookingId`, `bookingNumber`) without creating a second hold | `BookingController` / `BookingService#createBooking` | Retry-safe booking creation; mirrors the payment path's existing `idempotency_keys` mechanism |
+| Accept `Idempotency-Key: <uuid>` on `POST /api/bookings` **and `POST /api/private/bookings`**; same key within its TTL returns the **same** `201` body (`bookingId`, `bookingNumber`) without creating a second hold | `BookingController` / `BookingService#createBooking` | Retry-safe booking creation; mirrors the payment path's existing `idempotency_keys` mechanism |
 | Document the header in `docs/api/booking.md` (scope: per user or per guest token + path, TTL ≥ the 15-minute hold) | `docs/api/booking.md` | The frontend may only send what the contract documents |
 
 Once documented, the frontend will generate the key with `generateIdempotencyKey()` when the passenger

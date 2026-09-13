@@ -9,13 +9,17 @@ import { ErrorHandler, Injectable } from '@angular/core';
  *    that was open across a deploy fails its next lazy navigation with a ChunkLoadError - and
  *    the customer this most often happens to is the one sitting on the payment page.
  *    `promote-sit.yml` has recorded this for months. A stale-chunk failure is answered with ONE
- *    reload per browser session (sessionStorage flag; a second failure is logged, not looped).
+ *    reload per RELOAD_COOLDOWN_MS (sessionStorage timestamp; a second failure inside that window is
+ *    logged, not looped, while a tab that meets a later deploy can still recover - see claimReload).
  * 2. Everything else is still logged, but through one seam that a reporting sink can be attached
  *    to later, instead of 27 scattered `console.error` calls being the only trace.
  */
 @Injectable()
 export class GlobalErrorHandler implements ErrorHandler {
   static readonly RELOAD_FLAG = 'obrs_chunk_reload';
+
+  /** A genuine reload loop re-fails in seconds; a second deploy is minutes or hours away. */
+  static readonly RELOAD_COOLDOWN_MS = 10 * 60 * 1000;
 
   private static readonly CHUNK_LOAD_PATTERNS = [
     /ChunkLoadError/i,
@@ -69,11 +73,32 @@ export class GlobalErrorHandler implements ErrorHandler {
     return String(error);
   }
 
-  /** True the first time in this browser session; false afterwards or when storage is unavailable. */
+  /**
+   * True unless this session already reloaded within the last RELOAD_COOLDOWN_MS; false when
+   * storage is unavailable.
+   *
+   * OBRS-1853: this used to test the stored value for truthiness only, so the timestamp it
+   * wrote was never read and the session got exactly ONE reload, ever. A tab open across two
+   * deploys - the same hours-long payment-page tab the class exists for - spent its reload on
+   * the first stale chunk and answered the second with a console line: a dead button and no
+   * message. A cooldown keeps the loop protection (a real loop re-fails within seconds) while
+   * letting a second deploy, minutes or hours later, be recovered from.
+   */
   private claimReload(): boolean {
     try {
-      if (sessionStorage.getItem(GlobalErrorHandler.RELOAD_FLAG)) {
-        return false;
+      const last = sessionStorage.getItem(GlobalErrorHandler.RELOAD_FLAG);
+      if (last) {
+        const at = Date.parse(last);
+        if (Number.isNaN(at)) {
+          // Only an older build of this flag wrote a non-timestamp. Refuse this reload - it may be
+          // the second of a loop - but stamp a real timestamp so the tab is not stuck refusing for
+          // the rest of its session, which is what returning early used to do.
+          sessionStorage.setItem(GlobalErrorHandler.RELOAD_FLAG, new Date().toISOString());
+          return false;
+        }
+        if (Date.now() - at < GlobalErrorHandler.RELOAD_COOLDOWN_MS) {
+          return false;
+        }
       }
       sessionStorage.setItem(GlobalErrorHandler.RELOAD_FLAG, new Date().toISOString());
       return true;

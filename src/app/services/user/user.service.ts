@@ -22,10 +22,14 @@ export class UserService {
   // rather than staying as a lie a future caller could believe.
   // Production-readiness review 2026-09-11: the backend now rate-limits these two
   // endpoints per IP (429 after 60 calls / 15 min). They are on-blur hints, not a
-  // gate — RegisterComponent.checkDuplicateData already swallows the error and lets
-  // the signup endpoint's own duplicate refusal decide — so a 429 (or any failure)
-  // must neither pop the global error modal nor block the page behind the loading
-  // overlay. Same opt-out pattern as CancellationPolicyService.
+  // gate — RegisterComponent.checkDuplicateData swallows the error and lets the signup
+  // endpoint's own duplicate refusal decide — so a 429 (or any failure) must neither pop
+  // the global error modal nor block the page behind the loading overlay. Same opt-out
+  // pattern as CancellationPolicyService.
+  // ⚠️ OBRS-1853: "swallows the error" is only safe because that catch now CLEARS
+  // emailIsExist/phoneNumberIsExist. It used to leave the previous value, so a 429
+  // arriving after a genuine duplicate froze the inline warning on and register()
+  // refused to submit — silently, once this opt-out removed the error modal.
   checkExistEmail(email: string): Observable<ResponseAPI<boolean>> {
     return this.http.get<ResponseAPI<boolean>>(`${this.url}/email/${email}`, {
       context: this.quietContext(),

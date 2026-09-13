@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { PassengerInfoComponent } from './passenger-info.component';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
@@ -277,5 +278,119 @@ describe('PassengerInfoComponent', () => {
       expect(payload[0].passengerTypeConsentVersion).toBeNull();
       expect(payload[1].passengerTypeConsentVersion).toBeNull();
     });
+  });
+});
+
+/**
+ * OBRS-1853. The 2026-09-11 review added `isSubmitting` to stop a double tap creating two
+ * seat holds, but shipped no test for it - and the guard released too early: the success
+ * path ends in `router.navigate(['/payment'])`, which was not awaited, so the flag was
+ * cleared while the lazy payment chunk was still downloading and Next came back to life on
+ * exactly the slow connection the guard was written for. `submitPassengerInfo` now awaits
+ * the navigation, so the flag outlives it - which is what the first spec below pins down, by
+ * running the real method and holding only `router.navigate` open. The rest cover the guard.
+ */
+describe('PassengerInfoComponent single-flight submit (OBRS-1853)', () => {
+  let component: PassengerInfoComponent;
+
+  const stubForms = (c: PassengerInfoComponent) => {
+    (c as any).passengerInfoFormComponent = {
+      validateAndGetPassengerInfo: () => [{ firstName: 'A' } as unknown as PassengerInfo],
+    };
+    (c as any).bookerInfoFormComponent = {
+      validateAndGetBooker: () => ({ firstName: 'A' } as unknown as PassengerInfo),
+    };
+  };
+
+  beforeEach(() => {
+    component = new PassengerInfoComponent(
+      createStoreStub(),
+      createRouterStub(),
+      {} as never,
+      createTranslateStub(),
+      {} as never,
+      createAnalyticsServiceStub()
+    );
+    stubForms(component);
+  });
+
+  /**
+   * The one that covers the FIX rather than the guard around it: `submitPassengerInfo` runs for
+   * real, and the only thing held open is `router.navigate`. Drop the `await` in front of it and
+   * this test fails - the flag is released while the lazy /payment chunk is still loading, which
+   * is exactly the window a second tap used to get through.
+   */
+  it('keeps isSubmitting true until the navigation to /payment settles', async () => {
+    let arrive!: (ok: boolean) => void;
+    const navigation = new Promise<boolean>((resolve) => (arrive = resolve));
+    const navigate = jasmine.createSpy('navigate').and.returnValue(navigation);
+
+    const component = new PassengerInfoComponent(
+      createStoreStub(),
+      { navigate } as never,
+      {
+        createBooking: () =>
+          of({ code: 201, data: { bookingId: 7, bookingNumber: 'BK-7' } }),
+        setActiveBookingId: () => undefined,
+      } as never,
+      createTranslateStub(),
+      { success: () => undefined, error: () => undefined } as never,
+      createAnalyticsServiceStub()
+    );
+    stubForms(component);
+    spyOn(component as any, 'buildBookingPayload').and.returnValue(
+      Promise.resolve({ scheduleId: 1 })
+    );
+    spyOn(component as any, 'setBookingStore').and.stub();
+
+    const submit = component.onSubmitPassengerInfo();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(navigate).toHaveBeenCalledWith(['/payment']);
+    expect(component.isSubmitting).toBeTrue();
+
+    arrive(true);
+    await submit;
+
+    expect(component.isSubmitting).toBeFalse();
+  });
+
+  it('holds isSubmitting for the whole submit', async () => {
+    let release!: () => void;
+    const inFlight = new Promise<void>((resolve) => (release = resolve));
+    spyOn(component as any, 'submitPassengerInfo').and.returnValue(inFlight);
+
+    const submit = component.onSubmitPassengerInfo();
+    expect(component.isSubmitting).toBeTrue();
+
+    release();
+    await submit;
+    expect(component.isSubmitting).toBeFalse();
+  });
+
+  it('ignores a second tap while the first submit is still in flight', async () => {
+    let release!: () => void;
+    const inFlight = new Promise<void>((resolve) => (release = resolve));
+    const inner = spyOn(component as any, 'submitPassengerInfo').and.returnValue(inFlight);
+
+    const first = component.onSubmitPassengerInfo();
+    await component.onSubmitPassengerInfo();
+
+    expect(inner).toHaveBeenCalledTimes(1);
+
+    release();
+    await first;
+  });
+
+  it('releases the guard when the submit fails, so the user can retry', async () => {
+    spyOn(component as any, 'submitPassengerInfo').and.returnValue(
+      Promise.reject(new Error('network'))
+    );
+
+    await expectAsync(component.onSubmitPassengerInfo()).toBeRejected();
+
+    expect(component.isSubmitting).toBeFalse();
   });
 });

@@ -154,6 +154,13 @@ export class PassengerInfoComponent {
 
     this.isSubmitting = true;
     try {
+      // OBRS-1853: the await has to cover the navigation too. submitPassengerInfo ends
+      // in router.navigate(['/payment']), and /payment is lazy — without awaiting it the
+      // finally below re-enabled Next while the payment chunk was still downloading, so a
+      // second tap on a slow link created a second booking: exactly what this guard exists
+      // to stop. Awaiting means the flag is only released once the route has settled (or
+      // been refused by a guard), and the write after a successful navigation lands on an
+      // already-destroyed component, which is harmless.
       await this.submitPassengerInfo(passengerInfo, booker);
     } finally {
       this.isSubmitting = false;
@@ -209,7 +216,7 @@ export class PassengerInfoComponent {
     }
 
     if (isBookingCreated) {
-      this.router.navigate(['/payment']);
+      await this.router.navigate(['/payment']);
     }
   }
 
