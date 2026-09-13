@@ -23,6 +23,7 @@ import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 import { invokeSetScheduleBookingApi } from '../../../../shared/stores/schedule-booking/schedule-booking.action';
 import { Router } from '@angular/router';
+import { isTrustedMapsUrl } from '../../../../shared/lib/trusted-maps-url';
 import {
   capitalizeVehicleType,
   durationHours,
@@ -798,7 +799,10 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       // here composes a maps URL out of lat/lng - that is OBRS-269's separate
       // "navigate from where I am" deep-link, a different destination and a
       // decision this card explicitly leaves alone.
-      mapsUrl: stop.googleMapsUrl || null,
+      // Security review 2026-09 (FE-5): the value is admin-typed and rendered as an `[href]`;
+      // Angular's sanitizer only neuters `javascript:`, so an https link to anywhere would
+      // pass. Only a Google Maps link is shown; anything else falls back to plain text.
+      mapsUrl: isTrustedMapsUrl(stop.googleMapsUrl) ? stop.googleMapsUrl : null,
     };
   }
 

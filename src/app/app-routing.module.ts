@@ -56,6 +56,8 @@ export const appRoutes: Routes = [
     // every reset email fell through to the '**' wildcard and redirected to home.
     // Public — no guard: it is opened logged out, by definition.
     path: 'reset-password',
+    // Security review 2026-09 (FE-2): the URL carries the reset token; keep analytics off it.
+    data: { analyticsRestricted: true },
     loadChildren: () =>
       import('./modules/reset-password/reset-password.module').then(
         (m) => m.ResetPasswordModule
@@ -295,6 +297,8 @@ export const appRoutes: Routes = [
 
   {
     path: 'verify-email',
+    // Security review 2026-09 (FE-2): the URL carries the verification token; keep analytics off it.
+    data: { analyticsRestricted: true },
     loadChildren: () =>
       import('./modules/verify-email/verify-email.module').then(
         (m) => m.VerifyEmailModule
@@ -304,6 +308,8 @@ export const appRoutes: Routes = [
     // Public — no guard. Opened logged-out or with a stale token from the
     // confirmation email; mirrors the /verify-email route shape.
     path: 'change-email/confirm',
+    // Security review 2026-09 (FE-2): the URL carries the confirmation token; keep analytics off it.
+    data: { analyticsRestricted: true },
     loadChildren: () =>
       import('./modules/change-email-confirm/change-email-confirm.module').then(
         (m) => m.ChangeEmailConfirmModule

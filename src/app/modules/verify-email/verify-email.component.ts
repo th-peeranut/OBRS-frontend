@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
+import { stripQueryParamFromAddressBar } from '../../shared/lib/strip-query-param';
 
 @Component({
     selector: 'app-verify-email',
@@ -42,6 +43,9 @@ export class VerifyEmailComponent implements OnInit, OnDestroy {
       this.errorMessageKey = 'VERIFY_EMAIL.ERROR.TOKEN_MISSING';
       return;
     }
+    // Security review 2026-09 (FE-2): one-time credential - out of the address bar and history
+    // as soon as it is in memory. Analytics stays off this route via `analyticsRestricted`.
+    stripQueryParamFromAddressBar('token');
 
     try {
       const res = await this.authService.verifyEmail({ token });

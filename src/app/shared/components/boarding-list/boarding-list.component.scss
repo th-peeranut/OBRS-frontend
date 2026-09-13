@@ -154,6 +154,13 @@
   min-width: 200px;
 }
 
+// OBRS-374: pickup-stop filter dropdown — does not stretch like the search input above;
+// .boarding-search-row is already flex-wrap: wrap, so this wraps to its own line at
+// phone width with no new breakpoint.
+.boarding-stop-filter {
+  flex: 0 0 auto;
+}
+
 .boarding-scan-input-row {
   display: flex;
   gap: 10px;
@@ -310,6 +317,26 @@
   gap: 6px;
 }
 
+// OBRS-374: pickup-stop group header row, on-screen table. --admin-surface-soft/
+// --admin-outline/--admin-text are already declared in both the light block and the
+// .admin-shell.is-dark block of admin-theme.scss, so no :host-context override is
+// needed here.
+.boarding-stop-group-row td {
+  background: var(--admin-surface-soft);
+  border-top: 1px solid var(--admin-outline);
+  border-bottom: 1px solid var(--admin-outline);
+  padding: 8px 16px;
+}
+
+.boarding-stop-group-name {
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.boarding-stop-group-count {
+  margin-left: 8px;
+}
+
 // OBRS-100: dark-theme the manifest content, scoped to THIS component only
 // (blast radius = the boarding manifest). The surrounding card + table are
 // intentionally raw Bootstrap (see the top-of-file comment) and were never
@@ -374,4 +401,14 @@
 
 .boarding-manifest-print-table {
   width: 100%;
+}
+
+// OBRS-374: the print sheet has no .admin-shell ancestor, so the --admin-* tokens above
+// are meaningless there — this needs its own rule, same as .boarding-manifest-print
+// above uses $primary-white/$text-black rather than --admin-* tokens.
+.boarding-manifest-print-group-row td {
+  background: transparent;
+  border-top: 1px solid $primary-grey;
+  border-bottom: 1px solid $primary-grey;
+  font-weight: 700;
 }
