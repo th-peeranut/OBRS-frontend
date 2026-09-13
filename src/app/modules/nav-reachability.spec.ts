@@ -62,6 +62,7 @@ import { ForgetPasswordComponent } from './forget-password/forget-password.compo
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { VerifyEmailComponent } from './verify-email/verify-email.component';
 import { ChangeEmailConfirmComponent } from './change-email-confirm/change-email-confirm.component';
+import { ReportTriggerComponent } from '../shared/components/report-trigger/report-trigger.component';
 
 @Component({
     selector: 'app-notification-bell', template: '',
@@ -197,7 +198,12 @@ async function navEntriesFor(
 ): Promise<{ paths: string[]; hrefs: string[] }> {
   TestBed.resetTestingModule();
   await TestBed.configureTestingModule({
-    declarations: [layout, LangSwitcherComponent, NotificationBellStubComponent],
+    declarations: [
+      layout,
+      LangSwitcherComponent,
+      NotificationBellStubComponent,
+      ReportTriggerComponent,
+    ],
     imports: [RouterTestingModule, TranslateModule.forRoot()],
     providers: [
       {

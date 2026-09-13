@@ -84,9 +84,16 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
     </section>
   }
 
-  @if (context?.alreadySettled) {
+  @if (isAmending) {
     <section class="admin-card mt-3 ds-banner ds-banner-warn" data-testid="settlement-already-settled">
       {{ 'STAFF.SETTLEMENT.BANNER.ALREADY_SETTLED' | translate }}
+    </section>
+  } @else if (context?.alreadySettled) {
+    <!-- A box with field entries but no submission behind it: a day settled before OBRS-1803, or
+         costs the boarding screen keyed round by round. There is nothing here to correct, so a
+         submit really would add rows on top - which is what this banner still says. -->
+    <section class="admin-card mt-3 ds-banner ds-banner-warn" data-testid="settlement-entries-exist">
+      {{ 'STAFF.SETTLEMENT.BANNER.ENTRIES_EXIST' | translate }}
     </section>
   }
 
@@ -211,6 +218,9 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
                 </td>
               } @else {
                 <td>
+                  <!-- OBRS-1803: locked while the day is being fetched. The answer REPLACES these
+                  rows (it may carry a previous submission to open on), so anything typed during the
+                  ~2s the call takes would be wiped without a word. -->
                   <input
                     type="text"
                     inputmode="decimal"
@@ -219,6 +229,7 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
                     [attr.data-testid]="'settlement-amount-' + row.category"
                     [(ngModel)]="row.amountInput"
                     [name]="'settlementAmount' + row.category"
+                    [disabled]="isContextLoading"
                   />
                   <!-- Same signal the per-round expense form gives (OBRS-960): a value `toCents`
                   cannot read is otherwise dropped from the payload without a word. -->
@@ -238,6 +249,7 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
                     [attr.data-testid]="'settlement-note-' + row.category"
                     [(ngModel)]="row.noteInput"
                     [name]="'settlementNote' + row.category"
+                    [disabled]="isContextLoading"
                   />
                 </td>
               }
@@ -299,6 +311,7 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
       type="button"
       class="admin-btn"
       data-testid="settlement-add-bill"
+      [disabled]="isContextLoading"
       (click)="addRepairBill()"
     >
       {{ 'STAFF.SETTLEMENT.REPAIR.ADD_BILL' | translate }}
@@ -333,7 +346,7 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
       data-testid="settlement-submit"
       (click)="onSubmit()"
     >
-      {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.SETTLEMENT.SUBMIT') | translate }}
+      {{ submitLabelKey | translate }}
     </button>
   </section>
 }

@@ -31,101 +31,112 @@
     {{ "HOME.NAVBAR.CONTACT" | translate }}
   </button>
 
-  <!-- Desktop button-container (language switcher + auth) — hidden at ≤992px -->
-  <div class="button-container navbar-desktop-only">
-    <!-- Dark mode toggle — desktop instance -->
-    <app-theme-toggle ariaLabelKey="HOME.NAVBAR.THEME_TOGGLE"></app-theme-toggle>
+  <!-- OBRS-1832: the tools cluster at the top right. The report trigger is the
+       FIRST item of it in EVERY shell (customer here, `.admin-topbar-actions` in
+       staff/admin), which is the whole rule: one position, no exceptions.
+       It sits OUTSIDE `.navbar-desktop-only` on purpose — that class hides the
+       cluster outright at ≤992px, and a control that moves into a menu at one
+       breakpoint is a control users have to look for twice. Here it stays next
+       to the hamburger instead, at the same place on the bar. -->
+  <div class="navbar-tools">
+    <app-report-trigger variant="icon"></app-report-trigger>
 
-    <!-- Language globe dropdown — desktop instance -->
-    <app-lang-switcher></app-lang-switcher>
+    <!-- Desktop button-container (language switcher + auth) — hidden at ≤992px -->
+    <div class="button-container navbar-desktop-only">
+      <!-- Dark mode toggle — desktop instance -->
+      <app-theme-toggle ariaLabelKey="HOME.NAVBAR.THEME_TOGGLE"></app-theme-toggle>
 
-    @if (!isLogin) {
-      <button class="btn btn-signin" type="button" [routerLink]="'/login'">
-        {{ "HOME.NAVBAR.SIGNIN" | translate }}
-      </button>
-      <button class="btn btn-signup" type="button" [routerLink]="'/register'">
-        {{ "HOME.NAVBAR.SIGNUP" | translate }}
-      </button>
-    }
+      <!-- Language globe dropdown — desktop instance -->
+      <app-lang-switcher></app-lang-switcher>
 
-    @if (isLogin) {
-      <!-- PROFILE AVATAR DROPDOWN -->
-      <div class="navbar-profile">
-        <button
-          #profileDropdown
-          class="navbar-avatar"
-          type="button"
-          (click)="toggleProfileDropdown()"
-          [attr.aria-expanded]="isProfileDropdownOpen"
-          aria-haspopup="menu"
-          [attr.aria-label]="'HOME.NAVBAR.PROFILE_MENU' | translate"
-          >
-          {{ userInitials }}
+      @if (!isLogin) {
+        <button class="btn btn-signin" type="button" [routerLink]="'/login'">
+          {{ "HOME.NAVBAR.SIGNIN" | translate }}
         </button>
-        @if (isProfileDropdownOpen) {
-          <div class="navbar-profile-menu" role="menu">
-            @for (item of personalMenuItems; track item.path) {
-              <a
-                class="navbar-profile-item"
-                role="menuitem"
-                [routerLink]="item.path"
-                (click)="isProfileDropdownOpen = false"
-                >
-                <span class="material-symbols-outlined" [attr.translate]="'no'">{{ item.icon }}</span>
-                <span>{{ item.labelKey | translate }}</span>
-              </a>
-            }
-            @if (isAdmin) {
-              <a
-                class="navbar-profile-item"
-                role="menuitem"
-                [routerLink]="'/admin/dashboard'"
-                (click)="isProfileDropdownOpen = false"
-                >
-                <span class="material-symbols-outlined" [attr.translate]="'no'">dashboard</span>
-                <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
-              </a>
-            }
-            @if (isSalesperson || isDriver) {
-              <a
-                class="navbar-profile-item"
-                role="menuitem"
-                [routerLink]="'/staff'"
-                (click)="isProfileDropdownOpen = false"
-                >
-                <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
-                <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
-              </a>
-            }
-            <button
-              type="button"
-              class="navbar-profile-item"
-              role="menuitem"
-              (click)="onLogout()"
-              >
-              <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
-              <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
-            </button>
-          </div>
-        }
-      </div>
-    }
-  </div>
+        <button class="btn btn-signup" type="button" [routerLink]="'/register'">
+          {{ "HOME.NAVBAR.SIGNUP" | translate }}
+        </button>
+      }
 
-  <!-- Hamburger toggle — visible only at ≤992px -->
-  <button
-    #hamburgerBtn
-    type="button"
-    class="navbar-hamburger"
-    (click)="toggleMobileMenu()"
-    [attr.aria-expanded]="isMobileMenuOpen"
-    aria-controls="navbar-mobile-panel"
-    [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
-    >
-    <span class="material-symbols-outlined" [attr.translate]="'no'">
-      {{ isMobileMenuOpen ? 'close' : 'menu' }}
-    </span>
-  </button>
+      @if (isLogin) {
+        <!-- PROFILE AVATAR DROPDOWN -->
+        <div class="navbar-profile">
+          <button
+            #profileDropdown
+            class="navbar-avatar"
+            type="button"
+            (click)="toggleProfileDropdown()"
+            [attr.aria-expanded]="isProfileDropdownOpen"
+            aria-haspopup="menu"
+            [attr.aria-label]="'HOME.NAVBAR.PROFILE_MENU' | translate"
+            >
+            {{ userInitials }}
+          </button>
+          @if (isProfileDropdownOpen) {
+            <div class="navbar-profile-menu" role="menu">
+              @for (item of personalMenuItems; track item.path) {
+                <a
+                  class="navbar-profile-item"
+                  role="menuitem"
+                  [routerLink]="item.path"
+                  (click)="isProfileDropdownOpen = false"
+                  >
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">{{ item.icon }}</span>
+                  <span>{{ item.labelKey | translate }}</span>
+                </a>
+              }
+              @if (isAdmin) {
+                <a
+                  class="navbar-profile-item"
+                  role="menuitem"
+                  [routerLink]="'/admin/dashboard'"
+                  (click)="isProfileDropdownOpen = false"
+                  >
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">dashboard</span>
+                  <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
+                </a>
+              }
+              @if (isSalesperson || isDriver) {
+                <a
+                  class="navbar-profile-item"
+                  role="menuitem"
+                  [routerLink]="'/staff'"
+                  (click)="isProfileDropdownOpen = false"
+                  >
+                  <span class="material-symbols-outlined" [attr.translate]="'no'">badge</span>
+                  <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
+                </a>
+              }
+              <button
+                type="button"
+                class="navbar-profile-item"
+                role="menuitem"
+                (click)="onLogout()"
+                >
+                <span class="material-symbols-outlined" [attr.translate]="'no'">logout</span>
+                <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Hamburger toggle — visible only at ≤992px -->
+    <button
+      #hamburgerBtn
+      type="button"
+      class="navbar-hamburger"
+      (click)="toggleMobileMenu()"
+      [attr.aria-expanded]="isMobileMenuOpen"
+      aria-controls="navbar-mobile-panel"
+      [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
+      >
+      <span class="material-symbols-outlined" [attr.translate]="'no'">
+        {{ isMobileMenuOpen ? 'close' : 'menu' }}
+      </span>
+    </button>
+  </div>
 </div>
 
 <!-- Mobile slide-down panel — visible only at ≤992px when open -->
@@ -190,6 +201,14 @@
         <span class="material-symbols-outlined" [attr.translate]="'no'">contact_support</span>
         <span>{{ "HOME.NAVBAR.CONTACT" | translate }}</span>
       </button>
+      <!-- OBRS-1832: the labelled twin of the icon on the bar. Both are on screen
+           while this panel is open and both open the same modal — the icon is NOT
+           hidden here, because a control that appears and disappears with a menu
+           state is the behaviour this card exists to remove. -->
+      <app-report-trigger
+        variant="row"
+        (triggered)="closeMobileMenu()"
+      ></app-report-trigger>
     </div>
     <!-- 4. Auth area -->
     <div class="navbar-mobile-section">

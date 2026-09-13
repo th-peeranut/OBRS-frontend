@@ -208,7 +208,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.isProfileDropdownOpen = false;
     this.isMobileMenuOpen = false;
 
-    this.authService.clearAuthData();
+    // OBRS-1855: `endSession()`, not `clearAuthData()` — this button is the CUSTOMER's
+    // sign-out, and clearing localStorage alone left their refresh token live on the
+    // server for the rest of its 7 days. It cannot call `logout()`: that one redirects to
+    // `/login`, and the public navbar lands on `/` (below).
+    this.authService.endSession();
     this.alertService.success(
       this.translate.instant('HOME.NAVBAR.SIGNOUT_SUCCESS')
     );

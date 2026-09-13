@@ -24,9 +24,9 @@
  * purpose, instead of being an accident every other spec has to work around.
  *
  * THE TEST THAT WOULD HAVE CAUGHT OBRS-867
- * `banner covers the usability FAB while undecided, and stops covering it once answered`.
- * It measures with `document.elementFromPoint` at the FAB's own centre rather than
- * asserting a z-index or waiting for a click to time out:
+ * `the banner no longer covers the report entry point at all`. It measures with
+ * `document.elementFromPoint` at the trigger's own centre rather than asserting a
+ * z-index or waiting for a click to time out:
  *   - a z-index assertion is a proxy — it cannot see a stacking context, and OBRS-750
  *     already recorded what a proxy costs in this lane (`force: true` reporting success
  *     for a click that landed on a parent);
@@ -35,15 +35,17 @@
  * `elementFromPoint` returns the element the browser would actually deliver the click
  * to. That is the effect, not a proxy for it. (Same technique as
  * `obrs-854-account-deeplink.spec.ts`, deliberately: that spec measures the overlap over
- * the close-account button at a 390px phone viewport, this one over the usability FAB at
- * 1280×720. Different surface, different viewport, same question.)
+ * the close-account button at a 390px phone viewport, this one over the report trigger
+ * at 1280×720. Different surface, different viewport, same question.)
  *
- * THE OVERLAP IS DELIBERATE, AND THAT IS WHY IT IS PINNED RATHER THAN FIXED HERE.
- * analytics-consent-banner.component.scss: `z-index: 1000` with the comment "Above the
- * usability FAB (z-index 900) — the two share the bottom-right corner, and while the
- * question is unanswered this one is the more urgent." This spec does not overturn that.
- * It records it, so that a future change to either component's stacking has to look at
- * the trade instead of discovering it through a red gate lane four commits later.
+ * THE OVERLAP IS GONE — OBRS-1832 REMOVED THE ELEMENT IT WAS WITH.
+ * It used to be deliberate and pinned as such: analytics-consent-banner.component.scss
+ * carries `z-index: 1000` with the comment "Above the usability FAB (z-index 900) — the
+ * two share the bottom-right corner, and while the question is unanswered this one is
+ * the more urgent." Nothing shares that corner any more: the report entry point moved
+ * into the navbar, so the case below pins the opposite — the trigger is clickable WHILE
+ * the banner is up. The banner's own z-index is untouched; it still outranks anything
+ * that arrives in that corner later.
  *
  * ✅ THE OPEN PRODUCT QUESTION THIS COMMENT USED TO CARRY IS ANSWERED (OBRS-887).
  * It was raised on OBRS-882 as an overlap: the banner covered `button.btn-success` on the
@@ -69,7 +71,7 @@ import { ANALYTICS_CONSENT_KEY, seedAnalyticsConsent } from '../support/analytic
 const BANNER = '.consent-banner';
 const ACCEPT = '.consent-banner__btn--accept';
 const DECLINE = '.consent-banner__actions .consent-banner__btn:not(.consent-banner__btn--accept)';
-const FAB = '.report-fab';
+const TRIGGER = '.navbar-tools .report-trigger';
 
 /**
  * The measurement vendors, blocked at the browser.
@@ -123,27 +125,27 @@ async function stubHome(page: Page): Promise<void> {
  * not, what is in front of it" — and `expect.poll` at the call sites lets the transient
  * layer clear without hiding a permanent one.
  */
-async function topmostOverFab(page: Page): Promise<string> {
-  return page.evaluate((fabSelector) => {
-    const fab = document.querySelector(fabSelector);
-    if (!fab) return 'NO-FAB';
-    const box = fab.getBoundingClientRect();
+async function topmostOverTrigger(page: Page): Promise<string> {
+  return page.evaluate((triggerSelector) => {
+    const trigger = document.querySelector(triggerSelector);
+    if (!trigger) return 'NO-TRIGGER';
+    const box = trigger.getBoundingClientRect();
     const stack = document.elementsFromPoint(box.x + box.width / 2, box.y + box.height / 2);
 
     for (const element of stack) {
       if (element.closest('.consent-banner')) return 'CONSENT-BANNER';
-      if (element.closest(fabSelector)) return 'FAB';
+      if (element.closest(triggerSelector)) return 'TRIGGER';
     }
     // Neither is in the stack at all. Name what IS on top, so a third overlay arriving
-    // one day reports itself instead of hiding behind a bare "not FAB".
+    // one day reports itself instead of hiding behind a bare "not TRIGGER".
     return stack[0] ? `OTHER:${stack[0].className || stack[0].tagName}` : 'NOTHING';
-  }, FAB);
+  }, TRIGGER);
 }
 
-/** `topmostOverFab`, polled — see that helper for why a transient layer has to clear. */
-async function expectTopmostOverFab(page: Page, expected: string, because: string) {
+/** `topmostOverTrigger`, polled — see that helper for why a transient layer has to clear. */
+async function expectTopmostOverTrigger(page: Page, expected: string, because: string) {
   await expect
-    .poll(() => topmostOverFab(page), { message: because, timeout: 10_000 })
+    .poll(() => topmostOverTrigger(page), { message: because, timeout: 10_000 })
     .toBe(expected);
 }
 
@@ -175,32 +177,36 @@ test.describe('Analytics consent banner — the undecided state', () => {
     await expect(banner).toContainText('May we measure how this site is used?');
   });
 
-  test('banner covers the usability FAB while undecided, and stops covering it once answered', async ({
+  test('the banner no longer covers the report entry point at all (OBRS-1832)', async ({
     page,
   }) => {
     await page.goto('/');
     await expect(page.locator(BANNER)).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator(FAB)).toBeVisible();
+    await expect(page.locator(TRIGGER)).toBeVisible();
 
-    // THE REGRESSION, stated positively. This is the state 23 gate cases were silently
-    // running in on 2026-07-29.
-    await expectTopmostOverFab(
+    // THE REGRESSION, restated. Until OBRS-1832 this case pinned the OPPOSITE:
+    // the banner deliberately sat over the report FAB in the bottom-right corner,
+    // and 23 gate cases were silently running in a state where the only way to
+    // report a problem was unclickable. The entry point is in the navbar now, so
+    // a bar pinned to the bottom edge cannot reach it — and that is the claim.
+    await expectTopmostOverTrigger(
       page,
-      'CONSENT-BANNER',
-      'while the PDPA question is unanswered the banner is expected to sit over the FAB ' +
-        '(deliberate — see analytics-consent-banner.component.scss). If this now reads FAB, ' +
-        'the stacking changed and the comment in that file is stale.'
+      'TRIGGER',
+      'the report trigger must be clickable WHILE the PDPA question is unanswered — ' +
+        'it is in the top bar and the banner is on the bottom edge. If this reads ' +
+        'CONSENT-BANNER, something re-introduced a full-viewport overlay.'
     );
+    await page.locator(TRIGGER).click();
+    await expect(page.locator('.report-modal, [role="dialog"]').first()).toBeVisible();
+    // Closed by its own close button, not Escape: this modal has never bound a
+    // key (checked against origin/dev -- ADR-006 shipped it without one), and a
+    // backdrop left open swallows the Decline click below.
+    await page.locator('.report-modal__close').click();
+    await expect(page.locator('.report-modal-backdrop')).toHaveCount(0);
 
     await page.locator(DECLINE).click();
-
     await expect(page.locator(BANNER)).toHaveCount(0);
-    // The half that actually matters: dismissal RETURNS the FAB, rather than leaving an
-    // invisible interceptor behind. A `display: none` on the wrong node would pass the
-    // count assertion above and fail this one.
-    await expectTopmostOverFab(page, 'FAB', 'dismissing the banner must give the FAB back');
-    await page.locator(FAB).click();
-    await expect(page.locator('.report-modal, [role="dialog"]').first()).toBeVisible();
+    await expectTopmostOverTrigger(page, 'TRIGGER', 'dismissal must not leave an invisible interceptor');
   });
 });
 
@@ -213,7 +219,7 @@ test.describe('Analytics consent banner — answering it', () => {
   // for requests to the tag hosts. What it cannot be is a merge gate: it needs the
   // `analytics-e2e` build (the only one carrying a measurement ID) and so runs under its
   // own config. This is the gated crumb of that coverage: accepting must dismiss the bar.
-  // Decline's dismissal is asserted in the overlap test above, where it is load-bearing.
+  // Decline's dismissal is asserted in the position test above, where it is load-bearing.
   test('Accept persists "granted" and dismisses the banner', async ({ page }) => {
     await page.goto('/');
     await page.locator(ACCEPT).click();
@@ -232,8 +238,8 @@ test.describe('Analytics consent banner — a settled answer', () => {
     await seedAnalyticsConsent(page);
 
     await page.goto('/');
-    await expect(page.locator(FAB)).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(TRIGGER)).toBeVisible({ timeout: 15_000 });
     await expect(page.locator(BANNER)).toHaveCount(0);
-    await expectTopmostOverFab(page, 'FAB', 'a seeded decision must leave the FAB clickable');
+    await expectTopmostOverTrigger(page, 'TRIGGER', 'a seeded decision must leave the trigger clickable');
   });
 });
