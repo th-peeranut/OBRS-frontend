@@ -1,5 +1,7 @@
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
@@ -10,6 +12,7 @@ import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { UserService } from '../../services/user/user.service';
 import { createTranslateStub } from '../../testing/test-stubs';
+import { REGISTER_OPTION } from '../../shared/enum/register-option.enum';
 
 describe('RegisterComponent', () => {
   let component: RegisterComponent;
@@ -327,5 +330,62 @@ describe('RegisterComponent — password manager autofill tokens (OBRS-1559)', (
 
   it('carries the same token on the confirmation field, so the generated value fills both', () => {
     expect(autocompleteOf('confirmPassword')).toBe('new-password');
+  });
+});
+
+/**
+ * OBRS-1853. The duplicate-email/phone hint is a hint, not a gate: since the 2026-09-11
+ * review the backend rate-limits it per IP (429 after 60 calls / 15 min) and `UserService`
+ * opts it out of the global error alert, so a refusal reaches the user as nothing at all.
+ *
+ * The catch used to `return` without touching the flag, so a 429 arriving AFTER a genuine
+ * duplicate left `emailIsExist` stuck at true: the inline "already exists" message stayed
+ * under an address the user had since corrected, and `register()` refuses to submit while
+ * the flag is set - with no else branch, so pressing Register did nothing, silently, until
+ * the page was reloaded. Failing OPEN hands the decision to /api/auth/signup, which is the
+ * only authority on duplicates anyway.
+ */
+describe('RegisterComponent duplicate-hint failure', () => {
+  const build = (usersService: unknown) =>
+    new RegisterComponent(
+      createTranslateStub(),
+      new FormBuilder(),
+      { register: jasmine.createSpy('register') } as never,
+      { error: jasmine.createSpy('error') } as never,
+      usersService as never
+    );
+
+  const throwing = () => ({
+    checkExistEmail: () => throwError(() => new HttpErrorResponse({ status: 429 })),
+    checkExistPhoneNumber: () => throwError(() => new HttpErrorResponse({ status: 429 })),
+  });
+
+  it('clears emailIsExist when the hint call fails, so the form can still be submitted', async () => {
+    const component = build(throwing());
+    component.emailIsExist = true;
+
+    await component.checkDuplicateData('somchai@example.com', REGISTER_OPTION.EMAIL);
+
+    expect(component.emailIsExist).toBeFalse();
+  });
+
+  it('clears phoneNumberIsExist on the same failure', async () => {
+    const component = build(throwing());
+    component.phoneNumberIsExist = true;
+
+    await component.checkDuplicateData('0812345678', REGISTER_OPTION.PHONENUMBER);
+
+    expect(component.phoneNumberIsExist).toBeFalse();
+  });
+
+  it('still reports a duplicate the backend actually confirmed', async () => {
+    const component = build({
+      checkExistEmail: () => of({ code: 200, data: true }),
+      checkExistPhoneNumber: () => of({ code: 200, data: false }),
+    });
+
+    await component.checkDuplicateData('taken@example.com', REGISTER_OPTION.EMAIL);
+
+    expect(component.emailIsExist).toBeTrue();
   });
 });

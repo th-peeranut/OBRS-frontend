@@ -76,6 +76,8 @@ import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-mod
 import { ExpenseBatchPageComponent } from './pages/expenses/expense-batch-page/expense-batch-page.component';
 import { ExpensePayeesPageComponent } from './pages/expense-payees/expense-payees-page.component';
 import { MaintenancePartsPageComponent } from './pages/maintenance-parts/maintenance-parts-page.component';
+import { MaintenancePartMergeModalComponent } from './pages/maintenance-parts/maintenance-part-merge-modal/maintenance-part-merge-modal.component';
+import { MaintenancePartReopenModalComponent } from './pages/maintenance-parts/maintenance-part-reopen-modal/maintenance-part-reopen-modal.component';
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
 import { CashRefundApprovalsPageComponent } from './pages/cash-refund-approvals/cash-refund-approvals-page.component';
@@ -636,6 +638,8 @@ export const adminRoutes: Routes = [
     ExpenseBatchPageComponent,
     ExpensePayeesPageComponent,
     MaintenancePartsPageComponent,
+    MaintenancePartMergeModalComponent,
+    MaintenancePartReopenModalComponent,
     ManualRefundWorklistPageComponent,
     CashRefundApprovalsPageComponent,
     ParcelClaimsPageComponent,

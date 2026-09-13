@@ -1,0 +1,18 @@
+@import "../../../../../../styles/variables.scss";
+
+:host {
+  display: block;
+}
+
+.part-merge-impact {
+  margin: $space-sm 0;
+  color: var(--admin-text);
+  font-size: $font-size-sm;
+}
+
+.part-merge-reversible-note {
+  margin: 0 0 $space-sm;
+  color: var(--admin-muted);
+  font-size: $font-size-xs;
+  line-height: 1.6;
+}

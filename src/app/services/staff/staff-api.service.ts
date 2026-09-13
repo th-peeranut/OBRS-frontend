@@ -22,6 +22,8 @@ import {
 } from '../../shared/interfaces/my-booking.interface';
 import {
   CargoAvailabilityRespDto,
+  ParcelArrivalResendReqDto,
+  ParcelArrivalResendRespDto,
   ParcelCarryOnReqDto,
   ParcelCarryOnRespDto,
   ParcelCollectReqDto,
@@ -896,6 +898,31 @@ export class StaffApiService {
   ): Observable<ResponseAPI<ParcelCollectRespDto>> {
     return this.http.post<ResponseAPI<ParcelCollectRespDto>>(
       `${environment.apiUrl}/api/private/parcels/${parcelId}/collect`,
+      payload,
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /**
+   * POST /api/private/parcels/{id}/arrival-notification/resend — OBRS-1811.
+   *
+   * Sends the arrival SMS again, optionally correcting the recipient's number
+   * first. Omitting `recipientPhone` re-sends to the number already on the
+   * parcel (the handset-was-off case); supplying one corrects the parcel and
+   * texts the new number (the mistyped-at-the-counter case, which a plain
+   * resend can never fix because the provider accepts a well-formed wrong
+   * number and reports it as sent).
+   *
+   * Same `parcelActionContext` as the sibling transitions above, so a 409/429
+   * surfaces through the shared parcel-action error handling rather than the
+   * generic interceptor toast.
+   */
+  resendParcelArrivalNotification(
+    parcelId: number,
+    payload: ParcelArrivalResendReqDto = {}
+  ): Observable<ResponseAPI<ParcelArrivalResendRespDto>> {
+    return this.http.post<ResponseAPI<ParcelArrivalResendRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/arrival-notification/resend`,
       payload,
       { context: this.parcelActionContext }
     );

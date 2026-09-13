@@ -34,7 +34,7 @@
     }
   },
   "USABILITY_REPORT": {
-    "FAB": {
+    "TRIGGER": {
       "LABEL": "Report Issue",
       "ARIA_LABEL": "Report a usability issue"
     },
@@ -2099,6 +2099,7 @@
       "TABLE_TITLE": "Profit and loss by vehicle",
       "EMPTY": "No vehicles have any figures in this date range.",
       "OF_WHICH_VAT": "of which VAT",
+      "COMPARED_WITH": "vs {{from}} – {{to}}",
       "OF_WHICH_HISTORICAL": "of which imported historical revenue",
       "HISTORICAL_CONFLICTS": "{{count}} day(s) where imported figures clashed with real sales",
       "EXPAND_ARIA": "Show this vehicle's cost breakdown",
@@ -2112,15 +2113,18 @@
         "REVENUE": "Total revenue",
         "EXPENSES": "Total expenses",
         "MARGIN": "Margin",
+        "MARGIN_PCT": "Net margin",
         "PENDING_EXPENSES": "Costs awaiting approval",
         "PENDING_EXPENSES_HINT": "Not yet subtracted from the margin"
       },
       "COL": {
         "VEHICLE": "Vehicle",
+        "TRIPS": "Trips",
         "REVENUE": "Revenue",
         "EXPENSES": "Expenses",
         "VAT": "of which VAT",
         "MARGIN": "Margin",
+        "MARGIN_PCT": "Margin %",
         "OTHER_CATEGORIES": "{{count}} other categories"
       },
       "COST_MIX": {
@@ -2234,6 +2238,25 @@
       },
       "NOTE": "Note",
       "NOTE_PLACEHOLDER": "Additional details (optional)",
+      "RECEIPT": {
+        "LABEL": "Receipt",
+        "HINT": "A photo or PDF of the paper bill — kept as tax evidence (ภ.ง.ด.50). Optional; JPG, PNG, WEBP or PDF, up to 10 MB.",
+        "ATTACHED": "Attached",
+        "MISSING": "No receipt",
+        "ATTACH": "Attach receipt",
+        "REPLACE": "Replace receipt",
+        "VIEW": "View",
+        "REMOVE": "Remove",
+        "REMOVE_TITLE": "Remove this receipt?",
+        "REMOVE_CONFIRM": "This cannot be undone. The expense record itself is not affected.",
+        "UPLOADED": "Receipt uploaded",
+        "UPLOAD_FAILED": "Could not upload the receipt. Please try again.",
+        "REMOVE_FAILED": "Could not remove the receipt. Please try again.",
+        "VIEW_FAILED": "Could not open the receipt. Please try again.",
+        "NOT_FOUND": "Receipt file not found",
+        "INVALID_TYPE": "Unsupported file type — use a JPG, PNG or WEBP image, or a PDF.",
+        "TOO_LARGE": "File is too large — the maximum size is 10 MB."
+      },
       "ITEMS": {
         "TITLE": "Bill lines",
         "HINT": "Optional. Break a repair or gas bill into its lines to see which part costs what. Leave it empty to record the bill as a single amount.",
@@ -2329,12 +2352,31 @@
       "EMPTY_TITLE": "No entries in the registry yet",
       "EMPTY_BODY": "Add one with the \"Add entry\" button, or just type a new name while entering a bill and it will be added from there.",
       "NO_MATCH": "No entry matches this filter",
-      "NAME_TAKEN": "That name is already in the registry. Entries are never merged automatically, because a merge cannot be undone.",
+      "NAME_TAKEN": "That name is already in the registry. Renaming does not merge two entries automatically — use the \"Merge\" action on this row if you want to combine them.",
       "NAME_WILL_REUSE": "That name is already in the registry. You can still save: the existing entry will be used rather than a duplicate created.",
       "NAME_KIND_CONFLICT": "\"{{name}}\" already exists as {{kind}}. One name cannot be both, or two different things end up compared on price. Give it a distinct name, e.g. \"Labour: change …\".",
       "SEEDED_BADGE": "Built in · translated",
       "SEEDED_RENAME_WARNING": "⚠️ This is one of the 13 built-in entries and has English and Chinese names. Renaming it makes it an entry you typed and its translations are lost for good — English screens will show the Thai name, and this cannot be undone from here.",
       "FILTER_KIND_ALL": "Type: all",
+      "SHOW_MERGED": "Show merged-away entries",
+      "STATUS_MERGED": "Merged",
+      "MERGED_INTO": "Merged into {{name}}",
+      "MERGE": "Merge",
+      "MERGING": "Merging…",
+      "MERGE_TITLE": "Merge into another entry",
+      "MERGE_SOURCE_PREFIX": "Folding away:",
+      "MERGE_TARGET_LABEL": "Destination entry",
+      "MERGE_NO_TARGETS": "There is no other entry of this kind to merge into yet.",
+      "MERGE_IMPACT_LOADING": "Checking what will move…",
+      "MERGE_IMPACT_FAILED": "Could not check what would move. Try again.",
+      "MERGE_IMPACT_SUMMARY": "{{billLineCount}} bill line(s) and {{planCount}} maintenance plan(s) will move under the new name.",
+      "MERGE_REVERSIBLE_NOTE": "This can be undone later — reopen the entry you are folding away to make it selectable again.",
+      "MERGE_SUCCESS": "Merged successfully.",
+      "REOPEN": "Reopen this name",
+      "REOPENING": "Reopening…",
+      "REOPEN_CONFIRM_TITLE": "Reopen this name?",
+      "REOPEN_CONFIRM_MESSAGE": "This entry will appear in the pickers again. Bills entered while it was merged stay linked to {{mergedInto}} — they do not move back.",
+      "REOPEN_SUCCESS": "Reopened successfully.",
       "KINDS": {
         "PART": "Part",
         "LABOUR": "Labour"
@@ -3310,7 +3352,9 @@
       "SUCCESS": "Payment complete. Your ticket is ready.",
       "PENDING": "We're waiting for your payment to be confirmed. This page updates on its own once the money arrives.",
       "FAILED": "The payment didn't go through. Please check your card details or account balance and try again.",
-      "QR_UNAVAILABLE": "We couldn't create the QR code. Please tap Refresh QR to try again."
+      "QR_UNAVAILABLE": "We couldn't create the QR code. Please tap Refresh QR to try again.",
+      "REDIRECT_BLOCKED": "We couldn't open the card verification page because its address isn't a recognised payment gateway. No money has been taken. Please try again or choose another payment method.",
+      "REDIRECT_BLOCKED_QR": "We couldn't open the payment confirmation page because its address isn't a recognised payment gateway. If you have already paid by scanning the QR, the payment is still recorded once your bank confirms it. Check your booking shortly or contact our staff."
     },
     "RESULT": {
       "FAILED_REDIRECT": "Payment failed. Please select a schedule and book again."
@@ -4077,8 +4121,25 @@
         "COLLECT": "Collect",
         "LEAVE_AT_STOP": "Leave at stop + photo",
         "VIEW_DROP_OFF_PHOTO": "View drop-off photo",
-        "FILE_CLAIM": "File claim"
+        "FILE_CLAIM": "File claim",
+        "RESEND_NOTIFICATION": "Resend notification"
       },
+        "NOTIFY": {
+        "FAILED": "Notification failed",
+        "NO_PHONE": "No recipient number",
+        "RESEND_OK": "The arrival SMS was sent to the recipient again",
+        "RESEND_NOT_SENT": "The SMS provider refused this message. Check the number and try again"
+        },
+        "RESEND_DIALOG": {
+        "TITLE": "Resend the arrival notification",
+        "HINT": "The arrival SMS, with the collection code, goes to the number below again. If that number is wrong, correct it here and the SMS goes to the new one.",
+        "PHONE_LABEL": "Recipient phone",
+        "PHONE_INVALID": "Must be a Thai mobile number, e.g. 0812345678",
+        "CORRECTION_WARNING": "Changing this updates the recipient number on this parcel, and records who changed it",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Resend",
+        "SUBMITTING": "Sending…"
+        },
       "COLLECT_DIALOG": {
         "TITLE": "Collect parcel",
         "CODE_LABEL": "Collection code",
@@ -4124,6 +4185,11 @@
         "ALREADY_COLLECTED": "This parcel has already been collected.",
         "WRONG_STATE": "This parcel is not in the expected state. The list has been refreshed.",
         "BOOKING_NOT_CONFIRMED": "This parcel is not paid for. Take payment on the booking before handing it over.",
+        "RESEND_PHONE_INVALID": "The recipient phone must be a Thai mobile number - the SMS is sent to it",
+        "RESEND_PHONE_REQUIRED": "This parcel has no recipient number. Enter one before resending",
+        "RESEND_LIMIT_PHONE": "This number has reached its daily resend limit. Try again tomorrow",
+        "RESEND_LIMIT_GLOBAL": "Resends have reached today’s system limit. Try again tomorrow",
+        "RESEND_GENERIC": "The notification could not be resent. Please try again",
         "ALREADY_LEFT_AT_STOP": "This parcel is already recorded as left at the stop.",
         "PHOTO_TOO_LARGE": "The photo is larger than 10 MB. Please take it again.",
         "PHOTO_UNSUPPORTED": "Unsupported photo type. Use JPEG, PNG or WebP.",
@@ -4354,6 +4420,7 @@
         "SALES_POINT_FORBIDDEN": "You can only record this entry for rounds departing from your own sales point. This round is not yours.",
         "PER_HEAD_SALES_POINT_FORBIDDEN": "You can only record heads for stops that belong to your own sales point.",
         "DAY_ALREADY_RETURNED": "That day’s cash box has already been returned and signed off, so entries can no longer be added to it. Ask the owner to re-open the box for that day, then key this bill again.",
+        "DAY_ALREADY_SETTLED": "Nothing was recorded: this day already carries exactly these figures. Change something first, then submit again.",
         "REPAIR_BILL_ZERO_TOTAL": "A repair bill must come to more than zero. Enter the amount on at least one line."
       },
       "MY_DAY": {
@@ -4434,7 +4501,8 @@
       "BANNER": {
         "REOPENED": "The owner re-opened this cash box {{n}} time(s)",
         "REOPEN_REASON": "Latest reason: {{reason}}",
-        "ALREADY_SETTLED": "This day has already been settled. Submitting again adds new entries on top of the existing ones - check before you do."
+        "ALREADY_SETTLED": "This day has already been settled. The form below holds the figures that were sent - change what needs changing and submit again to CORRECT them, not to add a second set.",
+        "ENTRIES_EXIST": "This day has already been settled. Submitting again adds new entries on top of the existing ones - check before you do."
       },
       "BLOCKED": {
         "PICK_VEHICLE_DRIVER": "Pick a date, a number plate and a driver before settling",
@@ -4446,6 +4514,7 @@
       },
       "TOTAL": "To be recorded",
       "SUBMIT": "Settle the whole day",
+      "SUBMIT_AMEND": "Correct this day's settlement",
       "SUCCESS": "The day has been settled"
     }
   },

@@ -75,7 +75,7 @@
           }
 
           @if (!isLoading) {
-            @for (group of groupedEntries; track group) {
+            @for (group of groupedEntries; track group.category) {
               <tr class="admin-group-row">
                 <td [attr.colspan]="showSlugColumn ? 3 : 2">
                   <span class="admin-chip">{{ group.category }}</span>

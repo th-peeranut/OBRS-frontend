@@ -263,6 +263,9 @@ export interface ExpenseRow {
    * Carried on the ROW because the edit modal opens synchronously from it (there is no
    * second detail fetch), so a row without lines would silently drop them on the next save. */
   items: ExpenseItemRow[];
+  /** OBRS-845: whether a receipt file is attached. Derived from `AdminExpenseDto.receiptFileRef`
+   * — never carry the raw storage path itself onto the row, since it is not a reachable URL. */
+  hasReceipt: boolean;
 }
 
 /** OBRS-1374: one line of a bill as the table/modal reads it. `part` is `''` when the line is
@@ -344,13 +347,17 @@ export function toExpenseRow(
     note: dto.note ?? '',
     source: dto.source ?? 'MANUAL',
     items: (dto.items ?? []).map(toExpenseItemRow),
+    hasReceipt: !!dto.receiptFileRef,
   };
 }
 
 /** Raw reactive-form value shape (`ExpenseFormModalComponent.expenseForm`).
  * Deliberately has NO properties for the audit fields (createdBy/At,
  * updatedBy/At) — §9's "no accidental round-trip" is structural, not just a
- * mapper convention. */
+ * mapper convention. OBRS-845: also deliberately has NO `receiptFileRef` —
+ * the backend preserves it through a full-replace PUT only when the KEY is
+ * absent from the body (same OBRS-580 shape as the stop photo), so this form
+ * must never be able to express one, let alone clear it. */
 export interface ExpenseFormValue {
   /** OBRS-808: the admin-only operator choice, as a string because
    * `app-admin-dropdown` coerces every value through `String(x ?? '')` (see

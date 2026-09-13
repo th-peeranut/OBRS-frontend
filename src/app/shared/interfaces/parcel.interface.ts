@@ -342,6 +342,49 @@ export interface ParcelDeliveryListItemDto {
    */
   leftAtStopAt?: string | null;
   leftAtStopPhotoUrl?: string | null;
+  /**
+   * OBRS-1811: the provider's verdict on the LATEST attempt to tell this
+   * parcel's recipient it arrived — `'sent' | 'failed' | 'no_phone'`.
+   *
+   * Not a delivery receipt: `'sent'` means the SMS provider accepted the
+   * message, which it also does for a well-formed but WRONG number. That is
+   * exactly why the resend action takes an optional corrected number rather
+   * than only re-firing the same send.
+   *
+   * `null`/absent means NO attempt was recorded — the parcel has not been
+   * marked arrived yet, it arrived before the backend migration that created
+   * the table, or the backend predates this card. Render absent as "no
+   * information", NEVER as success: a badge that implies a send happened
+   * because a field is missing is the same silent lie this card removes.
+   */
+  arrivalNotificationResult?: 'sent' | 'failed' | 'no_phone' | null;
+}
+
+/**
+ * OBRS-1811: `POST /api/private/parcels/{id}/arrival-notification/resend`
+ * body. One optional field, deliberately — omit it and the arrival SMS goes
+ * again to the number already on the parcel; send it and the parcel's
+ * recipient number is corrected first, then texted.
+ */
+export interface ParcelArrivalResendReqDto {
+  /** Omit/undefined = resend to the number already on the parcel. */
+  recipientPhone?: string;
+}
+
+/**
+ * OBRS-1811: the resend result. ⛔ Deliberately carries NO collection code —
+ * the owner rejected letting staff read the handoff code back (option ค on
+ * the card), because a secret that can be read back is not one and it would
+ * make the backend's brute-force lockout decorative.
+ */
+export interface ParcelArrivalResendRespDto {
+  /** Provider verdict on the hand-off, never a delivery receipt. */
+  result: 'sent' | 'failed' | 'no_phone';
+  attemptNo: number;
+  /** The number actually texted — echo it back into the row. */
+  recipientPhone: string;
+  /** True when this call also changed the parcel's recipient number. */
+  phoneCorrected: boolean;
 }
 
 /**

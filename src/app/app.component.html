@@ -8,6 +8,11 @@ first in the DOM so a screen reader announces "you are viewing as X, the data is
 still yours" before the page it qualifies. Renders nothing unless a preview is on. -->
 <app-role-preview-banner></app-role-preview-banner>
 <router-outlet></router-outlet>
-<app-report-usability-fab></app-report-usability-fab>
+<!-- OBRS-1832: the report MODAL, not a button. It renders nothing until an
+`<app-report-trigger>` somewhere in the chrome asks it to open, so it occupies no
+pixels and can cover nothing. The FAB that used to sit here floated over every
+route and guessed at runtime whether it was covering a control; ADR-006 is
+superseded by docs/adr/0044-report-entry-point-lives-in-the-chrome.md. -->
+<app-report-usability-modal></app-report-usability-modal>
 <!-- OBRS-867: renders only while the PDPA question is unanswered. -->
 <app-analytics-consent-banner></app-analytics-consent-banner>

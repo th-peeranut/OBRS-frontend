@@ -26,6 +26,7 @@ const ROW: ExpenseRow = {
   note: '',
   source: 'MANUAL',
   items: [],
+  hasReceipt: false,
 };
 
 describe('ExpenseDeleteModalComponent', () => {

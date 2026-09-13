@@ -70,6 +70,21 @@ export class VehiclePlReportStore extends AdminCollectionStore<VehiclePlReportDt
         margin: '0.00',
         currency: 'THB',
         pendingExpenses: '0.00',
+        tripCount: 0,
+        marginPct: null,
+      },
+      // OBRS-1726: the local stand-in for a response that never arrived, so the deltas are
+      // NULL, not 0.00 — a zero here would render as "held steady" on a screen that has no
+      // data at all. The dates mirror the requested range so the label still reads sensibly.
+      previous: {
+        from: this.fromDate,
+        to: this.toDate,
+        revenue: '0.00',
+        expenses: '0.00',
+        margin: '0.00',
+        revenueChangePct: null,
+        expenseChangePct: null,
+        marginChangePct: null,
       },
     };
   }

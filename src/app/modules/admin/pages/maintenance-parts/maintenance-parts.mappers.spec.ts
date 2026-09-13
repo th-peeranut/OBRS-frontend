@@ -1,7 +1,9 @@
 import {
   findMaintenancePartByExactName,
+  isMergedPart,
   isSeededPart,
   maintenancePartLabel,
+  mergeableTargets,
   sortMaintenancePartsByName,
 } from './maintenance-parts.mappers';
 import { AdminMaintenancePartDto } from '../../../../services/admin/admin-api.service';
@@ -19,8 +21,9 @@ describe('maintenance-parts.mappers', () => {
     id: number,
     name: string,
     code: string | null = null,
-    kind: AdminMaintenancePartDto['kind'] = 'PART'
-  ): AdminMaintenancePartDto => ({ id, code, name, kind, active: true });
+    kind: AdminMaintenancePartDto['kind'] = 'PART',
+    mergedIntoId: number | null = null
+  ): AdminMaintenancePartDto => ({ id, code, name, kind, active: true, mergedIntoId });
 
   describe('isSeededPart', () => {
     it('a row carrying a code is one of the 13 the system seeded', () => {
@@ -95,6 +98,49 @@ describe('maintenance-parts.mappers', () => {
 
       expect(sortMaintenancePartsByName(parts).map((p) => p.id)).toEqual([1, 2]);
       expect(parts.map((p) => p.id)).toEqual([2, 1]);
+    });
+  });
+
+  describe('isMergedPart', () => {
+    it('a row carrying a mergedIntoId has been folded away', () => {
+      expect(isMergedPart(part(1, 'จาระบี PBR', null, 'PART', 2))).toBe(true);
+    });
+
+    it('a row with no mergedIntoId stands on its own', () => {
+      expect(isMergedPart(part(1, 'จาระบี'))).toBe(false);
+    });
+  });
+
+  describe('mergeableTargets', () => {
+    it('offers only rows of the SAME kind as the source', () => {
+      const source = part(1, 'จาระบี', null, 'PART');
+      const labour = part(2, 'ค่าแรงเปลี่ยนสายพาน', null, 'LABOUR');
+      const otherPart = part(3, 'จาระบี PBR', null, 'PART');
+
+      expect(mergeableTargets([source, labour, otherPart], source).map((p) => p.id)).toEqual([3]);
+    });
+
+    it('never offers the source row itself', () => {
+      const source = part(1, 'จาระบี');
+      expect(mergeableTargets([source], source)).toEqual([]);
+    });
+
+    it('excludes a row already merged away, so no chain can form', () => {
+      const source = part(1, 'จาระบี');
+      const alreadyMerged = part(2, 'จาระบี PBR', null, 'PART', 3);
+      const validTarget = part(3, 'จารบีทนความร้อน');
+
+      const result = mergeableTargets([source, alreadyMerged, validTarget], source);
+
+      expect(result.map((p) => p.id)).toEqual([3]);
+    });
+
+    it('sorts the offered rows by name', () => {
+      const source = part(1, 'x');
+      const beta = part(2, 'beta');
+      const alpha = part(3, 'alpha');
+
+      expect(mergeableTargets([source, beta, alpha], source).map((p) => p.id)).toEqual([3, 2]);
     });
   });
 });

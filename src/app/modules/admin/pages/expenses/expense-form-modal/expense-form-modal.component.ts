@@ -37,6 +37,11 @@ import {
 
 const AMOUNT_MAX_DECIMALS = 2;
 
+// OBRS-845: locked contract (client-side courtesy check only — the backend re-validates by
+// magic bytes and is the real gate).
+const RECEIPT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const RECEIPT_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
 // OBRS-1374 (schema.sql expense_items.description VARCHAR(255)).
 const ITEM_DESCRIPTION_MAX_LENGTH = 255;
 
@@ -102,6 +107,18 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
   protected readonly ITEM_UNIT_MAX_LENGTH = ITEM_UNIT_MAX_LENGTH;
   protected isSubmitting = false;
   protected readonly expenseForm: FormGroup;
+
+  /**
+   * OBRS-845: the receipt attach/replace/remove/view block. Local state, NOT read off
+   * `selectedExpense.hasReceipt` on every render — that `@Input` is the parent's cache
+   * snapshot and this modal mutates the file out from under it via its OWN API calls (upload/
+   * delete), the same reason `editingOwnerLabel`/`editingPayeeName` above stay getters onto the
+   * input rather than the other way around: this one specifically needs to be writable after a
+   * successful upload/remove without waiting on the parent's `reloadStructure()` round trip.
+   */
+  protected hasReceipt = false;
+  protected receiptBusy = false;
+  protected receiptError = '';
 
   private readonly subscriptions = new Subscription();
 
@@ -176,9 +193,12 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
     if (this.isOpen) {
       if (this.mode === 'edit' && this.selectedExpense) {
         this.initEditForm(this.selectedExpense);
+        this.hasReceipt = this.selectedExpense.hasReceipt;
       } else {
         this.initCreateForm();
+        this.hasReceipt = false;
       }
+      this.receiptError = '';
     } else {
       // FormGroup.reset() blanks the controls a FormArray HOLDS, it does not remove them - a
       // four-line bill would leave four empty rows behind for the next open. Clear it first.
@@ -206,6 +226,12 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
    * which reads as "no payee" and is one save away from becoming true. */
   protected get editingPayeeName(): string {
     return this.selectedExpense?.payeeName ?? '';
+  }
+
+  /** OBRS-845: the receipt block needs an existing expense id — `POST/DELETE/GET
+   * .../{id}/receipt...` all 404 with none — so it renders on edit only, never on create. */
+  protected get showReceiptSection(): boolean {
+    return this.mode === 'edit' && !!this.selectedExpense;
   }
 
   protected get itemsArray(): FormArray {
@@ -370,6 +396,104 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
     } finally {
       this.isSubmitting = false;
     }
+  }
+
+  /**
+   * OBRS-845: client-side validation is a courtesy for a fast error message only — the backend
+   * re-validates by magic bytes and 400s, which `extractApiErrorMessage` surfaces same as any
+   * other save failure. Mirrors `ReportUsabilityModalComponent.onFilesSelected`'s
+   * type-then-size check order and clear-the-input-immediately shape.
+   */
+  protected async onReceiptFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+
+    if (!file || !this.selectedExpense || this.receiptBusy) {
+      return;
+    }
+
+    this.receiptError = '';
+    if (!RECEIPT_ALLOWED_MIME_TYPES.includes(file.type)) {
+      this.receiptError = this.translate.instant('ADMIN.EXPENSES.RECEIPT.INVALID_TYPE');
+      return;
+    }
+    if (file.size > RECEIPT_MAX_SIZE_BYTES) {
+      this.receiptError = this.translate.instant('ADMIN.EXPENSES.RECEIPT.TOO_LARGE');
+      return;
+    }
+
+    this.receiptBusy = true;
+    try {
+      await firstValueFrom(this.adminApiService.uploadExpenseReceipt(this.selectedExpense.id, file));
+      this.hasReceipt = true;
+      await this.alertService.success(this.translate.instant('ADMIN.EXPENSES.RECEIPT.UPLOADED'));
+      await this.reloadStructure();
+    } catch (error) {
+      this.receiptError =
+        extractApiErrorMessage(error) || this.translate.instant('ADMIN.EXPENSES.RECEIPT.UPLOAD_FAILED');
+    } finally {
+      this.receiptBusy = false;
+    }
+  }
+
+  protected async removeReceipt(): Promise<void> {
+    if (!this.selectedExpense || this.receiptBusy) {
+      return;
+    }
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('ADMIN.EXPENSES.RECEIPT.REMOVE_TITLE'),
+      text: this.translate.instant('ADMIN.EXPENSES.RECEIPT.REMOVE_CONFIRM'),
+      confirmButtonText: this.translate.instant('ADMIN.COMMON.DELETE'),
+      cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.receiptError = '';
+    this.receiptBusy = true;
+    try {
+      await firstValueFrom(this.adminApiService.deleteExpenseReceipt(this.selectedExpense.id));
+      this.hasReceipt = false;
+    } catch (error) {
+      this.receiptError =
+        extractApiErrorMessage(error) || this.translate.instant('ADMIN.EXPENSES.RECEIPT.REMOVE_FAILED');
+    } finally {
+      this.receiptBusy = false;
+    }
+  }
+
+  /**
+   * OBRS-845: fetches the signed URL ON DEMAND — never cached on the component, because it
+   * expires — and opens it only after that fetch resolves. A 404 means this expense currently
+   * has no receipt (the row went stale, or it was removed from another tab).
+   */
+  protected async viewReceipt(): Promise<void> {
+    if (!this.selectedExpense || this.receiptBusy) {
+      return;
+    }
+    this.receiptError = '';
+    this.receiptBusy = true;
+    try {
+      const response = await firstValueFrom(
+        this.adminApiService.getExpenseReceiptUrl(this.selectedExpense.id)
+      );
+      const url = response?.data?.url;
+      if (url) {
+        window.open(url, '_blank', 'noopener');
+      }
+    } catch (error) {
+      this.receiptError = this.isNotFound(error)
+        ? this.translate.instant('ADMIN.EXPENSES.RECEIPT.NOT_FOUND')
+        : extractApiErrorMessage(error) || this.translate.instant('ADMIN.EXPENSES.RECEIPT.VIEW_FAILED');
+    } finally {
+      this.receiptBusy = false;
+    }
+  }
+
+  private isNotFound(error: unknown): boolean {
+    return (error as { status?: number } | null)?.status === 404;
   }
 
   private initCreateForm(): void {

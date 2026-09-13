@@ -71,6 +71,25 @@ const ACTION_ERROR_KEYS: Record<string, string> = {
   PARCEL_PHOTO_UNREADABLE: 'STAFF.PARCEL_DELIVERY.ERROR.PHOTO_FAILED',
 };
 
+// OBRS-1811: the resend action's own error codes. Its own table, like the claim
+// one above, because these are answers to "why did the SMS not go" and the
+// delivery-transition fallback ("the parcel is in the wrong state, the list has
+// been refreshed") answers none of them. The two rate-limit codes are DERIVED
+// from their message keys, not hand-typed: `RateLimitException` carries no
+// errorCode of its own, so `DomainException.getErrorCode()` builds one from the
+// key - the same derivation the collect rate limit above already relies on, and
+// the reason that entry exists is a card about exactly this kind of typo.
+const RESEND_ACTION_ERROR_KEYS: Record<string, string> = {
+  PARCEL_RECIPIENT_PHONE_INVALID: 'STAFF.PARCEL_DELIVERY.ERROR.RESEND_PHONE_INVALID',
+  PARCEL_RECIPIENT_PHONE_REQUIRED: 'STAFF.PARCEL_DELIVERY.ERROR.RESEND_PHONE_REQUIRED',
+  PARCEL_ALREADY_COLLECTED: 'STAFF.PARCEL_DELIVERY.ERROR.ALREADY_COLLECTED',
+  PARCEL_BOOKING_NOT_CONFIRMED: 'STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED',
+  [errorCodeFromMessageKey('parcel.resend.daily-limit-phone')]:
+    'STAFF.PARCEL_DELIVERY.ERROR.RESEND_LIMIT_PHONE',
+  [errorCodeFromMessageKey('parcel.resend.daily-limit-global')]:
+    'STAFF.PARCEL_DELIVERY.ERROR.RESEND_LIMIT_GLOBAL',
+};
+
 /**
  * Smart page, rendered as the _ส่งมอบ_ tab of
  * `/staff/parcels/schedule/:scheduleId` (OBRS-574 merged it with the verify
@@ -110,6 +129,11 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
   // OBRS-1388 — "ยื่นเคลม" dialog state. `claimDialogParcel` is the row
   // already in hand (optimistic open, design-system §6); `claimHistory` and
   // `filedClaim` arrive from the server and are never guessed client-side.
+  // OBRS-1811
+  protected resendDialogParcel: ParcelDeliveryListItemDto | null = null;
+  protected isResending = false;
+  protected resendErrorKey: string | null = null;
+
   protected claimDialogParcel: ParcelDeliveryListItemDto | null = null;
   protected claimHistory: ParcelClaimRespDto[] = [];
   protected isClaimHistoryLoading = false;
@@ -199,6 +223,97 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
   protected closeCollectDialog(): void {
     if (this.isCollecting) return;
     this.collectDialogParcelId = null;
+  }
+
+  /**
+   * OBRS-1811: the badge that tells staff the recipient may never have been
+   * reached. `'failed'` is the SMS provider refusing the message; `'no_phone'`
+   * is a parcel with no recipient number at all, which used to be completely
+   * silent. Anything else - including a MISSING value - returns null, because a
+   * row with no attempt recorded carries no information and must not be dressed
+   * up as either outcome.
+   */
+  protected arrivalNotificationWarning(row: ParcelDeliveryListItemDto): string | null {
+    if (row.arrivalNotificationResult === 'failed') {
+      return 'STAFF.PARCEL_DELIVERY.NOTIFY.FAILED';
+    }
+    if (row.arrivalNotificationResult === 'no_phone') {
+      return 'STAFF.PARCEL_DELIVERY.NOTIFY.NO_PHONE';
+    }
+    return null;
+  }
+
+  protected openResendDialog(row: ParcelDeliveryListItemDto): void {
+    if (this.isRowBlocked(row)) return;
+    this.resendErrorKey = null;
+    this.resendDialogParcel = row;
+  }
+
+  protected closeResendDialog(): void {
+    if (this.isResending) return;
+    this.resendDialogParcel = null;
+  }
+
+  /**
+   * OBRS-1811. The dialog always emits a number, so the correction decision is
+   * made HERE by comparing it with the row: unchanged means send the body
+   * without `recipientPhone` (a plain resend), changed means send it and let
+   * the server amend the parcel. Sending the same number back as a
+   * "correction" would write a no-op audit row claiming an edit that did not
+   * happen.
+   */
+  protected confirmResend(recipientPhone: string): void {
+    const row = this.resendDialogParcel;
+    if (!row) return;
+
+    const isCorrection = recipientPhone !== row.recipientPhone;
+    this.isResending = true;
+    this.resendErrorKey = null;
+    this.staffApiService
+      .resendParcelArrivalNotification(row.parcelId, isCorrection ? { recipientPhone } : {})
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => {
+          this.isResending = false;
+          this.resendDialogParcel = null;
+          const data = resp?.data;
+          if (!data) {
+            // No body to trust - re-read rather than guess at the new row state.
+            void this.store.refresh();
+            return;
+          }
+          this.store.mutate((rows) =>
+            rows.map((r) =>
+              r.parcelId === row.parcelId
+                ? {
+                    ...r,
+                    recipientPhone: data.recipientPhone,
+                    arrivalNotificationResult: data.result,
+                  }
+                : r
+            )
+          );
+          // 'sent' is the PROVIDER accepting the message, never a delivery
+          // receipt - the two toasts are worded to keep that distinction.
+          this.alertService.toast(
+            this.translate.instant(
+              data.result === 'sent'
+                ? 'STAFF.PARCEL_DELIVERY.NOTIFY.RESEND_OK'
+                : 'STAFF.PARCEL_DELIVERY.NOTIFY.RESEND_NOT_SENT'
+            ),
+            data.result === 'sent' ? 'success' : 'error'
+          );
+        },
+        error: (err: unknown) => {
+          this.isResending = false;
+          const errorCode = (err as HttpErrorResponse)?.error?.errorCode as string | undefined;
+          this.resendErrorKey = mapApiErrorCode(
+            errorCode,
+            RESEND_ACTION_ERROR_KEYS,
+            'STAFF.PARCEL_DELIVERY.ERROR.RESEND_GENERIC'
+          );
+        },
+      });
   }
 
   /** Opens optimistically (design-system §6): `row` is already in hand, so
