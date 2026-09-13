@@ -40,6 +40,8 @@
             renaming a garage on the registry screen changes every row of this column at once. -->
             <th>{{ 'ADMIN.EXPENSES.PAYEE.LABEL' | translate }}</th>
             <th>{{ 'ADMIN.EXPENSES.NOTE' | translate }}</th>
+            <!-- OBRS-845: lets the owner scan for the rows still missing tax evidence. -->
+            <th>{{ 'ADMIN.EXPENSES.RECEIPT.LABEL' | translate }}</th>
             @if (canWrite) {
               <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
             }
@@ -55,6 +57,8 @@
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 <!-- OBRS-1577: the payee column's skeleton cell. -->
+                <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+                <!-- OBRS-845: the receipt column's skeleton cell. -->
                 <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 @if (canWrite) {
                   <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -90,6 +94,22 @@
                 <td class="expense-money">{{ formatMoney(row.amount) }}</td>
                 <td>{{ row.payeeName || '-' }}</td>
                 <td [attr.title]="row.note || null">{{ row.note || '-' }}</td>
+                <td data-testid="expense-receipt-cell">
+                  <!-- OBRS-845: state is never hue alone — icon shape + text differ, not just
+                  color, so this still reads in dark mode, colour-blindness and greyscale print. -->
+                  @if (row.hasReceipt) {
+                    <span class="admin-status is-success admin-status--icon">
+                      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">check_circle</span>
+                      {{ 'ADMIN.EXPENSES.RECEIPT.ATTACHED' | translate }}
+                    </span>
+                  }
+                  @if (!row.hasReceipt) {
+                    <span class="admin-status is-neutral admin-status--icon">
+                      <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">radio_button_unchecked</span>
+                      {{ 'ADMIN.EXPENSES.RECEIPT.MISSING' | translate }}
+                    </span>
+                  }
+                </td>
                 @if (canWrite) {
                   <td class="text-right">
                     <div class="admin-inline-actions">

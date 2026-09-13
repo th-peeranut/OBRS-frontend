@@ -26,6 +26,7 @@ function row(id: number): ExpenseRow {
     note: '',
     source: 'FIELD',
     items: [],
+    hasReceipt: false,
   };
 }
 
