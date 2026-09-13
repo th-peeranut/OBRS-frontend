@@ -14,7 +14,8 @@ import { FooterComponent } from './components/footer/footer.component';
 import { StepperComponent } from './components/stepper/stepper.component';
 import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
-import { ReportUsabilityFabComponent } from './components/report-usability-fab/report-usability-fab.component';
+import { ReportUsabilityModalComponent } from './components/report-usability-modal/report-usability-modal.component';
+import { ReportTriggerComponent } from './components/report-trigger/report-trigger.component';
 import { ExportButtonComponent } from './components/export-button/export-button.component';
 // OBRS-1734: the one combined date-range picker, replacing the two-separate-
 // `p-datePicker` pattern one report page at a time.
@@ -75,7 +76,8 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     StepperComponent,
     LangSwitcherComponent,
     ThemeToggleComponent,
-    ReportUsabilityFabComponent,
+    ReportUsabilityModalComponent,
+    ReportTriggerComponent,
     ExportButtonComponent,
     DateRangePickerComponent,
     PromoCodeFieldComponent,
@@ -126,7 +128,8 @@ import { TitleLabelPipe } from './pipes/title-label.pipe';
     StepperComponent,
     LangSwitcherComponent,
     ThemeToggleComponent,
-    ReportUsabilityFabComponent,
+    ReportUsabilityModalComponent,
+    ReportTriggerComponent,
     ExportButtonComponent,
     DateRangePickerComponent,
     PromoCodeFieldComponent,

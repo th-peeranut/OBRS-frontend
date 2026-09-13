@@ -1,15 +1,3 @@
-<!-- Floating Action Button -->
-<button
-  #fabButton
-  class="report-fab"
-  type="button"
-  [attr.aria-label]="'USABILITY_REPORT.FAB.ARIA_LABEL' | translate"
-  (click)="openModal()"
-  >
-  <span class="material-symbols-outlined" [attr.translate]="'no'">flag</span>
-  <span class="report-fab__label">{{ 'USABILITY_REPORT.FAB.LABEL' | translate }}</span>
-</button>
-
 <!-- Modal Backdrop -->
 @if (isModalOpen) {
   <div
