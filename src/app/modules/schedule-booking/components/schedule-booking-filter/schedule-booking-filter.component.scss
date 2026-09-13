@@ -158,8 +158,9 @@
 }
 
 // Not a `.btn`: the whole bar is the button and this is its affordance label.
-// $primary-blue is 5.14:1 on $primary-white (variables.scss:25 records white on
-// it at 5.33:1 — the pair is symmetric).
+// $primary-blue is 5.33:1 on $primary-white (variables.scss:25 records white on
+// it at 5.33:1 — the pair is symmetric, contrast ratio is the same either
+// direction).
 .search-summary__action {
   flex: 0 0 auto;
   font-size: $font-size-sm;

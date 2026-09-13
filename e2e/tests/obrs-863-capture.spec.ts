@@ -44,7 +44,12 @@ function todayLocal(): string {
  */
 const FILTER = {
   roundTrip: { id: 'one_way', name: 'One way' },
-  passengerInfo: [{ type: 'adult', count: 2 }],
+  // `'ADULT'`, not the shared `STORE_SEED`'s lowercase `'adult'`. `getPayload()`
+  // counts `type === 'ADULT'`, so the lowercase seed resolves to 0 passengers
+  // and `isSearchable()` is false — i.e. it describes a search that never ran,
+  // which is exactly the state this page must NOT collapse in. Nothing else
+  // asserted `numberOfPassengers` before, so the fixture's case never mattered.
+  passengerInfo: [{ type: 'ADULT', count: 2 }],
   startStationId: 1,
   stopStationId: 4,
   departureDate: todayLocal(),

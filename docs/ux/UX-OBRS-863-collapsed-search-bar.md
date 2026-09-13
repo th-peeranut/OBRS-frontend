@@ -38,22 +38,34 @@ No new files. No new NgRx action, reducer or selector.
 
 | State | Bar | Form | Trigger |
 |---|---|---|---|
-| collapsed (default once a search exists) | route · date(s) · seats + **แก้ไข / Edit** | not rendered | arrival, and after a successful search |
+| collapsed | route · date(s) · seats + **แก้ไข / Edit** | not rendered | a search actually ran AND there is a summary to show in the form's place |
 | expanded | same summary + **ย่อ / Collapse** | rendered | pressing the bar |
 | no search yet | `SEARCH_SUMMARY_EMPTY` | rendered | nothing in the store to summarise |
 
-The third row is the one worth stating: the bar collapses only once a summary
-actually resolves. A customer who reaches this route directly gets the form, not
-an empty strip above an empty page. The decision is taken **once** — a later
-`scheduleFilter` emission (the day strip writes one on every tap) must not reopen
-a bar the customer just closed.
+**Both halves of that trigger, not either**, and each was got wrong once:
+
+- *A renderable summary is not a search.* `roundTripOnChange$` dispatches
+  `getRawValue()` on every trip-type toggle, ungated — so a customer who picks a
+  route and touches the pill before setting a passenger count writes a filter
+  that `buildSummary()` can render and `isSearchable()` rejects. Collapsing on
+  the summary alone put the form away mid-fill, above an empty list.
+- *A search is not a summary.* `isSearchable()` never looks at the date, so a
+  restored filter with a null `departureDate` searches while `buildSummary()`
+  returns null. Collapsing on the search alone would hide the form behind a bar
+  reading "no route selected yet" over a full result list.
+
+The decision is taken **once**: a later `scheduleFilter` emission — the day strip
+writes one on every tap — must not reopen a bar the customer just closed, or
+close one they just opened.
 
 ## 3. Where the summary's values come from
 
-`selectScheduleFilter` + `selectProvinceWithStation`, resolved through
-`getStationFallbackLabel` with the same `'en' | 'th'` narrowing
+`selectScheduleFilter` + `selectProvinceWithStation`, resolved through the
+shared `getStationLabelById()` — literally the same function the result list
+calls, extracted to `station.interface.ts` during review from the private copy
+the list already had — with the same `'en' | 'th'` narrowing
 `ScheduleBookingListComponent.normalizeLocale()` uses, and dates through
-`formatDayChip` — the same formatter the day strip renders its chips with.
+`formatDayChip`, the same formatter the day strip renders its chips with.
 
 Deliberately **not** the form controls. The form holds what the customer is
 part-way through editing; the list below holds what the last search returned. A

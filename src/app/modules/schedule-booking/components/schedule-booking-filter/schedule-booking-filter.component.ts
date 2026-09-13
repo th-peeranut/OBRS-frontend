@@ -38,7 +38,7 @@ import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-list/schedule-list.action';
 import {
-  getStationFallbackLabel,
+  getStationLabelById,
   StationApi,
 } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
@@ -233,12 +233,15 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     ])
       .pipe(takeUntil(this.destroy$))
       .subscribe(([scheduleFilter, stations, lang]) => {
+        // Settling here (on "a summary can be rendered") rather than where a
+        // search actually dispatches let this fire off an INCOMPLETE write —
+        // e.g. the trip-type toggle writes the raw form on every change,
+        // stations-only, 0 passengers — collapsing the form on a customer who
+        // had only picked a route and never pressed Search. Settling is done in
+        // the `isSearchable` branch below instead, which is the same condition
+        // that actually fires `invokeGetScheduleListApi` — see the UX spec's
+        // own trigger: "arrival, and after a successful search".
         this.summary = this.buildSummary(scheduleFilter, stations, lang);
-
-        if (this.summary && !this.summarySettled) {
-          this.summarySettled = true;
-          this.isExpanded = false;
-        }
       });
 
     this.scheduleFilter
@@ -315,6 +318,23 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
                 schedule_filter: payload,
               })
             );
+
+            // OBRS-863 AC#1/AC#3: collapse in lockstep with a search that
+            // actually ran — restored on arrival, or a later write (day strip,
+            // trip-type toggle) that happens to already be a complete search —
+            // never merely because `buildSummary` can render one.
+            //
+            // BOTH conditions, not either: `isSearchable()` does not look at the
+            // date, so a restored filter carrying a null `departureDate` searches
+            // while `buildSummary()` returns null, and collapsing on that alone
+            // would hide the form behind a bar reading "no route selected yet"
+            // over a full result list. `summary` is already fresh here — the
+            // `combineLatest` above is subscribed FIRST, so it has recomputed off
+            // this same store emission by the time this line runs.
+            if (!this.summarySettled && this.summary) {
+              this.summarySettled = true;
+              this.isExpanded = false;
+            }
           }
         }
       });
@@ -588,12 +608,12 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     // and must read the English one here.
     const locale = (lang || '').toLowerCase().startsWith('th') ? 'th' : 'en';
 
-    const from = this.summaryStationLabel(
+    const from = getStationLabelById(
       scheduleFilter.startStationId,
       stations,
       locale
     );
-    const to = this.summaryStationLabel(
+    const to = getStationLabelById(
       scheduleFilter.stopStationId,
       stations,
       locale
@@ -623,20 +643,6 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         0
       ),
     };
-  }
-
-  private summaryStationLabel(
-    stationId: string | number | null | undefined,
-    stations: StationApi[] | null | undefined,
-    locale: 'en' | 'th'
-  ): string {
-    if (stationId === null || stationId === undefined || stationId === '') {
-      return '';
-    }
-
-    const parsed = Number(stationId);
-    const match = (stations ?? []).find((station) => station.id === parsed);
-    return match ? getStationFallbackLabel(match, locale) : '';
   }
 
   /** `formatDayChip` rather than a new formatter: it is what the day strip one

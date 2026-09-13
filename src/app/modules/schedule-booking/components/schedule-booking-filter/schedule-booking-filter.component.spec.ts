@@ -1988,6 +1988,35 @@ describe('ScheduleBookingFilterComponent — collapsed search summary (OBRS-863)
     expect(formCopies()).toBe(1);
   });
 
+  // The two halves of the collapse condition, each pinned from the side that
+  // used to get it wrong. Every case above seeds a filter for which BOTH hold,
+  // which is exactly why neither was caught by them.
+  it('AC#1: a renderable summary is not enough — no search ran, so the form stays open', async () => {
+    // Stations and a date resolve, so `buildSummary()` succeeds; no passenger
+    // does, so `isSearchable()` does not. This is the store the trip-type pill
+    // writes when a customer picks a route and touches it before setting a
+    // passenger count — it dispatches `getRawValue()` unconditionally, unlike
+    // the Search button. Collapsing here put the form away mid-fill, above an
+    // empty result list.
+    await setup({ ...SAVED_FILTER, passengerInfo: [{ type: 'ADULT', count: 0 }] });
+
+    expect(component.summary).not.toBeNull();
+    expect(component.isExpanded).toBeTrue();
+    expect(formCopies()).toBe(1);
+  });
+
+  it('AC#1: a search with nothing to summarise does not collapse either', async () => {
+    // `isSearchable()` never looks at the date, so this searches; the summary
+    // reads the STORE's null `departureDate` and cannot be built. Collapsing on
+    // the search alone would hide the form behind a bar reading "no route
+    // selected yet" over a full result list.
+    await setup({ ...SAVED_FILTER, departureDate: null });
+
+    expect(component.summary).toBeNull();
+    expect(component.isExpanded).toBeTrue();
+    expect(formCopies()).toBe(1);
+  });
+
   it('AC#2: opening it renders the one existing form, never a second copy', async () => {
     await setup(SAVED_FILTER);
 

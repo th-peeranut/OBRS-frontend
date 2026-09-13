@@ -54,22 +54,28 @@ own frame, which was sized for a form and still wrapped 96px of margin+padding
 around a 65px bar. `.booking-section .booking-card.is-collapsed` gives that up in
 the collapsed state only.
 
-## 2) AC#1–#4, #7 — unit (`schedule-booking-filter.component.spec.ts`, 7 new cases)
+## 2) AC#1–#4, #7 — unit (`schedule-booking-filter.component.spec.ts`, 9 new cases)
 
 ```
 npx ng test --watch=false --browsers=ChromeHeadless --include="src/app/modules/schedule-booking/**/*.spec.ts"
-→ Executed 144 of 144 SUCCESS      (137 before this card)
+→ Executed 146 of 146 SUCCESS      (137 before this card)
 ```
 
 | Case | Result |
 |---|---|
 | AC#1 a restored search renders collapsed, form gone | ✓ |
 | AC#1 nothing searched → the form stays open instead | ✓ |
+| AC#1 a renderable summary is not enough — no search ran, form stays open | ✓ |
+| AC#1 a search with nothing to summarise does not collapse either | ✓ |
 | AC#2 opening renders the ONE existing form, never a second copy | ✓ |
 | AC#3 a successful search collapses; a refused one does not | ✓ |
 | AC#4 summary reads the store, not the form being edited | ✓ |
 | AC#4 a one-way search summarises one date, not a range | ✓ |
 | AC#7 real `<button type=button>` publishing `aria-expanded` | ✓ |
+
+Rows 3 and 4 were added **after review**, one per half of the collapse condition
+— see §6. The first seven all seed an already-complete filter, for which both
+halves happen to hold, which is exactly why none of them caught either bug.
 
 ⚠️ These are green only because the block uses `provideMockStore`. Written first
 with a hand-rolled store stub they passed alone and failed **six ways** in a
@@ -103,7 +109,7 @@ the *same* roster through the *same* resolver, so they cannot disagree.
 
 ```
 for each of the 23 npm `test:*` scripts CI runs        → 23/23 OK
-npx ng test --watch=false --browsers=ChromeHeadless    → Executed 7159 of 7159 SUCCESS
+npx ng test --watch=false --browsers=ChromeHeadless    → Executed 7161 of 7161 SUCCESS
 npm run e2e:gate                                       → see §5
 ```
 
@@ -159,7 +165,58 @@ E2E_GATE_PORT=4233 npx playwright test --config=playwright.gate.config.ts custom
 → 4 passed
 ```
 
-## 6) Not covered here
+## 6) What review found, and what changed after it
+
+`obrs-scrutinize` ran against the first commit and returned `##SELF_FIXED##`.
+Two of its three fixes were real defects, not style:
+
+**The collapse fired on paths where no search had run.** The settle was wired to
+"a summary can be rendered". `roundTripOnChange$` dispatches
+`bookingForm.getRawValue()` on **every** trip-type toggle, ungated — unlike
+`onSearch()`, it does not check `isSearchable()`. So a customer who picked both
+stations and then touched the round-trip pill before setting a passenger count
+wrote a filter that `buildSummary()` renders happily (it checks from/to/date, not
+passengers) while `isSearchable()` rejects it: the form collapsed mid-fill, above
+an empty result list. Moved into the `isSearchable(payload)` branch that actually
+dispatches the search.
+
+**That fix opened the mirror hole, which I then closed.** `isSearchable()` never
+looks at the date, so a restored filter carrying a null `departureDate` searches
+while `buildSummary()` returns null — collapsing on the search alone would hide
+the form behind a bar reading "no route selected yet" over a full result list.
+The condition is now **both**: `if (!this.summarySettled && this.summary)`.
+`summary` is fresh at that line because the `combineLatest` is subscribed first
+and has recomputed off the same store emission.
+
+Two unit cases were added, one per half. Both hold the fixture complete except
+for the one field under test, which is why the original seven missed them.
+
+**`summaryStationLabel()` was a duplicate** of `ScheduleBookingListComponent`'s
+private `getStationLabelById()` — same guard, same `Number()`, same `.find()`,
+same call. Extracted to `station.interface.ts` and both components repointed at
+it, which makes AC#4 structural rather than a convention: the bar and the list
+now resolve station names through one function.
+
+A contrast comment claiming `5.14:1` was also corrected to the measured `5.33:1`.
+
+**Caught by the capture spec after those fixes, and it was the fixture's fault:**
+`obrs-863-capture.spec.ts` seeded `passengerInfo: [{ type: 'adult', … }]`, copied
+from the shared `STORE_SEED`. `getPayload()` counts `type === 'ADULT'`, so the
+lowercase seed resolves to **0 passengers** — it describes a search that never
+ran, which is now exactly the state the page must not collapse in. Fixture fixed
+to `'ADULT'`; the measurement is unchanged at 983px → 610px.
+
+One finding was returned as a note rather than fixed: `buildSummary()` returns
+null when a store-held station id does not resolve against the current roster (a
+deactivated or renamed stop). With the condition above, that leaves the form
+**open** — safe, not misleading — because `isSearchable()` resolves the same ids
+and so no search runs either. Worth an owner's call only if stale filters
+referencing dead stops turn out to be common.
+
+Re-run after all of it: unit 146/146 in the module and 7161/7161 overall, capture
+4/4, all 23 CI gate scripts, `e2e:gate` — see the table above.
+
+## 7) Not covered here
 
 - No SIT verification: FE-only, no external integration, nothing deployed.
 - The sold-out/no-results empty states keep the form OPEN (their seeded filter
