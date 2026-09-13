@@ -111,6 +111,70 @@ function dayPayloadWithOtherCounter(
 }
 
 /**
+ * OBRS-1755 BR-31 - a DAY counter's FIRST submit on a round: ค่าหัว configured,
+ * nothing recorded yet. The branch the whole "the screen may differ from the
+ * server's current figure" ruling stands on, and the one the F1 fixture repair
+ * accidentally removed from this file.
+ *
+ * `systemHeadCount` (12) is deliberately non-zero AND different from
+ * `recordedHeadCount` (0), so a seed taken from the wrong one is visible.
+ */
+function dayPayloadNothingRecorded(
+  overrides: Partial<StaffRemittanceDto> = {},
+): StaffRemittanceDto {
+  return dayPayload({
+    perHeadLines: [
+      {
+        stopId: 11,
+        stopName: 'บ้านบึง',
+        salesPointId: 2,
+        ratePerHead: '20.00',
+        configured: true,
+        systemHeadCount: 12,
+        recordedHeadCount: 0,
+        recordedAmount: '0.00',
+      },
+    ],
+    perHeadOtherCountersAmount: '0.00',
+    deductions: { perHeadDeducted: '0.00', advancePaidOut: '0.00', deferredTicketCash: '0.00' },
+    // 2180.00 cash in, nothing deducted YET - the prefill is what will deduct it.
+    myExpectedCash: '2180.00',
+    roundExpectedCash: '2180.00',
+    ...overrides,
+  });
+}
+
+/**
+ * The other branch, made observable: a round where ค่าหัว IS recorded (9) and
+ * the system counted something ELSE (12). A seed that reached for
+ * `systemHeadCount` here would read 12, so the two branches cannot be confused.
+ */
+function dayPayloadRecordedDiffersFromSystem(
+  overrides: Partial<StaffRemittanceDto> = {},
+): StaffRemittanceDto {
+  return dayPayload({
+    perHeadLines: [
+      {
+        stopId: 11,
+        stopName: 'บ้านบึง',
+        salesPointId: 2,
+        ratePerHead: '20.00',
+        configured: true,
+        systemHeadCount: 12,
+        recordedHeadCount: 9,
+        recordedAmount: '180.00',
+      },
+    ],
+    perHeadOtherCountersAmount: '0.00',
+    deductions: { perHeadDeducted: '180.00', advancePaidOut: '0.00', deferredTicketCash: '0.00' },
+    // 2180.00 cash in - 180.00 already recorded.
+    myExpectedCash: '2000.00',
+    roundExpectedCash: '2000.00',
+    ...overrides,
+  });
+}
+
+/**
  * What the SERVER will compute after it writes `headCounts`, derived from the
  * fixture by BR-4 - an independent oracle, not a restatement of the component.
  * The client's `expectedCashAmount` has to equal this or the submit is refused
@@ -260,11 +324,33 @@ describe('StaffRemittanceTabComponent', () => {
 
   // ── BR-10: the system's own head count is visible either way ────────────
 
-  it('prefills the head count from systemHeadCount and says it matches', () => {
-    open(dayPayload());
+  // POSITIVE CONTROL (OBRS-1755 BR-31). This used to run on a fixture with
+  // recordedHeadCount 12 AND systemHeadCount 12: `recordedHeadCount > 0`
+  // short-circuits first, so the 12 on screen proved nothing about the
+  // systemHeadCount branch, and deleting the prefill entirely left it green.
+  // The fixture below records NOTHING, so 12 can only have come from the
+  // system count.
+  it('prefills the head count from systemHeadCount when nothing is recorded yet', () => {
+    open(dayPayloadNothingRecorded());
+
+    expect(component['perHeadLines'][0].recordedHeadCount)
+      .withContext('the branch under test is the one where nothing is recorded')
+      .toBe(0);
     expect(component['headCountInputs'][11]).toBe('12');
     expect(present('remittance-per-head-system-11')).toBeTrue();
     expect(component['isHeadCountOverridden'](component['perHeadLines'][0])).toBeFalse();
+  });
+
+  // The other arm of the same ternary, with the two counts DIFFERENT so the
+  // answer names which one was used.
+  it('prefills from the RECORDED count, not the system count, once one exists', () => {
+    open(dayPayloadRecordedDiffersFromSystem());
+
+    expect(component['headCountInputs'][11])
+      .withContext('9 is recorded, 12 is what the system counted')
+      .toBe('9');
+    // ...and because they disagree, the screen must already be saying so (BR-10).
+    expect(component['isHeadCountOverridden'](component['perHeadLines'][0])).toBeTrue();
   });
 
   it('keeps showing the system count as an OVERRIDE once it is typed over', () => {
@@ -621,7 +707,12 @@ describe('StaffRemittanceTabComponent', () => {
   // half now travels as its own opaque field.
   describe('OBRS-1755 F1 — another counter\'s per-head on the same round', () => {
     it('the fixtures obey the server\'s invariant, so the tests below mean something', () => {
-      for (const payload of [dayPayload(), dayPayloadWithOtherCounter()]) {
+      for (const payload of [
+        dayPayload(),
+        dayPayloadWithOtherCounter(),
+        dayPayloadNothingRecorded(),
+        dayPayloadRecordedDiffersFromSystem(),
+      ]) {
         const money = (value: string) => Math.round(Number(value) * 100);
         const visible = payload.perHeadLines.reduce(
           (sum, line) => sum + money(line.recordedAmount),
@@ -705,6 +796,68 @@ describe('StaffRemittanceTabComponent', () => {
       open(roundPayload());
       expect(component['pendingExpectedCents']).toBe(168000);
       expect(present('remittance-per-head-other-counters')).toBeFalse();
+    });
+  });
+
+  // ── OBRS-1755 BR-31: the screen matches the POST-WRITE figure ───────────
+  //
+  // Not "the screen equals myExpectedCash". `SettlementService.submit()` upserts
+  // every line of `perHead[]` BEFORE it recomputes and compares against
+  // `expectedCashAmount` (BR-15), and `buildPayload()` sends every configured
+  // line - falling back to `systemHeadCount` where nothing is recorded. So a
+  // prefill is not decoration: it gets written, and the figure the clerk is
+  // shown has to already include it. Forcing the two to be equal would refuse
+  // a DAY counter's FIRST submit as stale, every time - F1 rebuilt.
+  describe('OBRS-1755 BR-31 — a DAY counter submitting a round for the first time', () => {
+    it('shows what the server will compute AFTER the prefill is written', () => {
+      const payload = dayPayloadNothingRecorded();
+      open(payload);
+
+      // The oracle is derived from the fixture by BR-4, never copied off the
+      // getter under test.
+      const expected = serverExpectedAfterWrite(payload, { 11: 12 });
+      expect((component['pendingExpectedCents'] / 100).toFixed(2)).toBe(expected);
+    });
+
+    // The heart of BR-31: on THIS branch the screen legitimately disagrees with
+    // the number the payload arrived carrying, and the gap is exactly the
+    // prefill about to be written.
+    it('DIFFERS from the payload myExpectedCash by exactly the prefilled ค่าหัว', () => {
+      const payload = dayPayloadNothingRecorded();
+      open(payload);
+
+      const onWire = Math.round(Number(payload.myExpectedCash) * 100);
+      expect(component['pendingExpectedCents'])
+        .withContext('equal here would mean the prefill is not priced in')
+        .not.toBe(onWire);
+      // 12 heads x 20.00 = 240.00, the amount the submit is about to record.
+      expect(onWire - component['pendingExpectedCents']).toBe(24000);
+    });
+
+    it('submits that same figure, so the server has nothing to call stale', () => {
+      const payload = dayPayloadNothingRecorded();
+      open(payload);
+      api.postRemittanceSubmit.and.returnValue(resp(payload));
+
+      component['onSubmit']();
+
+      const sent = api.postRemittanceSubmit.calls.mostRecent().args[1];
+      expect(sent.perHead).toEqual([{ stopId: 11, headCount: 12 }]);
+      expect(sent.expectedCashAmount).toBe(serverExpectedAfterWrite(payload, { 11: 12 }));
+    });
+
+    // The contrast case, so "differs" above is not read as "always differs":
+    // once a count IS recorded and nobody edits it, the two definitions agree.
+    it('agrees with the payload figure on a round that HAS a recorded count', () => {
+      const payload = dayPayloadRecordedDiffersFromSystem();
+      open(payload);
+
+      expect(component['pendingExpectedCents']).toBe(
+        Math.round(Number(payload.myExpectedCash) * 100),
+      );
+      expect((component['pendingExpectedCents'] / 100).toFixed(2)).toBe(
+        serverExpectedAfterWrite(payload, { 11: 9 }),
+      );
     });
   });
 
