@@ -284,6 +284,16 @@ export default defineConfig({
     // terms as the rest: public fixtures for three families, a synthetic session
     // for the admin one.
     '**/obrs-568-dropdown-panel-geometry.spec.ts',
+    // OBRS-931. `position: sticky` is a used value, not a declared one: any ancestor
+    // with an `overflow` or a `transform` turns it back into a bar that scrolls away,
+    // and `<app-navbar>` is mounted per page on 21 customer templates. A stylesheet
+    // assertion would pass on every one of them; only a real scroll in a real engine
+    // knows which pages keep it. Belongs on the merge gate rather than in CAPTURE
+    // because the regression it catches is silent - the bar looks right until someone
+    // scrolls - and it is exactly the kind an unrelated layout change reintroduces.
+    // Hermetic on this lane's terms: it reuses e2e/support/customer-pages.ts, so every
+    // /api/** call is fulfilled in-browser.
+    '**/obrs-931-sticky-navbar.spec.ts',
   ],
 
   timeout: 60_000,
