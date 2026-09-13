@@ -9,25 +9,38 @@
       height="480px"
       (tilesloaded)="onTilesLoaded()"
       >
-      <!-- PICKUP MARKERS — iterate precomputed stable array; trackBy prevents destruction on reorder -->
+      <!-- PICKUP MARKERS — iterate precomputed stable array; trackBy prevents destruction on reorder.
+      OBRS-1838: bind position/content/zIndex/title individually, NOT [options] — MapAdvancedMarker's
+      ngOnChanges only reacts to those four named inputs, never to `changes['options']` (unlike the
+      legacy MapMarker, which calls setOptions() on any options change), so a recompute delivered only
+      through [options] would silently stop reaching the live marker after its first render. -->
       @for (m of pickupMarkers; track trackBySlug($index, m)) {
-        <map-marker
-          [options]="m.options"
+        <map-advanced-marker
+          [position]="m.options.position"
+          [content]="m.options.content"
+          [zIndex]="m.options.zIndex"
+          [title]="m.options.title"
           (mapClick)="onPickupMarkerClick(m.slug)"
-        ></map-marker>
+        ></map-advanced-marker>
       }
       <!-- DROPOFF MARKERS -->
       @for (m of dropoffMarkers; track trackBySlug($index, m)) {
-        <map-marker
-          [options]="m.options"
+        <map-advanced-marker
+          [position]="m.options.position"
+          [content]="m.options.content"
+          [zIndex]="m.options.zIndex"
+          [title]="m.options.title"
           (mapClick)="onDropoffMarkerClick(m.slug)"
-        ></map-marker>
+        ></map-advanced-marker>
       }
       <!-- USER LOCATION MARKER -->
       @if (userMarkerOptions) {
-        <map-marker
-          [options]="userMarkerOptions"
-        ></map-marker>
+        <map-advanced-marker
+          [position]="userMarkerOptions.position"
+          [content]="userMarkerOptions.content"
+          [zIndex]="userMarkerOptions.zIndex"
+          [title]="userMarkerOptions.title"
+        ></map-advanced-marker>
       }
       <!-- ROUTE POLYLINE -->
       @if (polylinePath.length > 1) {

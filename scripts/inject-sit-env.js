@@ -31,8 +31,16 @@ const maptilerKey = process.env.MAPTILER_API_KEY || '';
 const ga4MeasurementId = process.env.GA4_MEASUREMENT_ID || '';
 const clarityProjectId = process.env.CLARITY_PROJECT_ID || '';
 
+// OBRS-1838: the Cloud Map ID AdvancedMarkerElement needs. This script only ever
+// runs for SIT, so SIT's own Map ID is the correct default here rather than a
+// required variable -- a Map ID is a public identifier, not a credential, and
+// making it required would fail the SIT build until someone set a Netlify var.
+// MAPS_MAP_ID overrides it if SIT is ever repointed at another Cloud project.
+const mapsMapId = process.env.MAPS_MAP_ID || '6b1b77b585b50c8668808c25';
+
 const content = `export const localEnv = {
   mapsApiKey: '${values.mapsApiKey}',
+  mapsMapId: '${mapsMapId}',
   googleClientId: '${values.googleClientId}',
   maptilerKey: '${maptilerKey}',
   ga4MeasurementId: '${ga4MeasurementId}',

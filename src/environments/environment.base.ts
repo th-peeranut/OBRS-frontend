@@ -23,6 +23,14 @@ export const environmentBase = {
   useDevApiEndpoints: true,
   homeRouteSlug: 'chonburi_bangkok',
   mapsApiKey: '',
+  // OBRS-1838: the Cloud Map ID that AdvancedMarkerElement requires. Blank is
+  // the committed default for the same reason mapsApiKey is -- a Map ID is
+  // project-scoped, so SIT's cannot be reused by prod. Blank never renders:
+  // `showMap` already needs a non-empty mapsApiKey, so a blank Map ID can only
+  // co-occur with a map that was not going to draw anyway. The one combination
+  // that does bite is a real key with a blank Map ID -- markers silently stop
+  // appearing -- which is why inject-prod-env.js names the variable explicitly.
+  mapsMapId: '',
   googleClientId: '',
   // OBRS-424: MapTiler tile key for the internal fleet live map (layer 1).
   // Empty by default — no key has been provisioned yet (owner has been

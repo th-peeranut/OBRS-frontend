@@ -536,20 +536,41 @@ export class AuthService {
    * refresh token the untouched half would have kept working for a week after the user pressed
    * "sign out" — on a shared machine that is the whole point of the button, undone.
    *
-   * Order matters: local state is cleared and the navigation queued BEFORE the request, and the
-   * request is fire-and-forget. A slow or failed network must not leave the user sitting on a
-   * page that still believes they are signed in, and there is nothing useful to tell them about
-   * a logout call that failed — the backend answers 200 for every token it is handed anyway.
+   * OBRS-1855 moved the revoke itself into `endSession()`; the ordering rationale went with
+   * it. What is left here is the redirect, plus the booking context OBRS-903 attached to it.
    */
   logout(): void {
-    const refreshToken = this.getRefreshToken();
-    this.clearAuthData();
+    this.endSession();
     // OBRS-903: the cross-tab booking context outlives a tab by design, so
     // pressing "sign out" on a shared machine has to end it too. Deliberately
     // here and NOT in `clearAuthData()` — that also runs on the JWT-expired
     // login retry (`callLogin`) and inside the interceptor's 401 handling, where
     // wiping the customer's trip selection would recreate this very bug.
     clearBookingContext();
+
+    this.router.navigate(['/login']);
+  }
+
+  /**
+   * OBRS-1855: the revoking half of signing out, WITHOUT the redirect.
+   *
+   * OBRS-855 put the revoke inside `logout()`, and `logout()` ends on `/login`. The
+   * customer's own sign-out button lands on `/` instead, so it could not call `logout()`
+   * and called `clearAuthData()` directly — which never reaches the server. The customer
+   * was therefore the one role whose refresh token survived their own sign-out for the
+   * rest of its week (`application.yml` `refresh-expiration-time: 604800000`).
+   *
+   * Order matters: local state is cleared BEFORE the request, and the request is
+   * fire-and-forget. A slow or failed network must not leave the user sitting on a page
+   * that still believes they are signed in, and there is nothing useful to tell them about
+   * a logout call that failed — the backend answers 200 for every token it is handed anyway.
+   *
+   * ⛔ A new sign-out path calls THIS and then navigates wherever it likes. Calling
+   * `clearAuthData()` on its own is what this card exists to undo.
+   */
+  endSession(): void {
+    const refreshToken = this.getRefreshToken();
+    this.clearAuthData();
 
     if (refreshToken) {
       this.http
@@ -564,8 +585,6 @@ export class AuthService {
         )
         .subscribe({ error: () => undefined });
     }
-
-    this.router.navigate(['/login']);
   }
 
   isAuthenticated(): boolean {
