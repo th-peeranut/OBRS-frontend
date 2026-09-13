@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { RouteStop } from '../../../../../shared/interfaces/route-map.interface';
 import { buildMapsDirectionsUrl } from '../../../../../shared/lib/maps-directions-url';
+import { isTrustedMapsUrl } from '../../../../../shared/lib/trusted-maps-url';
 
 
 @Component({
@@ -69,9 +70,18 @@ export class RouteStopDetailCardComponent {
     return this.stop?.latitude != null && this.stop?.longitude != null;
   }
 
+  /** Security review 2026-09 (FE-5): the "open maps" button is enabled only for a URL that
+   *  `openMaps()` would actually follow, so a refused value reads as "no link" rather than as
+   *  a button that does nothing. */
+  get canOpenMaps(): boolean {
+    return isTrustedMapsUrl(this.stop?.googleMapsUrl);
+  }
+
   openMaps(): void {
-    if (this.stop?.googleMapsUrl) {
-      window.open(this.stop.googleMapsUrl, '_blank', 'noopener,noreferrer');
+    // Security review 2026-09 (FE-5): an admin-typed URL is opened only when it is a Google
+    // Maps link; `window.open` is not run through Angular's sanitizer.
+    if (this.canOpenMaps) {
+      window.open(this.stop!.googleMapsUrl!, '_blank', 'noopener,noreferrer');
     }
   }
 
