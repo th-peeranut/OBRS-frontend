@@ -1238,6 +1238,21 @@ export interface AdminExpenseDto {
    */
   items?: AdminExpenseItemDto[];
   rejectionReason?: string | null;
+  /**
+   * OBRS-845: the storage path of the attached receipt file (photo/PDF of the paper bill), or
+   * `null` when none is attached. A storage path, NOT a URL — the bucket is private, so this can
+   * never be rendered as a link or an `<img src>`. The only way to view the file is
+   * `getExpenseReceiptUrl()` below, which exchanges it for a short-lived signed URL on demand.
+   */
+  receiptFileRef?: string | null;
+}
+
+/** OBRS-845: `GET /private/expenses/{id}/receipt/url` 200 body. `url` is a short-lived SIGNED
+ * URL into the private receipt bucket — fetch it ON DEMAND at the moment of viewing and never
+ * cache/store it (it expires; default `expiresInSeconds` is 300). */
+export interface ExpenseReceiptUrlDto {
+  url: string;
+  expiresInSeconds: number;
 }
 
 /** OBRS-685: `ExpenseReqDto` — sent verbatim by the create/edit form
@@ -2711,6 +2726,34 @@ export class AdminApiService {
 
   deleteExpense(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`);
+  }
+
+  /**
+   * OBRS-845: uploads (or replaces) an expense's receipt file. Same multipart convention as
+   * `uploadStopPhoto` above: a bare `FormData`, no explicit Content-Type — the browser sets
+   * `multipart/form-data` with its own boundary. Uploading when one already exists REPLACES it
+   * (backend contract, not a client-side guard).
+   */
+  uploadExpenseReceipt(id: number, file: File): Observable<ResponseAPI<AdminExpenseDto>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ResponseAPI<AdminExpenseDto>>(
+      `${this.baseUrl}/private/expenses/${id}/receipt`,
+      formData,
+      this.toRequestOptions()
+    );
+  }
+
+  deleteExpenseReceipt(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/expenses/${id}/receipt`);
+  }
+
+  /**
+   * OBRS-845: exchanges the expense id for a short-lived signed URL onto its receipt file — the
+   * only reachable way to view it (the bucket is private). 404 when the expense has no receipt.
+   */
+  getExpenseReceiptUrl(id: number): Observable<ResponseAPI<ExpenseReceiptUrlDto>> {
+    return this.getRequest<ExpenseReceiptUrlDto>(`${this.baseUrl}/private/expenses/${id}/receipt/url`);
   }
 
   // ── OBRS-1356: the owner's review of what a salesperson recorded in the field ──

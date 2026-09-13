@@ -26,6 +26,7 @@ function row(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     note: 'note',
     source: 'MANUAL',
     items: [],
+    hasReceipt: false,
     ...overrides,
   };
 }
@@ -264,6 +265,34 @@ describe('ExpenseListTableComponent', () => {
         expect(btn.nativeElement.disabled).toBeFalse();
         expect(btn.nativeElement.getAttribute('title')).toBeNull();
       }
+    });
+  });
+
+  // OBRS-845: a row with a receipt must be distinguishable from one without, so the owner can
+  // scan the list for the ones still missing tax evidence.
+  describe('receipt indicator (OBRS-845)', () => {
+    function receiptCell(): HTMLElement {
+      return fixture.debugElement.query(By.css('[data-testid="expense-receipt-cell"]')).nativeElement;
+    }
+
+    it('renders the ATTACHED chip for a row with a receipt', () => {
+      component.isLoading = false;
+      component.rows = [row({ hasReceipt: true })];
+      fixture.detectChanges();
+
+      const cell = receiptCell();
+      expect(cell.querySelector('.admin-status.is-success')).not.toBeNull();
+      expect(cell.querySelector('.admin-status.is-neutral')).toBeNull();
+    });
+
+    it('renders the MISSING chip for a row with no receipt — a different chip, not merely absent', () => {
+      component.isLoading = false;
+      component.rows = [row({ hasReceipt: false })];
+      fixture.detectChanges();
+
+      const cell = receiptCell();
+      expect(cell.querySelector('.admin-status.is-neutral')).not.toBeNull();
+      expect(cell.querySelector('.admin-status.is-success')).toBeNull();
     });
   });
 });

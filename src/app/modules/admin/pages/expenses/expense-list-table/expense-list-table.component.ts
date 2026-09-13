@@ -42,7 +42,8 @@ export class ExpenseListTableComponent {
     // OBRS-1577: +1 for the always-rendered Payee column.
     // OBRS-1627: 10 -> 6. Operator, Source, VAT, receipt no. and paid-by all
     // left the table; the operator column's conditional +1 went with them.
-    return 6 + (this.canWrite ? 1 : 0);
+    // OBRS-845: +1 for the always-rendered Receipt column.
+    return 7 + (this.canWrite ? 1 : 0);
   }
 
   // Arrow-function field: NgForOf invokes trackBy as a free function, so a

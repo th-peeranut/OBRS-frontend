@@ -25,6 +25,21 @@
 // permission that unlocks it. Plain text says the value is not editable here at
 // all. No background of its own, so it inherits the modal's themed surface and
 // var(--admin-text) is measured against the right thing in both themes.
+// OBRS-845: the receipt block sits between the subtitle and the form grid, outside the grid
+// itself (see the template comment) — `.admin-form-grid`'s own 12px `gap` does not reach it.
+.expense-receipt-block {
+  margin-bottom: 12px;
+}
+
+// Mirrors stop-form-modal.component.scss's identical rule (per-component copy — style
+// encapsulation, same as this repo's other per-page-mappers convention): a disabled
+// <input type="file"> does not stop a click on the <label> wrapping it, so `pointer-events:
+// none` is what actually makes attach/replace inert while an upload is in flight.
+.admin-btn.disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
 .admin-readonly-value {
   margin: 0;
   padding: 9px 0;

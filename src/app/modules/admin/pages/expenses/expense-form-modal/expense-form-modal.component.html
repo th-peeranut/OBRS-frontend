@@ -9,6 +9,74 @@
         }}
       </h4>
       <p class="admin-modal-subtitle">{{ 'ADMIN.EXPENSES.MODAL_HINT' | translate }}</p>
+
+      <!-- OBRS-845: RECEIPT — its own block, structurally OUTSIDE the form, same reason the
+      stop's photo block is (OBRS-580): the file is written by three dedicated endpoints and the
+      backend preserves receiptFileRef through the PUT only when the key is absent, so the save
+      form must never be able to express or clear it. Edit mode only — the endpoints need an
+      existing expense id. -->
+      @if (showReceiptSection) {
+        <div class="admin-form-field expense-receipt-block" data-testid="expense-receipt-field">
+          <label class="admin-form-label">{{ 'ADMIN.EXPENSES.RECEIPT.LABEL' | translate }}</label>
+          <div class="admin-inline-actions">
+            @if (hasReceipt) {
+              <span class="admin-status is-success admin-status--icon">
+                <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">check_circle</span>
+                {{ 'ADMIN.EXPENSES.RECEIPT.ATTACHED' | translate }}
+              </span>
+              <button
+                type="button"
+                class="admin-btn admin-btn-small"
+                data-testid="expense-receipt-view"
+                [disabled]="receiptBusy"
+                [appPending]="receiptBusy"
+                (click)="viewReceipt()"
+                >
+                {{ 'ADMIN.EXPENSES.RECEIPT.VIEW' | translate }}
+              </button>
+              <label class="admin-btn admin-btn-small mb-0" [class.disabled]="receiptBusy" data-testid="expense-receipt-replace">
+                {{ 'ADMIN.EXPENSES.RECEIPT.REPLACE' | translate }}
+                <input
+                  type="file"
+                  class="visually-hidden"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  [disabled]="receiptBusy"
+                  (change)="onReceiptFileSelected($event)"
+                  />
+              </label>
+              <button
+                type="button"
+                class="admin-btn admin-btn-small admin-btn-danger"
+                data-testid="expense-receipt-remove"
+                [disabled]="receiptBusy"
+                (click)="removeReceipt()"
+                >
+                {{ 'ADMIN.EXPENSES.RECEIPT.REMOVE' | translate }}
+              </button>
+            } @else {
+              <span class="admin-status is-neutral admin-status--icon">
+                <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">radio_button_unchecked</span>
+                {{ 'ADMIN.EXPENSES.RECEIPT.MISSING' | translate }}
+              </span>
+              <label class="admin-btn admin-btn-small mb-0" [class.disabled]="receiptBusy" data-testid="expense-receipt-attach">
+                {{ 'ADMIN.EXPENSES.RECEIPT.ATTACH' | translate }}
+                <input
+                  type="file"
+                  class="visually-hidden"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  [disabled]="receiptBusy"
+                  (change)="onReceiptFileSelected($event)"
+                  />
+              </label>
+            }
+          </div>
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.RECEIPT.HINT' | translate }}</small>
+          @if (receiptError) {
+            <small class="admin-error" data-testid="expense-receipt-error">{{ receiptError }}</small>
+          }
+        </div>
+      }
+
       <form [formGroup]="expenseForm" class="admin-form-grid" (ngSubmit)="submitExpense()">
         <!-- OBRS-808: admin-only, create-only. An `owner` never sees this - the
         server derives their operator from the principal and IGNORES any

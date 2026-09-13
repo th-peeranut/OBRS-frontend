@@ -1131,6 +1131,31 @@ touched. `EExpenseCategory` widened to 16 codes with
 `EXPENSE_CATEGORY_CODES`) so the payout renders a real label, not a raw i18n
 key, in the owner's own driver-cash-day return modal.
 
+### Expense receipt attach/replace/remove/view (`/admin/expenses`, OBRS-845)
+
+One optional receipt file (photo or PDF of the paper bill, kept as tax evidence for ภ.ง.ด.50) per
+expense, surfaced in two places on the existing `/admin/expenses` screen — no new page, no new
+NgRx slice:
+
+- **List row** (`ExpenseListTableComponent`) — a Receipt column renders an `.admin-status`
+  chip, `is-success`/`check_circle` when `row.hasReceipt` else `is-neutral`/
+  `radio_button_unchecked`, so the owner can scan for rows still missing evidence. Icon shape +
+  text differ, not just color (design-system §11 "state is never hue alone"). No action lives
+  here — attach/replace/remove/view all happen from the edit modal below, opened via the
+  existing pencil button, so the row does not grow a second interactive control.
+- **Edit modal** (`ExpenseFormModalComponent`) — a block between the subtitle and the form grid,
+  **structurally outside `<form>`**, same reasoning as the stop-photo block above (OBRS-580): the
+  backend preserves `AdminExpenseDto.receiptFileRef` through the full-replace `PUT` only when the
+  key is absent from the body, so `ExpenseFormValue`/`toExpensePayload()` must never be able to
+  express or clear it — the block only calls `AdminApiService.uploadExpenseReceipt`/
+  `deleteExpenseReceipt`/`getExpenseReceiptUrl` directly. Edit mode only (create has no id yet
+  for those endpoints to act on). "View" fetches `GET .../receipt/url` and opens the returned
+  **signed URL** in a new tab only after that call resolves — the URL is short-lived and is never
+  cached on the component or in NgRx; a 404 there (no receipt / removed elsewhere) shows a
+  dedicated "ไม่พบไฟล์ใบเสร็จ" message rather than a generic failure. Client-side type/size
+  checks (JPG/PNG/WEBP/PDF, ≤10 MB) are a courtesy for a fast error message only — the backend
+  re-validates by magic bytes and its 400 is what actually gates a bad upload.
+
 ## Counter (staff act-on-behalf) cancel (`/staff/cancel-booking`, OBRS-766)
 
 Salesperson-only page (`requiredRoles: ['salesperson']`, never `driver`) that
