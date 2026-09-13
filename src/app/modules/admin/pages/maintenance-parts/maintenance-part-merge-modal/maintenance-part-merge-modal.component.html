@@ -1,0 +1,73 @@
+@if (isOpen) {
+  <div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="cancel()">
+    <div class="admin-modal">
+      <h4 class="admin-modal-title">{{ 'ADMIN.MAINTENANCE_PARTS.MERGE_TITLE' | translate }}</h4>
+      @if (sourcePart) {
+        <p class="admin-modal-subtitle">
+          {{ 'ADMIN.MAINTENANCE_PARTS.MERGE_SOURCE_PREFIX' | translate }}
+          <strong data-testid="part-merge-source">{{ sourceLabel }}</strong>
+        </p>
+      }
+
+      <div class="admin-form-grid">
+        <div class="admin-form-field full">
+          <label class="admin-form-label">
+            {{ 'ADMIN.MAINTENANCE_PARTS.MERGE_TARGET_LABEL' | translate }}
+          </label>
+          <app-admin-dropdown
+            [value]="selectedTargetId"
+            [options]="targetOptions"
+            valueKey="code"
+            labelKey="label"
+            [placeholder]="'ADMIN.MAINTENANCE_PARTS.MERGE_TARGET_LABEL' | translate"
+            data-testid="part-merge-target"
+            (valueChange)="onTargetChange($event)"
+          ></app-admin-dropdown>
+          @if (targetOptions.length === 0) {
+            <small class="admin-error" data-testid="part-merge-no-targets">
+              {{ 'ADMIN.MAINTENANCE_PARTS.MERGE_NO_TARGETS' | translate }}
+            </small>
+          }
+        </div>
+      </div>
+
+      @if (selectedTargetId) {
+        <div class="part-merge-impact" data-testid="part-merge-impact">
+          @if (isLoadingImpact) {
+            <p>{{ 'ADMIN.MAINTENANCE_PARTS.MERGE_IMPACT_LOADING' | translate }}</p>
+          } @else if (impactFailed) {
+            <p class="admin-error">{{ 'ADMIN.MAINTENANCE_PARTS.MERGE_IMPACT_FAILED' | translate }}</p>
+          } @else if (impact) {
+            <p data-testid="part-merge-impact-summary">
+              {{
+              'ADMIN.MAINTENANCE_PARTS.MERGE_IMPACT_SUMMARY'
+              | translate:{ billLineCount: impact.billLineCount, planCount: impact.planCount }
+              }}
+            </p>
+          }
+        </div>
+      }
+
+      <!-- AC4 / the owner's 2026-08-29 ruling: reversible, and said so here — never "ถาวร" /
+      "ย้อนกลับไม่ได้". -->
+      <p class="part-merge-reversible-note" data-testid="part-merge-reversible-note">
+        {{ 'ADMIN.MAINTENANCE_PARTS.MERGE_REVERSIBLE_NOTE' | translate }}
+      </p>
+
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-btn" (click)="cancel()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-primary"
+          data-testid="part-merge-confirm"
+          [disabled]="!canConfirm"
+          (click)="confirmMerge()"
+          >
+          {{ isMerging ? ('ADMIN.MAINTENANCE_PARTS.MERGING' | translate) : ('ADMIN.MAINTENANCE_PARTS.MERGE' | translate) }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -59,8 +59,8 @@ describe('DriverCashRepairFormComponent', () => {
     };
     partsStore = {
       data$: new BehaviorSubject<AdminMaintenancePartDto[] | null>([
-        { id: 7, code: null, name: 'ยางหน้า', kind: 'PART', active: true },
-        { id: 8, code: null, name: 'อะไหล่ที่เลิกใช้แล้ว', kind: 'PART', active: false },
+        { id: 7, code: null, name: 'ยางหน้า', kind: 'PART', active: true, mergedIntoId: null },
+        { id: 8, code: null, name: 'อะไหล่ที่เลิกใช้แล้ว', kind: 'PART', active: false, mergedIntoId: null },
       ]),
       refresh: jasmine.createSpy('refresh'),
     };

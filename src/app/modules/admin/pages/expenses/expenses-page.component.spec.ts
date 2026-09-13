@@ -66,9 +66,9 @@ function makeVehiclesStoreStub(vehicles: AdminVehicleDto[] = []) {
  * retired row is in the default so this page's own ACTIVE filter is what the assertions exercise. */
 function makePartsStoreStub(
   parts: AdminMaintenancePartDto[] = [
-    { id: 1, code: 'ENGINE_OIL', name: 'น้ำมันเครื่อง', kind: 'PART', active: true },
-    { id: 2, code: null, name: 'ค่าแรงเปลี่ยนสายพาน', kind: 'LABOUR', active: true },
-    { id: 3, code: null, name: 'อะไหล่ที่เลิกใช้แล้ว', kind: 'PART', active: false },
+    { id: 1, code: 'ENGINE_OIL', name: 'น้ำมันเครื่อง', kind: 'PART', active: true, mergedIntoId: null },
+    { id: 2, code: null, name: 'ค่าแรงเปลี่ยนสายพาน', kind: 'LABOUR', active: true, mergedIntoId: null },
+    { id: 3, code: null, name: 'อะไหล่ที่เลิกใช้แล้ว', kind: 'PART', active: false, mergedIntoId: null },
   ]
 ) {
   const data$ = new BehaviorSubject<AdminMaintenancePartDto[] | null>(parts);
