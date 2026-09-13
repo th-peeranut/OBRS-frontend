@@ -15,7 +15,7 @@
             }
           </p>
         </div>
-        <button type="button" class="user-editor-close" (click)="requestClose()">
+        <button type="button" class="user-editor-close" [attr.aria-label]="'ADMIN.COMMON.CLOSE' | translate" [title]="'ADMIN.COMMON.CLOSE' | translate" (click)="requestClose()">
           <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
         </button>
       </div>
