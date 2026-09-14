@@ -181,7 +181,7 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
     setPassengers([buildPassenger({ ticketId: 7, ticketNumber: 'T-7' })]);
     await settleQr();
 
-    expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(7, true);
+    expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(7);
     expect(qrSpy).toHaveBeenCalledTimes(1);
     expect(qrSpy.calls.mostRecent().args[0]).toBe('tok-7');
     // The regression itself: the human-readable number must never be the payload.
@@ -196,10 +196,7 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
     await settleQr();
     fixture.detectChanges();
 
-    expect(ticketServiceStub.getBoardingToken.calls.allArgs()).toEqual([
-      [1, true],
-      [2, true],
-    ]);
+    expect(ticketServiceStub.getBoardingToken.calls.allArgs()).toEqual([[1], [2]]);
 
     const images = qrImages();
     expect(images.length).toBe(2);
@@ -295,10 +292,7 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
     await settleQr();
     fixture.detectChanges();
 
-    expect(ticketServiceStub.getBoardingToken.calls.allArgs()).toEqual([
-      [1, true],
-      [2, true],
-    ]);
+    expect(ticketServiceStub.getBoardingToken.calls.allArgs()).toEqual([[1], [2]]);
     expect(qrImages().length).toBe(2);
     // The return leg's QR must not be a copy of the outbound one — that is the
     // whole failure this card fixes.

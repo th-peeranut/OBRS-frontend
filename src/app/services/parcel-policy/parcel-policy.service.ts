@@ -5,7 +5,6 @@ import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 // OBRS-629: the parcel carriage limits as ParcelIntakeService actually enforces
@@ -54,7 +53,6 @@ export class ParcelPolicyService {
   // SKIP_AUTH_LOGOUT: this endpoint is unauthenticated and never 401s.
   getParcelPolicy(): Observable<ResponseAPI<ParcelPolicyDto>> {
     const context = new HttpContext()
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true);
 
     return this.http.get<ResponseAPI<ParcelPolicyDto>>(

@@ -5,7 +5,6 @@ import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 // OBRS-627: the cancellation/refund terms as they apply to any booking, for the
@@ -55,7 +54,6 @@ export class CancellationPolicyService {
   // never produces a 401 to tolerate.
   getCancellationPolicy(): Observable<ResponseAPI<CancellationPolicyDto>> {
     const context = new HttpContext()
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true);
 
     return this.http.get<ResponseAPI<CancellationPolicyDto>>(

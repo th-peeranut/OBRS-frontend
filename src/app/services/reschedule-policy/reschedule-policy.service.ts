@@ -5,7 +5,6 @@ import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 // OBRS-623/659: the reschedule terms as they apply to any booking, for the PUBLIC
@@ -53,7 +52,6 @@ export class ReschedulePolicyService {
   // Deliberately NOT SKIP_AUTH_LOGOUT: this endpoint is unauthenticated and never 401s.
   getReschedulePolicy(): Observable<ResponseAPI<ReschedulePolicyDto>> {
     const context = new HttpContext()
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true);
 
     return this.http.get<ResponseAPI<ReschedulePolicyDto>>(

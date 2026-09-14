@@ -190,11 +190,11 @@ export class MyBookingsComponent implements OnInit {
       return;
     }
     this.selectedStatus = status;
-    // Switching filters keeps the current cards on screen, so surface the
-    // global loading dialog instead of the (first-load only) skeletons.
-    this.store.dispatch(
-      invokeLoadMyBookingsApi({ status: status || null, showLoading: true })
-    );
+    // OBRS-908: switching filters used to raise the global loading dialog, because
+    // the cards stay on screen and the (first-load only) skeletons do not show. It now
+    // loads without covering them — the dialog is reserved for actions that must not be
+    // repeated, and re-reading a list is not one.
+    this.store.dispatch(invokeLoadMyBookingsApi({ status: status || null }));
   }
 
   onCancel(booking: MyBookingView): void {
@@ -354,10 +354,7 @@ export class MyBookingsComponent implements OnInit {
 
   onRetry(): void {
     this.store.dispatch(
-      invokeLoadMyBookingsApi({
-        status: this.selectedStatus || null,
-        showLoading: true,
-      })
+      invokeLoadMyBookingsApi({ status: this.selectedStatus || null })
     );
   }
 

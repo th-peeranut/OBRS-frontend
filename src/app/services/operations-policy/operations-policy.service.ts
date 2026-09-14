@@ -5,7 +5,6 @@ import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 // OBRS-703 AC-10: mirrors BookingPolicyService exactly -- see that file's own
@@ -40,7 +39,6 @@ export class OperationsPolicyService {
   // global loading overlay and global error modal must both be skipped.
   getOperationsPolicy(): Observable<ResponseAPI<OperationsPolicyDto>> {
     const context = new HttpContext()
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true);
 
     return this.http.get<ResponseAPI<OperationsPolicyDto>>(

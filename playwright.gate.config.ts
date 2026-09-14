@@ -131,6 +131,16 @@ export default defineConfig({
     // outside every Karma fixture, so "no modal reaches the page" is a claim
     // only a real app can settle -- and that seam is where OBRS-642 shipped.
     '**/obrs-1222-station-load-error.spec.ts',
+    // OBRS-908. The entry above admits its spec because SweetAlert2 lands in
+    // document.body where no Karma fixture can see it; this is the same seam asked the
+    // opposite question -- not "does the modal stay away when a call FAILS" but "does it
+    // stay away when every call SUCCEEDS, slowly". It holds every /api/ response 800ms,
+    // past the 300ms grace period the card added, so the old every-request default could
+    // not hide behind the delay, and counts container ADDITIONS with a MutationObserver
+    // rather than sampling -- the overlay lived 231-272ms per request (OBRS-1436), which
+    // a `toHaveCount(0)` would miss ten times over. Hermetic: mockPublicPageApis plus a
+    // route that only delays and falls through.
+    '**/obrs-908-blocking-overlay.spec.ts',
     '**/route-smoke.spec.ts',
     '**/confirm-guidance-flow.spec.ts',
     '**/report-usability-issue.spec.ts',

@@ -572,7 +572,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       // for the Home quick-pick (OBRS-923); a smaller sample can silently
       // change which route ranks first, so this stays byte-identical to the
       // pre-577 request (page 0, size 100, no status).
-      .getMyBookings({ showLoadingDialog: false, skipAuthLogout: true, size: 100 })
+      .getMyBookings({ skipAuthLogout: true, size: 100 })
       .pipe(
         catchError(() => of(null)),
         takeUntil(this.destroy$)

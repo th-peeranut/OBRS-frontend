@@ -7,7 +7,6 @@ import { PageResponse } from '../../shared/interfaces/payment.interface';
 import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import {
   BoardingScanRequest,
@@ -554,8 +553,7 @@ export interface CounterBookingSearchParams {
 @Injectable({ providedIn: 'root' })
 export class StaffApiService {
   private readonly skipContext = new HttpContext()
-    .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true);
+    .set(SKIP_GLOBAL_ERROR_ALERT, true);
 
   constructor(private readonly http: HttpClient) {}
 
@@ -600,7 +598,6 @@ export class StaffApiService {
   // action must never force-logout the operator (OBRS-187 trap).
   private readonly boardingScanContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   boardingScan(request: BoardingScanRequest): Observable<ResponseAPI<BoardingScanResultDto>> {
@@ -873,7 +870,6 @@ export class StaffApiService {
    * `updateScheduleStatus()`/`delaySchedule()` above. */
   private readonly parcelActionContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   /** POST /api/private/parcels/{id}/load — accepted → in_transit. DRIVER-only. */
@@ -1095,7 +1091,6 @@ export class StaffApiService {
    * UX end to end, branching on `errorCode`. */
   private readonly cancelActionContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   /** GET /api/private/bookings/search — exactly one of phone/bookingNumber,
@@ -1176,7 +1171,6 @@ export class StaffApiService {
    * never force-logout nor duplicate a global alert. */
   private readonly driverCashActionContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   // ⚠️ CORRECTED (2026-08-02, backend reconciliation) — the base is

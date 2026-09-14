@@ -134,7 +134,7 @@ describe('SellReceiptPageComponent', () => {
       component.ngOnInit();
 
       expect(bookingServiceStub.getBookingTickets).toHaveBeenCalledWith(42, true);
-      expect(paymentServiceStub.getBookingPayments).toHaveBeenCalledWith(42, { skipGlobalLoadingAlert: true });
+      expect(paymentServiceStub.getBookingPayments).toHaveBeenCalledWith(42);
     });
 
     it('populates booking number, route, and departure/arrival from the first journey', () => {
@@ -269,8 +269,8 @@ describe('SellReceiptPageComponent', () => {
       const component = createComponent();
       component.ngOnInit();
 
-      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledWith(1, true);
-      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledWith(2, true);
+      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledWith(1);
+      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledWith(2);
     });
 
     it('renders a data-URL QR for a ticket whose boarding token resolves', async () => {

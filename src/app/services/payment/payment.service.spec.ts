@@ -9,6 +9,7 @@ import { AuthService } from '../../auth/auth.service';
 import { BookingService } from '../booking/booking.service';
 import { PaymentPayload } from '../../shared/interfaces/payment.interface';
 import { environment } from '../../../environments/environment';
+import { SHOW_BLOCKING_LOADING } from '../../shared/interceptors/http-context-tokens';
 
 /**
  * OBRS-858 (ADR-0123 Decision 6) — pins WHICH payment endpoint a caller reaches, and what it
@@ -123,5 +124,91 @@ describe('PaymentService — guest vs signed-in payment endpoint (OBRS-858)', ()
     const privateReq = httpMock.expectOne(`${environment.apiUrl}/api/private/payments/7/qr`);
     expect(privateReq.request.headers.has('X-Guest-Payment-Token')).toBeFalse();
     privateReq.flush(new Blob(['<svg/>'], { type: 'image/svg+xml' }));
+  });
+});
+
+/**
+ * OBRS-908 AC3. The overlay became opt-in, and the card's own scope lists exactly which
+ * actions keep it: paying, confirming a booking, cancelling/refunding one. This suite is
+ * the payment half — the half where losing the lock means a customer can press pay twice.
+ *
+ * Asserted on the REQUEST's context rather than on an argument, for the reason
+ * `station.service.spec.ts` gives: a context object that never reaches `HttpClient` leaves
+ * the token at its `() => false` default, and the call then looks identical from every
+ * angle except this one. `error.interceptor.spec.ts` owns the other half of the chain —
+ * that a request carrying this token does block, and only past the delay.
+ */
+describe('PaymentService — money movements still hold the screen (OBRS-908 AC3)', () => {
+  const PAYLOAD = {
+    bookingId: 42,
+    paymentMethod: 'card',
+    amount: 200,
+  } as unknown as PaymentPayload;
+
+  let service: PaymentService;
+  let httpMock: HttpTestingController;
+  let authStub: { isAuthenticated: () => boolean };
+  let bookingStub: { getGuestPaymentToken: () => string | null };
+
+  beforeEach(() => {
+    authStub = { isAuthenticated: () => true };
+    bookingStub = { getGuestPaymentToken: () => null };
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        PaymentService,
+        { provide: AuthService, useValue: authStub },
+        { provide: BookingService, useValue: bookingStub },
+      ],
+    });
+    service = TestBed.inject(PaymentService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('a signed-in charge opts in', () => {
+    service.createPayment(PAYLOAD).subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/payments`);
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+    req.flush({ code: 200, message: 'OK', data: {} });
+  });
+
+  it('a GUEST charge opts in too — the public door is the same action', () => {
+    authStub.isAuthenticated = () => false;
+    bookingStub.getGuestPaymentToken = () => 'signed.booking.token';
+
+    service.createPayment(PAYLOAD).subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/payments`);
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+    req.flush({ code: 200, message: 'OK', data: {} });
+  });
+
+  it('the walk-in and mock charges opt in — a counter sale is a charge', () => {
+    service.createWalkInPayment(PAYLOAD).subscribe();
+    const walkIn = httpMock.expectOne(`${environment.apiUrl}/api/private/payments/walk-in`);
+    expect(walkIn.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+    walkIn.flush({ code: 200, message: 'OK', data: {} });
+
+    service.createMockPayment(PAYLOAD).subscribe();
+    const mock = httpMock.expectOne(`${environment.apiUrl}/api/private/payments/mock`);
+    expect(mock.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+    mock.flush({ code: 200, message: 'OK', data: {} });
+  });
+
+  it('a refund opts in — the card names cancel/refund alongside pay', () => {
+    service.refundPayment(7).subscribe();
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/payments/7/refund`);
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+    req.flush({ code: 200, message: 'OK', data: {} });
+  });
+
+  it('READING the payments of a booking does NOT — it is a page loading its own data', () => {
+    service.getBookingPayments(42).subscribe();
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/api/private/bookings/42/payments`
+    );
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
+    req.flush({ code: 200, message: 'OK', data: {} });
   });
 });
