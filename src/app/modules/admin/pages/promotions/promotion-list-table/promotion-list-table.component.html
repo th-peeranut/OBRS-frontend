@@ -65,6 +65,7 @@
                       type="button"
                       class="admin-icon-btn"
                       [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                      [title]="'ADMIN.COMMON.EDIT' | translate"
                       (click)="edit.emit(row)"
                       >
                       <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
@@ -73,6 +74,7 @@
                       type="button"
                       class="admin-icon-btn danger"
                       [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                      [title]="'ADMIN.COMMON.DELETE' | translate"
                       (click)="deactivate.emit(row)"
                       >
                       <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>

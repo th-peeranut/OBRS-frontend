@@ -53,6 +53,7 @@
                       type="button"
                       class="admin-icon-btn"
                       [attr.aria-label]="'ADMIN.NOTIFICATION_MESSAGES.LIST.EDIT_ARIA' | translate: { locale: locale.toUpperCase() }"
+                      [title]="'ADMIN.NOTIFICATION_MESSAGES.LIST.EDIT_ARIA' | translate: { locale: locale.toUpperCase() }"
                       [attr.data-testid]="'notification-message-edit-' + key.messageCode + '-' + locale"
                       (click)="onEdit(key.messageCode, locale)"
                       >
