@@ -2306,7 +2306,14 @@
         "VEHICLE": "ทะเบียนรถ",
         "CATEGORY": "ประเภท",
         "PAID_BY": "จ่ายโดย",
-        "LINE_PART_NONE": "ไม่ระบุ"
+        "LINE_PART_NONE": "ไม่ระบุ",
+        "ODOMETER": "เลขไมล์",
+        "ODOMETER_HINT": "ถ้าบิลเขียนมา — ไม่บังคับ",
+        "ODOMETER_INVALID": "กรอกเป็นจำนวนเต็มบวก",
+        "PLANS_UPDATED": "อัปเดตแผนบำรุงรักษาแล้ว {{n}} รายการ",
+        "PLAN_UPDATED_LINE": "• {{part}} · {{km}} กม.",
+        "PLAN_UNNAMED_PART": "อะไหล่ที่ถูกลบออกจากทะเบียนแล้ว",
+        "GO_TO_PLANS": "ไปดูแผนบำรุงรักษา"
       }
     },
     "EXPENSE_PAYEES": {
