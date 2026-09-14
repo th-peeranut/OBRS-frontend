@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-863-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs863capture.config.ts",
+      "why": "OBRS-863 BEFORE/AFTER evidence for collapsing the results-page search form into a summary bar. Expects two servers started by hand on :4863 and :4864 -- :4863 serving a worktree at origin/dev for the BEFORE shot. CAPTURE and not GATE because it needs two trees at once, which no single-tree lane can stand up; the verdict itself belongs to the AC#1-#4/#7 slices in schedule-booking-filter.component.spec.ts. It measures rather than photographs: each side reads the first trip card top against the viewport height and asserts which side of the fold it falls on, so a pair that failed to reproduce the old overflow fails here instead of producing a misleading picture. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts seedCustomerSession/seedStore, so every /api/** call is fulfilled in-browser and neither side reaches SIT."
+    },
+    {
       "spec": "obrs-640-mobile-tap-typography.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs640audit.config.ts",

@@ -189,9 +189,15 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 ### [Frontend] 2026-09-11 — `Idempotency-Key` on both booking-create endpoints
 
 <!-- contract-request
-card: production-readiness review 2026-09-11 (review follow-up: OBRS-1853)
+card: OBRS-25
 status: open
+absent: Idempotency-Key :: src/main/java/com/example/demo/controller/business/*BookingController.java
 -->
+
+**Raised by**: the production-readiness review of 2026-09-11 (review follow-up: [OBRS-1853](https://nj-phuyaipu.atlassian.net/browse/OBRS-1853), Done).
+The card that owns the backend work is [OBRS-25](https://nj-phuyaipu.atlassian.net/browse/OBRS-25)
+*Idempotency for booking endpoints* — Needs Decision, so this entry stays open until that card is decided
+and shipped (OBRS-1871).
 
 **Affected endpoints**: `POST /api/bookings` (guest) **and `POST /api/private/bookings` (signed-in)** —
 `BookingService.createBooking` picks between them on `authService.isAuthenticated()`
