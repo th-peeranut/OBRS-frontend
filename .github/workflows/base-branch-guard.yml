@@ -1,0 +1,74 @@
+name: Base branch guard
+
+# Why this exists (OBRS-1236): `gh pr create` without `--base` targets the repo's DEFAULT
+# branch, which is `main` here - and nothing anywhere said so out loud. It happened twice:
+#   2026-08-10  PR #173 (OBRS-1213) was merged into `main` with all four CI checks green.
+#   2026-08-21  PR #291 (OBRS-1501) + #293 (OBRS-1503) were merged into `main`, which then ran
+#               4 commits ahead of `dev`; the first step of the prod runbook was rejected
+#               non-fast-forward, and neither fix ever reached the bundle prod was serving.
+# `ci.yml` cannot be the signal: its own `pull_request` trigger names `main` too, so a
+# wrong-base PR goes green in exactly the same way a right-base PR does. Prose could not be
+# the signal either - `--base dev` was written into the office skills on 2026-08-09, one day
+# before the first occurrence and twelve days before the second, and both still happened.
+# This check goes RED, it does not block: a required status check needs a repository ruleset,
+# and this account's plan refuses rulesets on the private sibling repo (measured 2026-09-13,
+# `gh api repos/th-peeranut/OBRS-backend/rulesets` -> 403). Red is the signal that was
+# missing; making it blocking is a separate decision for the repo owner.
+
+on:
+  pull_request:
+    branches: [main]
+    # `labeled`/`unlabeled` are not decoration: without them the `hotfix` escape hatch below
+    # would need an empty push before it could take effect on a PR that already exists.
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  base-branch:
+    runs-on: ubuntu-latest
+    # OBRS-1442: never inherit GitHub's 360-minute default.
+    timeout-minutes: 5
+    steps:
+      - name: Refuse a PR based on main
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'hotfix') }}
+        run: |
+          cat >&2 <<'MSG'
+          ==========================================================================
+          This PR's base branch is `main`. Point it at `dev`:
+
+              gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --base dev
+          ==========================================================================
+
+          Why `main` is the wrong base - two properties of this repository, not a
+          style preference:
+
+            1. `main` is an OUTPUT of the release promote, never an input. It is
+               written only by the release step `git push origin origin/dev:main`.
+               What a user actually gets is served from `sit`: Netlify publishes this
+               site from the `sit` branch (netlify.toml, OBRS-911), and `sit` is fed
+               only by promote-sit.yml pushing `origin/dev` -> `sit`. Work merged into
+               `main` therefore reaches no environment - measured on 2026-08-21, the
+               fixes in PR #291/#293 were still missing from the bundle prod served.
+
+            2. It breaks the next release night. The first step of the prod promote is
+               `git push origin origin/dev:main` ("Prod deploys from `main` - both
+               repos", deploy/prod/README.md in OBRS-backend). The moment `main` holds
+               a commit `dev` does not, that push is a non-fast-forward, and the same
+               runbook forbids forcing - so the release stops on its first command, at
+               21:00, inside a ~90-minute window.
+
+          If this really is a deliberate hotfix straight to `main`, label the PR
+          `hotfix` and this check turns green - no new push needed:
+
+              gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --add-label hotfix
+
+          Gate: .github/workflows/base-branch-guard.yml (OBRS-1236)
+          MSG
+          exit 1
+
+      - name: Intentional hotfix, allowed by the hotfix label
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'hotfix') }}
+        run: |
+          echo 'Base is main and this PR carries the hotfix label - allowed on purpose (OBRS-1236).'
