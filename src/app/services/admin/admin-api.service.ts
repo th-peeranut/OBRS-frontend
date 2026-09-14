@@ -3236,6 +3236,32 @@ export class AdminApiService {
     );
   }
 
+  // ── OBRS-1902: owner settings — scheduled maintenance window ──────────────
+
+  /** `null` data is the ordinary answer: it means nothing is scheduled. */
+  getMaintenanceWindow(): Observable<ResponseAPI<MaintenanceWindowConfigDto | null>> {
+    return this.getRequest<MaintenanceWindowConfigDto | null>(
+      `${this.baseUrl}/private/admin/configs/maintenance-window`
+    );
+  }
+
+  updateMaintenanceWindow(
+    payload: MaintenanceWindowConfigReqDto
+  ): Observable<ResponseAPI<MaintenanceWindowConfigDto | null>> {
+    return this.putRequest<MaintenanceWindowConfigDto | null>(
+      `${this.baseUrl}/private/admin/configs/maintenance-window`,
+      payload
+    );
+  }
+
+  /** Cancels an announcement that has not happened yet. A window that simply
+   * ended needs no call at all — the public read stops serving it on its own. */
+  cancelMaintenanceWindow(): Observable<ResponseAPI<MaintenanceWindowConfigDto | null>> {
+    return this.deleteRequest<MaintenanceWindowConfigDto | null>(
+      `${this.baseUrl}/private/admin/configs/maintenance-window`
+    );
+  }
+
   // ── OBRS-960: parcel-share monthly totals (/admin/reports) ───────────────
 
   getParcelShareMonthly(
@@ -3465,6 +3491,32 @@ export interface OwnerOperationsConfigDto {
 export type OperationsConfigReqDto = Omit<
   OwnerOperationsConfigDto,
   `${string}Overridden`
+>;
+
+/** `GET`/`PUT`/`DELETE /api/private/admin/configs/maintenance-window` — OBRS-1902.
+ *
+ * One document, not five dials: the backend stores it as a single json config
+ * row because a start with no message, or an end with no start, is a broken
+ * announcement rather than a partial one (MaintenanceWindowDto on that side). */
+export interface MaintenanceWindowConfigDto {
+  /** ISO-8601 instant the site is expected to go down. */
+  startAt: string;
+  /** ISO-8601 instant it is expected back. Past this, the public endpoint stops
+   * serving the announcement without anyone clearing the row. */
+  endAt: string;
+  /** Minutes before `startAt` that the pay button stops accepting payments —
+   * the owner's ruling of 2026-09-14. */
+  paymentLockMinutesBefore: number;
+  messageTh: string;
+  messageEn: string;
+  /** Derived by the backend: `startAt` minus the lock lead. Read-only here. */
+  paymentLockedFrom: string;
+}
+
+/** The PUT body — everything but the derived lock instant. */
+export type MaintenanceWindowConfigReqDto = Omit<
+  MaintenanceWindowConfigDto,
+  'paymentLockedFrom'
 >;
 
 /** One row of `GET /api/private/owner/parcel-share/monthly` — OBRS-960. */

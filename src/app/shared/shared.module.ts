@@ -47,6 +47,7 @@ import { AnalyticsConsentControlComponent } from './components/analytics-consent
 // reasoning as the consent bar, opposite end of the page so the two cannot
 // collide.
 import { BookingClosedNoticeComponent } from './components/booking-closed-notice/booking-closed-notice.component';
+import { MaintenanceNoticeComponent } from './components/maintenance-notice/maintenance-notice.component';
 import { RolePreviewBannerComponent } from './components/role-preview-banner/role-preview-banner.component';
 // OBRS-907: the one shared loading indicator (skeleton / spinner / inline).
 import { LoadingStateComponent } from './components/loading-state/loading-state.component';
@@ -97,6 +98,7 @@ import { AdminSharedModule } from '../modules/admin/admin-shared.module';
     AnalyticsConsentControlComponent,
     ArrivalDateNoticeComponent,
     BookingClosedNoticeComponent,
+    MaintenanceNoticeComponent,
     RolePreviewBannerComponent,
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,
@@ -148,6 +150,7 @@ import { AdminSharedModule } from '../modules/admin/admin-shared.module';
     AnalyticsConsentControlComponent,
     ArrivalDateNoticeComponent,
     BookingClosedNoticeComponent,
+    MaintenanceNoticeComponent,
     RolePreviewBannerComponent,
     LoadingStateComponent,
     ScheduleDelayNoticeComponent,

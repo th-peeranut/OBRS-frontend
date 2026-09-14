@@ -20,6 +20,12 @@
     "BODY": "Please message us on our Facebook page:",
     "CHANNEL": "NJ Phuyaipu"
   },
+  "MAINTENANCE_NOTICE": {
+    "ARIA_LABEL": "Notice: the site will be down for a scheduled update",
+    "COUNTDOWN": "Scheduled maintenance in {{minutes}} min ({{start}} – {{end}})",
+    "IN_PROGRESS": "Maintenance in progress. Expected back at {{end}}.",
+    "PAYMENT_LOCKED": "New payments are paused until then, so no payment is left half-finished."
+  },
   "ROLE_PREVIEW": {
     "MENU": "View as…",
     "ARIA_LABEL": "You are viewing this screen as another role",
@@ -576,6 +582,7 @@
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "Cancel & Reschedule",
       "NOTIFICATION_MESSAGES": "Notification Messages",
       "OPERATIONS_CONFIG": "Operations",
+      "MAINTENANCE_WINDOW": "Maintenance window",
       "EXPENSE_BATCH": "Envelope of bills"
     },
     "NAV": {
@@ -1841,6 +1848,27 @@
         "DONE": "The platform default is in use again.",
         "FAILED": "Could not hand the policy back. Nothing was changed."
       }
+    },
+    "MAINTENANCE_WINDOW": {
+      "SUBTITLE": "Announce a scheduled update before it takes the booking site down, and stop taking new payments while the countdown runs.",
+      "NONE_SCHEDULED": "Nothing is scheduled. Visitors see no banner and payments are open as usual.",
+      "SCHEDULED_NOTE": "Announced: {{start}} - {{end}}. New payments stop at {{lockedFrom}}.",
+      "START_LABEL": "Goes down at",
+      "END_LABEL": "Back up by",
+      "LOCK_LABEL": "Stop taking payments this many minutes before",
+      "LOCK_HELPER": "0 keeps selling right up to the moment it goes down. 180 at most - anything longer is a closure, not a countdown.",
+      "MESSAGE_TH_LABEL": "Message (Thai)",
+      "MESSAGE_EN_LABEL": "Message (English)",
+      "MESSAGE_HELPER": "Both are required. Chinese readers are shown the English one.",
+      "RANGE_VALIDATION": "The end must be after the start.",
+      "CANCEL_ANNOUNCEMENT": "Call the update off",
+      "CANCEL_CONFIRM_TITLE": "Remove the announcement?",
+      "CANCEL_CONFIRM_TEXT": "The banner disappears and payments reopen immediately.",
+      "CANCEL_CONFIRM_BUTTON": "Remove it",
+      "SAVED": "The announcement is live.",
+      "CANCELLED": "The announcement has been removed.",
+      "SAVE_FAILED": "Could not save the maintenance window.",
+      "LOAD_FAILED": "Could not load the maintenance window."
     },
     "OPERATIONS_CONFIG": {
       "SUBTITLE": "Set your own operations values -- seat hold time, the no-show cutoff, and the near-full alert threshold. Anything not set here follows the platform default.",
@@ -3307,6 +3335,7 @@
     }
   },
   "PAYMENT": {
+    "MAINTENANCE_LOCKED": "Payments are paused - the site is about to go down for maintenance",
     "INFO": {
       "TITLE": "Select payment method"
     },

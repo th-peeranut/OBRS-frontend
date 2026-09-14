@@ -11,6 +11,7 @@ import {
   PaymentByBookingIdResponse,
   PaymentResponse,
 } from '../../../../shared/interfaces/payment.interface';
+import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { PaymentQrcodeComponent } from './payment-qrcode.component';
 
 /**
@@ -78,7 +79,8 @@ describe('PaymentQrcodeComponent - refunded_partial payment summary (OBRS-298)',
       bookingService,
       paymentService,
       alertService,
-      translate
+      translate,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
   });
 
@@ -231,7 +233,8 @@ describe('PaymentQrcodeComponent - gateway ceiling refusal (OBRS-736)', () => {
       bookingService,
       paymentService,
       alertService,
-      translate
+      translate,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
   });
 
@@ -377,7 +380,8 @@ describe('PaymentQrcodeComponent - saving the QR on iOS (OBRS-1203)', () => {
       bookingService,
       paymentService,
       alertService,
-      translate
+      translate,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
     component.qrImageUrl = DATA_URL;
 
@@ -516,7 +520,8 @@ describe('PaymentQrcodeComponent - the QR preview dialog (OBRS-1203)', () => {
       bookingService,
       paymentService,
       alertService,
-      translate
+      translate,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
     component.qrImageUrl = DATA_URL;
   });
@@ -607,7 +612,8 @@ describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-135
       bookingService,
       paymentService,
       alertService,
-      translate
+      translate,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
   });
 
@@ -756,7 +762,8 @@ describe('PaymentQrcodeComponent - the amount under the QR comes from the server
       bookingService,
       paymentService,
       alertService,
-      translate
+      translate,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
   });
 
@@ -981,7 +988,8 @@ describe('PaymentQrcodeComponent - qrPaymentUrl host allow-list (security review
       bookingService,
       paymentService,
       alertService,
-      translate
+      translate,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
     navigateToGateway = spyOn(
       component as unknown as { navigateToGateway(url: string): void },
@@ -1027,5 +1035,80 @@ describe('PaymentQrcodeComponent - qrPaymentUrl host allow-list (security review
 
     expect(navigateToGateway).not.toHaveBeenCalled();
     expect(alertService.error).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * OBRS-1902 AC-6 — the QR hand-off during a maintenance countdown. `confirmPayment` opens the
+ * Omise payment page, so it is a START of a payment, not a confirmation of one already made:
+ * locking it is what keeps a customer from being handed off seconds before the site dies.
+ */
+describe('PaymentQrcodeComponent - payment lock during maintenance (OBRS-1902)', () => {
+  function build(locked: boolean) {
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+      'getActiveBookingNumber',
+    ]);
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+    ]);
+    const alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+
+    const component = new PaymentQrcodeComponent(
+      router,
+      bookingService,
+      paymentService,
+      alertService,
+      translate,
+      { isPaymentLockedNow: () => locked } as unknown as MaintenanceWindowService
+    );
+    component.qrPaymentUrl = 'https://pay.omise.co/offsites/ofsp_test';
+    return { component, alertService };
+  }
+
+  it('refuses the hand-off while the lock is open - the confirm dialog never opens', async () => {
+    const { component, alertService } = build(true);
+
+    expect(component.isPaymentLocked).toBeTrue();
+    await component.confirmPayment();
+
+    expect(alertService.confirm).not.toHaveBeenCalled();
+  });
+
+  it('is untouched when no maintenance window is announced', async () => {
+    const { component, alertService } = build(false);
+    alertService.confirm.and.resolveTo(false);
+
+    expect(component.isPaymentLocked).toBeFalse();
+    await component.confirmPayment();
+
+    expect(alertService.confirm).toHaveBeenCalled();
+  });
+
+  it('lets a customer who ALREADY has a QR on screen finish paying when the lock opens mid-session', async () => {
+    // The lock opens minutes before the outage, so it can arrive while a charge is already at the
+    // gateway and its QR already scanned. Taking the confirm step away then would strand exactly
+    // the customer this feature exists to protect - and the charge is payable from their banking
+    // app whether or not this page cooperates.
+    const { component, alertService } = build(true);
+    component.qrImageUrl = 'data:image/png;base64,QR';
+    alertService.confirm.and.resolveTo(false);
+
+    expect(component.isPaymentLocked).toBeTrue();
+    expect(component.isNewChargeLocked)
+      .withContext('an issued QR is an in-flight payment, not a new one')
+      .toBeFalse();
+
+    await component.confirmPayment();
+
+    expect(alertService.confirm).toHaveBeenCalled();
   });
 });

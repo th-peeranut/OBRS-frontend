@@ -703,6 +703,12 @@
     "lane": "GATE",
     "config": "playwright.gate.config.ts",
     "why": "OBRS-908 AC1/AC2: the blocking loading overlay became opt-in, and the claim is that a customer merely moving through the app never meets one. SweetAlert2 is raised by the HTTP interceptor into document.body, outside every Karma fixture, so this is the same seam obrs-1222-station-load-error.spec.ts is admitted for -- the unit suite owns the rule (error.interceptor.spec.ts), this owns the outcome on a real page. It holds every /api/ response 800ms, well past the new 300ms grace period, so the OLD default would raise an overlay on every call rather than hiding behind the delay; and it counts additions with a MutationObserver rather than sampling a locator, because the old overlay lived 231-272ms per request (OBRS-1436) and a sample would go green on a page that flashed it ten times. Hermetic on this lane's terms: mockPublicPageApis plus a route that only delays and falls through, so every /api/** call is answered in-spec."
+  },
+  {
+    "spec": "obrs-1902-maintenance-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs1902capture.config.ts",
+    "why": "OBRS-1902 AFTER evidence for the scheduled-downtime banner and the payment lock the owner ruled on (2026-09-14): the strip on a customer page, the disabled card pay button with its reason line, proof that opening the QR tab creates NO charge while the lock is open (the QR is not a display of an existing charge - asking for it creates one), and the back-office form the announcement is written from. CAPTURE and not GATE because the verdict belongs to maintenance-window.service.spec.ts and the backend's MaintenanceWindowConfigControllerTest, whose assertions fail a build; this exists so the owner can see the screens. Hermetic: mockPublicPageApis plus in-spec fulfilment of /api/operations-policy, /api/private/bookings, /api/private/payments and the owner config endpoint, so nothing reaches a backend."
   }
   ]
 }
