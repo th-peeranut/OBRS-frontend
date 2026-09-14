@@ -13,11 +13,7 @@ import {
 import { generateIdempotencyKey } from '../../shared/lib/idempotency-key';
 import { AuthService } from '../../auth/auth.service';
 import { BookingService } from '../booking/booking.service';
-import { SKIP_GLOBAL_LOADING_ALERT } from '../../shared/interceptors/http-context-tokens';
-
-interface PaymentRequestOptions {
-  skipGlobalLoadingAlert?: boolean;
-}
+import { SHOW_BLOCKING_LOADING } from '../../shared/interceptors/http-context-tokens';
 
 @Injectable({
   providedIn: 'root',
@@ -59,6 +55,7 @@ export class PaymentService {
             'X-Guest-Payment-Token',
             guestToken
           ),
+          context: this.blockingContext(),
         }
       );
     }
@@ -78,7 +75,7 @@ export class PaymentService {
     return this.http.post<ResponseAPI<PaymentResponse>>(
       `${this.baseUrl}/mock`,
       payload,
-      { headers }
+      { headers, context: this.blockingContext() }
     );
   }
 
@@ -92,7 +89,8 @@ export class PaymentService {
   refundPayment(paymentId: number): Observable<ResponseAPI<PaymentResponse>> {
     return this.http.post<ResponseAPI<PaymentResponse>>(
       `${this.baseUrl}/${paymentId}/refund`,
-      {}
+      {},
+      { context: this.blockingContext() }
     );
   }
 
@@ -110,19 +108,17 @@ export class PaymentService {
     );
   }
 
+  /**
+   * OBRS-908 dropped this method's loading-alert opt-out option. Reading a
+   * booking's payments is a page loading its own data, so under the new rule it
+   * never shows the blocking overlay and there is nothing left to opt out of —
+   * the receipt and payment-result pages already render their own inline spinner.
+   */
   getBookingPayments(
-    bookingId: number,
-    options: PaymentRequestOptions = {}
+    bookingId: number
   ): Observable<ResponseAPI<PaymentByBookingIdResponse>> {
-    const requestOptions = options.skipGlobalLoadingAlert
-      ? {
-          context: new HttpContext().set(SKIP_GLOBAL_LOADING_ALERT, true),
-        }
-      : {};
-
     return this.http.get<ResponseAPI<PaymentByBookingIdResponse>>(
-      `${environment.apiUrl}/api/private/bookings/${bookingId}/payments`,
-      requestOptions
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/payments`
     );
   }
 
@@ -160,7 +156,24 @@ export class PaymentService {
   ): Observable<ResponseAPI<PaymentResponse>> {
     return this.http.post<ResponseAPI<PaymentResponse>>(url, payload, {
       headers: this.createIdempotencyHeaders(idempotencyKey),
+      context: this.blockingContext(),
     });
+  }
+
+  /**
+   * OBRS-908: every call that moves money holds the screen while it is in flight.
+   *
+   * This is the first of the card's three opt-in cases and the least negotiable one —
+   * a second press mid-charge is a second charge attempt. `Idempotency-Key` is what
+   * makes a duplicate that DOES reach the backend harmless; this is what stops the
+   * customer producing one, and stops them navigating away from a charge in progress.
+   *
+   * Still subject to `BLOCKING_LOADING_DELAY_MS`, so a fast answer shows nothing at
+   * all, and to `LOADING_ESCAPE_AFTER_MS` (OBRS-642/OBRS-1336), so a charge that hangs
+   * hands the screen back after 8s rather than stranding the customer on it.
+   */
+  private blockingContext(): HttpContext {
+    return new HttpContext().set(SHOW_BLOCKING_LOADING, true);
   }
 
   private createIdempotencyHeaders(idempotencyKey?: string): HttpHeaders {

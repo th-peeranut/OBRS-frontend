@@ -7,7 +7,6 @@ import { PageResponse } from '../../shared/interfaces/payment.interface';
 import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import {
   BoardingScanRequest,
@@ -57,6 +56,10 @@ import {
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
+import {
+  StaffRemittanceDto,
+  StaffRemittanceSubmitReqDto,
+} from '../../shared/interfaces/staff-remittance.interface';
 import { DriverDto } from '../admin/admin-api.service';
 // OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
 // SHAPE for its supplementary print/export trip header, but must not take a
@@ -550,8 +553,7 @@ export interface CounterBookingSearchParams {
 @Injectable({ providedIn: 'root' })
 export class StaffApiService {
   private readonly skipContext = new HttpContext()
-    .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true);
+    .set(SKIP_GLOBAL_ERROR_ALERT, true);
 
   constructor(private readonly http: HttpClient) {}
 
@@ -596,7 +598,6 @@ export class StaffApiService {
   // action must never force-logout the operator (OBRS-187 trap).
   private readonly boardingScanContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   boardingScan(request: BoardingScanRequest): Observable<ResponseAPI<BoardingScanResultDto>> {
@@ -869,7 +870,6 @@ export class StaffApiService {
    * `updateScheduleStatus()`/`delaySchedule()` above. */
   private readonly parcelActionContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   /** POST /api/private/parcels/{id}/load — accepted → in_transit. DRIVER-only. */
@@ -1091,7 +1091,6 @@ export class StaffApiService {
    * UX end to end, branching on `errorCode`. */
   private readonly cancelActionContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   /** GET /api/private/bookings/search — exactly one of phone/bookingNumber,
@@ -1172,7 +1171,6 @@ export class StaffApiService {
    * never force-logout nor duplicate a global alert. */
   private readonly driverCashActionContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   // ⚠️ CORRECTED (2026-08-02, backend reconciliation) — the base is
@@ -1330,6 +1328,55 @@ export class StaffApiService {
     const headers = new HttpHeaders({ 'Idempotency-Key': idempotencyKey });
     return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
       `${environment.apiUrl}/api/private/driver-cash/days/settle`,
+      payload,
+      { context: this.driverCashActionContext, headers }
+    );
+  }
+
+  // ── OBRS-1755: the salesperson's own remittance for ONE round ──
+  // Base path is `/api/private/settlements` — the same one `AdminApiService`
+  // uses for the owner's pending list and sign-off, with NO `/admin/` segment
+  // (`SettlementController`). These two are the SALESPERSON-authorized pair;
+  // the owner's `GET /settlements/schedules/{id}` stays admin-only because its
+  // payload carries `settled`, `discrepancy` and every other seller's money.
+
+  /**
+   * OBRS-1755 — everything the "ส่งยอด" tab renders for one round, in one call.
+   *
+   * `skipContext` (not the action context below): a READ that fires whenever the
+   * tab is opened or the selected round changes, so a global banner on each one
+   * would be noise — the tab renders its own message.
+   */
+  getMyRemittance(scheduleId: number): Observable<ResponseAPI<StaffRemittanceDto>> {
+    return this.http.get<ResponseAPI<StaffRemittanceDto>>(
+      `${environment.apiUrl}/api/private/settlements/schedules/${scheduleId}/my-remittance`,
+      { context: this.skipContext }
+    );
+  }
+
+  /**
+   * OBRS-1755 — record the driver advance AND hand the round's cash to the owner
+   * in ONE transaction (owner ruling 2026-09-09: one button, not two).
+   *
+   * The `Idempotency-Key` header is the caller's to own across a retry, exactly
+   * as on `payWalkIn` and `postDriverCashDaySettle`: the server replays the
+   * stored response for a repeated key, so retrying the SAME payload must reuse
+   * the key or the advance is written twice.
+   *
+   * Reuses `driverCashActionContext` rather than declaring a fourth identical
+   * one: the reason that context exists — a domain 409 on a retryable
+   * salesperson money action must never force-logout nor raise a second global
+   * alert — is this endpoint's situation verbatim, and it answers with nine
+   * distinct 409s.
+   */
+  postRemittanceSubmit(
+    scheduleId: number,
+    payload: StaffRemittanceSubmitReqDto,
+    idempotencyKey: string
+  ): Observable<ResponseAPI<StaffRemittanceDto>> {
+    const headers = new HttpHeaders({ 'Idempotency-Key': idempotencyKey });
+    return this.http.post<ResponseAPI<StaffRemittanceDto>>(
+      `${environment.apiUrl}/api/private/settlements/schedules/${scheduleId}/submit`,
       payload,
       { context: this.driverCashActionContext, headers }
     );

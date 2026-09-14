@@ -96,21 +96,19 @@ describe('ProvinceEffect', () => {
       actionsSubject.next(invokeGetAllProvinceWithStationApi());
 
       expect(service.getAll).toHaveBeenCalledTimes(1);
-      // OBRS-642: `skipLoadingAlert` = skip the global blocking loading overlay. This
-      // is the customer's first screen and the overlay covered the booking form it
-      // exists to fill, with no way off it while the request was in flight — measured
-      // on prod 2026-08-10 at over a minute.
+      // OBRS-642 had this call opt out of the global blocking overlay by hand: this is
+      // the customer's first screen and the overlay covered the booking form it exists
+      // to fill, with no way off it while the request was in flight — measured on prod
+      // 2026-08-10 at over a minute. OBRS-908 turned that into the default, so the
+      // argument is gone and only `skipErrorAlert` is left to pin.
       //
-      // OBRS-1222: `skipErrorAlert` joins it, and the two are a PAIR with the inline
+      // OBRS-1222: `skipErrorAlert` is a PAIR with the inline
       // surface `app-station-load-error`. Dropping the flag brings back a modal that
       // now has an inline message underneath it; dropping the surface (see that
       // component's spec) makes the failure silent for a first-time visitor whose
       // dropdowns are empty. Asserted on the argument, because either half is a
       // one-line regression nothing else in this suite would notice.
-      expect(service.getAll).toHaveBeenCalledWith({
-        skipLoadingAlert: true,
-        skipErrorAlert: true,
-      });
+      expect(service.getAll).toHaveBeenCalledWith({ skipErrorAlert: true });
       expect(results.length).toBe(1);
       expect(results[0]).toEqual(
         invokeGetAllProvinceWithStationApiSuccess({ stations: [MOCK_STATION] })

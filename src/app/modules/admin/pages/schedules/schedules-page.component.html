@@ -180,6 +180,7 @@
                         class="admin-icon-btn"
                         (click)="viewSchedulesForSet(schedule)"
                         [attr.aria-label]="'ADMIN.SCHEDULES.VIEW_SCHEDULES' | translate"
+                        [title]="'ADMIN.SCHEDULES.VIEW_SCHEDULES' | translate"
                         >
                         <span class="material-symbols-outlined" [attr.translate]="'no'">format_list_bulleted</span>
                       </button>
@@ -189,6 +190,7 @@
                         [disabled]="isGenerating"
                         (click)="generateSchedules(schedule)"
                         [attr.aria-label]="'ADMIN.SCHEDULES.GENERATE' | translate"
+                        [title]="'ADMIN.SCHEDULES.GENERATE' | translate"
                         >
                         <span class="material-symbols-outlined" [attr.translate]="'no'">bolt</span>
                       </button>
@@ -196,6 +198,7 @@
                         type="button"
                         class="admin-icon-btn"
                         [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                        [title]="'ADMIN.COMMON.EDIT' | translate"
                         (click)="openEditModal(schedule)"
                         >
                         <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
@@ -204,6 +207,7 @@
                         type="button"
                         class="admin-icon-btn danger"
                         [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                        [title]="'ADMIN.COMMON.DELETE' | translate"
                         (click)="openDeleteModal(schedule)"
                         >
                         <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
@@ -312,6 +316,7 @@
                         type="button"
                         class="admin-icon-btn"
                         [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                        [title]="'ADMIN.COMMON.EDIT' | translate"
                         (click)="openScheduleEditModal(schedule)"
                         >
                         <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
@@ -320,6 +325,7 @@
                         type="button"
                         class="admin-icon-btn danger"
                         [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                        [title]="'ADMIN.COMMON.DELETE' | translate"
                         (click)="openDeleteModal(schedule)"
                         >
                         <span class="material-symbols-outlined" [attr.translate]="'no'">delete</span>
@@ -508,6 +514,7 @@
             [disabled]="isSubmitting"
             (click)="closeScheduleFormModal()"
             [attr.aria-label]="'ADMIN.COMMON.CANCEL' | translate"
+            [title]="'ADMIN.COMMON.CANCEL' | translate"
             >
             <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
           </button>

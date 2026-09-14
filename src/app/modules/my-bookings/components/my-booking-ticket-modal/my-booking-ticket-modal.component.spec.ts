@@ -205,7 +205,7 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
     });
     fixture.detectChanges();
 
-    expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(1, true);
+    expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(1);
 
     const cardInstance = fixture.debugElement.query(By.directive(ETicketCardComponent))
       .componentInstance as ETicketCardComponent;

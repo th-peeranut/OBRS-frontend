@@ -5,8 +5,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { OperationsPolicyService } from './operations-policy.service';
 import { environment } from '../../../environments/environment';
 import {
+  SHOW_BLOCKING_LOADING,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 describe('OperationsPolicyService', () => {
@@ -47,7 +47,7 @@ describe('OperationsPolicyService', () => {
     service.getOperationsPolicy().subscribe({ error: () => undefined });
 
     const req = httpMock.expectOne(`${environment.apiUrl}/api/operations-policy`);
-    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeTrue();
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
     expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
 
     req.flush({ code: 200, message: 'OK', data: { noShowCutoffMinutes: 5 } });

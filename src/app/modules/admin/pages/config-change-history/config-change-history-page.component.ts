@@ -4,6 +4,7 @@ import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { ConfigChangeHistoryStore } from './config-change-history.store';
 import { ConfigHistoryRow } from '../../../../shared/interfaces/config-history.interface';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 import {
   ActorDisplayKind,
   actorDisplayKind,
@@ -80,8 +81,8 @@ export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
     // exists to prevent). Mirrors ReportsPageComponent.ngOnInit.
     const filters = this.store.filters;
     this.selectedConfigKey = filters.configKey ?? '';
-    this.fromDate = ConfigChangeHistoryPageComponent.parseDateInputValue(filters.from);
-    this.toDate = ConfigChangeHistoryPageComponent.parseDateInputValue(filters.to);
+    this.fromDate = toDateControlValue(filters.from);
+    this.toDate = toDateControlValue(filters.to);
 
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.rows = data?.content ?? [];
@@ -217,8 +218,8 @@ export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
   private applyRange(): void {
     this.rangeError = '';
 
-    const from = this.fromDate ? ConfigChangeHistoryPageComponent.toDateInputValue(this.fromDate) : undefined;
-    const to = this.toDate ? ConfigChangeHistoryPageComponent.toDateInputValue(this.toDate) : undefined;
+    const from = this.fromDate ? toDateInputValue(this.fromDate) : undefined;
+    const to = this.toDate ? toDateInputValue(this.toDate) : undefined;
 
     if (from && to && from > to) {
       this.rangeError = this.translate.instant('ADMIN.CONFIG_CHANGE_HISTORY.ERROR.RANGE_INVALID');
@@ -267,24 +268,4 @@ export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
     ];
   }
 
-  // Inverse of toDateInputValue, for seeding the p-datePicker controls from the
-  // store's retained `yyyy-MM-dd` filter on mount (same helper shape as
-  // reports-page.component.ts:204).
-  private static parseDateInputValue(value: string | undefined): Date | null {
-    if (!value) {
-      return null;
-    }
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-      return null;
-    }
-    return new Date(year, month - 1, day);
-  }
-
-  private static toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
 }

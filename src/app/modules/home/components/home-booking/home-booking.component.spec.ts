@@ -218,7 +218,6 @@ describe('HomeBookingComponent', () => {
       // call site still pins size:100 explicitly (see the component's own
       // comment) so the OBRS-923 frequency-ranked sample doesn't shrink.
       expect(bookingServiceStub.getMyBookings).toHaveBeenCalledWith({
-        showLoadingDialog: false,
         skipAuthLogout: true,
         size: 100,
       });

@@ -172,6 +172,7 @@ the daily table — never shown next to stale/zero numbers. -->
                       class="admin-icon-btn"
                       (click)="toggleExpand(row)"
                       [attr.aria-label]="(isExpanded(row) ? 'ADMIN.REFUND_VOID_REPORT.COLLAPSE_ARIA' : 'ADMIN.REFUND_VOID_REPORT.EXPAND_ARIA') | translate"
+                      [title]="(isExpanded(row) ? 'ADMIN.REFUND_VOID_REPORT.COLLAPSE_ARIA' : 'ADMIN.REFUND_VOID_REPORT.EXPAND_ARIA') | translate"
                       >
                       <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
                     </button>

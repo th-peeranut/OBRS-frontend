@@ -12,7 +12,6 @@ import {
 import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import {
   APP_LANGUAGE_KEY,
@@ -148,7 +147,6 @@ export class RouteMapService {
   // ensures an unauthenticated visitor never gets bounced to /login by it.
   private selfHandledContext(): HttpContext {
     return new HttpContext()
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true)
       .set(SKIP_AUTH_LOGOUT, true);
   }

@@ -170,10 +170,34 @@ async function prepare(page: Page, lang: 'th' | 'en', consent: Consent = 'denied
   return wire;
 }
 
+const OVERLAY_SETTLE_TIMEOUT_MS = 5_000;
+
 async function logIn(page: Page): Promise<void> {
   await page.fill('#email', EMAIL);
   await page.fill('#password', PASSWORD);
   await page.click('button.login-btn[type="submit"]');
+
+  // OBRS-908. `LoginComponent` answers a successful login with `AlertService.success()`,
+  // which is a sweetalert2 modal with an OK button and no timer -- it waits to be
+  // acknowledged, and 59 of this app's 109 `success()` call sites even `await` that
+  // acknowledgement (measured: `grep -rn "await this.alertService.success(" src/app
+  // --include=*.ts | grep -v spec | wc -l`). It was never acknowledged here, because the
+  // NEXT /api/ request raised the global loading overlay and `Swal.fire` REPLACED the
+  // success popup, after which `hideLoading()` closed it -- the confirmation was being
+  // destroyed by a spinner. OBRS-908 made that overlay opt-in, so nothing destroys it any
+  // more and it sits on the page until dismissed.
+  //
+  // So this spec now dismisses it, which is what a customer does. It is not a workaround:
+  // the assertions below are about the CONSENT bar and the close-account button, and
+  // leaving an unrelated modal up would have them measure the wrong element -- which is
+  // exactly the failure this produced on the first run against the new interceptor.
+  const confirm = page.locator('.swal2-container .swal2-confirm');
+  await confirm.click({ timeout: 10_000 });
+  await page
+    .waitForFunction(() => document.querySelectorAll('.swal2-container').length === 0, null, {
+      timeout: OVERLAY_SETTLE_TIMEOUT_MS,
+    })
+    .catch(() => undefined);
 }
 
 /**
@@ -195,9 +219,15 @@ async function logIn(page: Page): Promise<void> {
  * produced — the same move OBRS-1383 made for the scroll offset. The wait is bounded and its
  * failure is deliberately NOT thrown: an overlay that never leaves is worth reporting as what it
  * is, and the read below names it, which a bare timeout here would not.
+ *
+ * ⚠️ CORRECTED BY OBRS-908, AND THE WAIT STAYS. The premise above — "errorInterceptor raises
+ * showLoading() for EVERY /api/ request" — is no longer true: the overlay is opt-in now and
+ * none of the calls this spec makes opts in, so the 231-272ms linger it was written against
+ * cannot occur here any more. It is kept because it still costs nothing and still names the
+ * culprit when SOMETHING is on top of the target, which is how the first run against the new
+ * interceptor identified the login confirmation `logIn()` now dismisses. Do not read this
+ * paragraph as a statement about today's interceptor; read it as why the wait exists.
  */
-const OVERLAY_SETTLE_TIMEOUT_MS = 5_000;
-
 async function waitForNoOverlay(page: Page): Promise<void> {
   await page
     .waitForFunction(() => document.querySelectorAll('.swal2-container').length === 0, null, {

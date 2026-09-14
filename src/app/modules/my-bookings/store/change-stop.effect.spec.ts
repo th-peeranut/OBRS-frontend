@@ -217,12 +217,13 @@ describe('ChangeStopEffect', () => {
     });
   });
 
-  // OBRS-1056: pins the ARGUMENT at this call site. StationService's own spec
-  // proves `{ skipLoadingAlert: true }` sets SKIP_GLOBAL_LOADING_ALERT; only this
-  // assertion catches someone dropping it here and bringing back the blocking
-  // popup that covered this dialog and swallowed its Escape key.
+  // OBRS-1056 pinned a `skipLoadingAlert: true` argument here, because dropping it
+  // brought back the blocking popup that covered this dialog and swallowed its
+  // Escape key. OBRS-908 deleted the flag by making the overlay opt-in, so what is
+  // pinned now is that this lane asks for NOTHING — an argument reappearing here
+  // would mean someone re-opted a dialog-backed lookup into blocking the screen.
   //
-  // OBRS-1222 AC4: it now pins the ABSENCE of `skipErrorAlert` just as hard.
+  // OBRS-1222 AC4: it still pins the ABSENCE of `skipErrorAlert` just as hard.
   // `ProvinceEffect` opted out of the global error modal because it ships an
   // inline replacement on the pages it owns; this lane ships no such surface and
   // only writes the failure into a dialog slice. Whoever is tempted to "make it
@@ -230,7 +231,7 @@ describe('ChangeStopEffect', () => {
   // load HERE — a customer mid-change to a REAL ticket — into no visible symptom
   // at all. `toHaveBeenCalledWith` is an exact object match, so that edit fails
   // this test.
-  it('loadStopsLookupOnOpen$ loads the stops lookup without the global loading popup, but KEEPS the error alert', () => {
+  it('loadStopsLookupOnOpen$ loads the stops lookup with no blocking overlay, but KEEPS the error alert', () => {
     const stationService = TestBed.inject(StationService) as jasmine.SpyObj<StationService>;
     stationService.getAll.and.returnValue(of({ code: 200, message: 'OK', data: [] } as ResponseAPI<StationApi[]>));
 
@@ -238,7 +239,7 @@ describe('ChangeStopEffect', () => {
 
     actionsSubject.next(openChangeStopDialog({ bookingId: 5 }));
 
-    expect(stationService.getAll).toHaveBeenCalledWith({ skipLoadingAlert: true });
+    expect(stationService.getAll).toHaveBeenCalledWith();
     const options = stationService.getAll.calls.mostRecent().args[0] ?? {};
     expect(options.skipErrorAlert).toBeUndefined();
   });

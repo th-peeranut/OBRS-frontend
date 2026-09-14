@@ -7,8 +7,8 @@ import {
 
 import { ScheduleService } from './schedule.service';
 import {
+  SHOW_BLOCKING_LOADING,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 describe('ScheduleService', () => {
@@ -43,7 +43,7 @@ describe('ScheduleService', () => {
     expect(req.request.params.get('passengerType')).toBe('monk');
     expect(req.request.params.get('fromStopId')).toBe('11');
     expect(req.request.params.get('toStopId')).toBe('12');
-    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeTrue();
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
     expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
 
     req.flush({ code: 200, data: [] });

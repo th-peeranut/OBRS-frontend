@@ -131,21 +131,18 @@ describe('BoardingQrService (OBRS-221 shared boarding-token QR pipeline)', () =>
     });
   });
 
-  describe('skipGlobalLoadingAlert passthrough', () => {
-    it('omits the second arg to TicketService.getBoardingToken by default (e-ticket call shape)', () => {
+  // OBRS-908 collapsed this pair. There used to be a third argument forwarded to
+  // `TicketService.getBoardingToken` so the sell-receipt page could opt each per-ticket
+  // GET out of the blocking overlay while the e-ticket page kept the plain call. With
+  // the overlay opt-in there is one call shape, and this pins that no caller can
+  // re-introduce a second argument.
+  describe('TicketService call shape', () => {
+    it('asks for the boarding token by id alone, for every caller', () => {
       ticketServiceStub.getBoardingToken.and.returnValue(successResponse(1, 'tok') as never);
 
       service.fetchBoardingTokens([1], () => undefined);
 
       expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(1);
-    });
-
-    it('passes skipGlobalLoadingAlert:true through explicitly when the caller opts in (sell-receipt call shape)', () => {
-      ticketServiceStub.getBoardingToken.and.returnValue(successResponse(1, 'tok') as never);
-
-      service.fetchBoardingTokens([1], () => undefined, true);
-
-      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(1, true);
     });
   });
 });

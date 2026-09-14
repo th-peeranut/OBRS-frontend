@@ -10,6 +10,7 @@ import {
   EodSalespersonTotalDto,
 } from '../../../../shared/interfaces/eod-sales-report.interface';
 import { formatMoney } from '../../../../shared/lib/money-display';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 // Sort/display order for the expandable per-row `byMethod` breakdown. Slugs not on this list
 // (a payment method the backend ships before this list catches up) sort after every known
@@ -65,7 +66,7 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.selectedDate = this.parseDateInputValue(this.store.date);
+    this.selectedDate = toDateControlValue(this.store.date);
 
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       const salespersons = data?.salespersons ?? null;
@@ -134,7 +135,7 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
     if (!value) {
       return;
     }
-    this.store.setDate(this.toDateInputValue(value));
+    this.store.setDate(toDateInputValue(value));
   }
 
   // OBRS-1403: salespersonId alone is no longer unique. The backend now attributes each row to
@@ -215,20 +216,5 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
       return '';
     }
     return this.translate.instant('ADMIN.EOD_REPORT.LOAD_FAILED');
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private parseDateInputValue(value: string): Date | null {
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-      return null;
-    }
-    return new Date(year, month - 1, day);
   }
 }

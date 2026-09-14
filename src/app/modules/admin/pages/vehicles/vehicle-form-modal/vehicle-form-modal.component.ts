@@ -3,11 +3,13 @@ import {
   EventEmitter,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   SimpleChanges,
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import {
   AdminApiService,
   AdminVehicleDto,
@@ -60,7 +62,7 @@ import {
     styleUrl: './vehicle-form-modal.component.scss',
     standalone: false
 })
-export class VehicleFormModalComponent implements OnChanges {
+export class VehicleFormModalComponent implements OnChanges, OnDestroy {
   @Input() isOpen = false;
   @Input() mode: 'create' | 'edit' = 'create';
   @Input() selectedVehicle: VehicleRow | null = null;
@@ -90,6 +92,8 @@ export class VehicleFormModalComponent implements OnChanges {
   private areDriversLoaded = false;
 
   protected readonly vehicleForm: FormGroup;
+
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -145,7 +149,8 @@ export class VehicleFormModalComponent implements OnChanges {
     // or the field keeps the verdict it got under the previous status.
     this.vehicleForm
       .get('status')
-      ?.valueChanges.subscribe(() => this.revalidateVehicleNumber());
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.revalidateVehicleNumber());
   }
 
   // Only `isOpen` transitions drive the form: the parent always sets
@@ -383,5 +388,10 @@ export class VehicleFormModalComponent implements OnChanges {
     ).toLowerCase();
 
     return rawLocale.startsWith('en') ? 'en' : 'th';
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

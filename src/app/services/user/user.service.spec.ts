@@ -4,8 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { UserService } from './user.service';
 import {
+  SHOW_BLOCKING_LOADING,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import { environment } from '../../../environments/environment';
 
@@ -35,7 +35,7 @@ describe('UserService', () => {
     const req = http.expectOne(`${environment.apiUrl}/api/users/check-duplicate/email/a@b.co`);
     expect(req.request.method).toBe('GET');
     expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
-    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeTrue();
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
     req.flush({ timestamp: '', code: 200, message: 'OK', data: false });
   });
 
@@ -44,7 +44,7 @@ describe('UserService', () => {
 
     const req = http.expectOne(`${environment.apiUrl}/api/users/check-duplicate/phoneNumber/0812345678`);
     expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
-    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeTrue();
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
     req.flush({ timestamp: '', code: 200, message: 'OK', data: false });
   });
 });

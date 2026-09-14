@@ -87,7 +87,7 @@
            rule - the signature is what makes it the sender's own declaration rather than a line we
            printed about them. Nothing is printed when they did not consent: a "did not consent"
            line would record a refusal the sender never gave. -->
-      @if (waybill?.leaveAtStopConsent) {
+      @if (w.leaveAtStopConsent) {
         <p class="parcel-waybill-leave-consent" data-testid="parcel-waybill-leave-consent">
           {{ 'STAFF.PARCEL_WAYBILL.LEAVE_CONSENT_LINE' | translate }}
         </p>

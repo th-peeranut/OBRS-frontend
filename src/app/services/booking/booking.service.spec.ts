@@ -3,7 +3,10 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { BookingService } from './booking.service';
 import { BookingPayload } from '../../shared/interfaces/booking.interface';
 import { environment } from '../../../environments/environment';
-import { SKIP_AUTH_LOGOUT } from '../../shared/interceptors/http-context-tokens';
+import {
+  SHOW_BLOCKING_LOADING,
+  SKIP_AUTH_LOGOUT,
+} from '../../shared/interceptors/http-context-tokens';
 import { AuthService } from '../../auth/auth.service';
 
 const PAYLOAD: BookingPayload = {
@@ -199,6 +202,71 @@ describe('BookingService', () => {
           refundMethod: 'MANUAL_REFUND_REQUIRED',
         },
       });
+    });
+  });
+
+  /**
+   * OBRS-908 AC3, the booking half. The card keeps the blocking overlay for exactly three
+   * actions, and two of them are here: confirming a booking (seats are held against that
+   * call, and a second press is a second attempt) and cancelling one (irreversible, and it
+   * moves money). Everything else this service does is a page loading its own data.
+   *
+   * The negative cases are not padding — they are the regression this card is most likely
+   * to suffer, which is somebody restoring the overlay wholesale by putting the token on a
+   * shared context helper. `silentContext()` is used by eleven calls here; only
+   * `cancelBooking` may carry the token.
+   */
+  describe('which calls still hold the screen (OBRS-908 AC3)', () => {
+    it('createBooking opts in — signed-in', () => {
+      authStub.isAuthenticated = () => true;
+      service.createBooking(PAYLOAD).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings`);
+      expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    it('createBooking opts in — guest, and still suppresses the error alert when asked', () => {
+      authStub.isAuthenticated = () => false;
+      service.createBooking(PAYLOAD, true).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings`);
+      // The two decisions are independent and both have to survive: OBRS-109 needs the
+      // error alert suppressed so a PROMO_CODE_* rejection renders inline, and OBRS-908
+      // needs the screen held. Combining them into one context is where one gets lost.
+      expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    it('cancelBooking opts in', () => {
+      service.cancelBooking(5).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/bookings/5/cancel`
+      );
+      expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+      req.flush({ code: 200, message: 'OK', data: {} });
+    });
+
+    it('reading the booking list does NOT', () => {
+      service.getMyBookings().subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/bookings/me?page=0&size=20`
+      );
+      expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
+      req.flush({ code: 200, message: 'OK', data: { content: [] } });
+    });
+
+    it('a reschedule ESTIMATE does NOT — silentContext() must not carry the token', () => {
+      service.getRescheduleOptions(5, '2026-01-01').subscribe();
+
+      const req = httpMock.expectOne((r) =>
+        r.url.includes('/bookings/5/reschedule-options')
+      );
+      expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
+      req.flush({ code: 200, message: 'OK', data: [] });
     });
   });
 

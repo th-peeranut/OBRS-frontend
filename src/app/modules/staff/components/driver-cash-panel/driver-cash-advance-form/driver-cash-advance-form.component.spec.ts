@@ -96,3 +96,76 @@ describe('DriverCashAdvanceFormComponent', () => {
     expect(component['amountInput']).toBe('');
   });
 });
+
+// ── OBRS-1755: the two additive inputs/outputs the ส่งยอด tab needs ──────────
+// Both exist so the SAME form serves two hosts. The point of each test below is
+// that the EXISTING host (driver-cash-panel) is unaffected: `showSubmit`
+// defaults true, and nothing there binds `amountChange`.
+describe('DriverCashAdvanceFormComponent — OBRS-1755 additive contract', () => {
+  let fixture: ComponentFixture<DriverCashAdvanceFormComponent>;
+  let component: DriverCashAdvanceFormComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [FormsModule, TranslateModule.forRoot()],
+      declarations: [DriverCashAdvanceFormComponent],
+    }).compileComponents();
+    fixture = TestBed.createComponent(DriverCashAdvanceFormComponent);
+    component = fixture.componentInstance;
+  });
+
+  function submitBtn(): HTMLButtonElement | null {
+    return fixture.nativeElement.querySelector('[data-testid="driver-cash-advance-submit"]');
+  }
+
+  it('renders its own submit button by DEFAULT (driver-cash-panel is unchanged)', () => {
+    fixture.detectChanges();
+    expect(component.showSubmit).withContext('default must be true').toBeTrue();
+    expect(submitBtn()).toBeTruthy();
+  });
+
+  it('renders NO submit button when the host owns the single primary action', () => {
+    component.showSubmit = false;
+    fixture.detectChanges();
+    expect(submitBtn()).toBeNull();
+    // The field itself must survive — hiding the button is the whole change.
+    expect(
+      fixture.nativeElement.querySelector('#dcp-advance-amount'),
+    ).withContext('the amount field must still render').toBeTruthy();
+  });
+
+  it('emits amountChange with the raw text on every keystroke', () => {
+    fixture.detectChanges();
+    const emitted: string[] = [];
+    component.amountChange.subscribe((value: string) => emitted.push(value));
+
+    component['onAmountInput']('5');
+    component['onAmountInput']('50');
+
+    expect(emitted).toEqual(['5', '50']);
+    // ...and the local value the existing submit path reads is still written.
+    expect(component['amountInput']).toBe('50');
+  });
+
+  // The clear-on-success contract is what the ส่งยอด tab drives too, so it must
+  // still hold with the button hidden — the tab has no other way to empty it.
+  it('still clears the input on a successful submit when showSubmit is false', () => {
+    component.showSubmit = false;
+    component['amountInput'] = '500';
+    component.isSubmitting = true;
+    fixture.detectChanges();
+
+    component.isSubmitting = false;
+    component.submitError = null;
+    component.ngOnChanges({
+      isSubmitting: {
+        previousValue: true,
+        currentValue: false,
+        firstChange: false,
+        isFirstChange: () => false,
+      },
+    });
+
+    expect(component['amountInput']).toBe('');
+  });
+});

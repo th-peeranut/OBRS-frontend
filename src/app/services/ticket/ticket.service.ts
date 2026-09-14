@@ -1,10 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { BoardingTokenDto } from '../../shared/interfaces/ticket-boarding.interface';
-import { SKIP_GLOBAL_LOADING_ALERT } from '../../shared/interceptors/http-context-tokens';
 
 /**
  * Customer-facing, per-ticket endpoints (OBRS-96). Kept separate from
@@ -28,20 +27,15 @@ export class TicketService {
    * docs/handoff.md Contract Requests — the backend implementation lands in
    * parallel on `ao/obrs-96-eticket-qr`, OBRS-backend).
    */
-  getBoardingToken(
-    ticketId: number,
-    skipGlobalLoadingAlert = false
-  ): Observable<ResponseAPI<BoardingTokenDto>> {
-    // The staff sell-receipt page renders its own inline spinner and fetches a
-    // token per ticket; without opting out, each per-ticket GET would pop the
-    // global "Loading..." dialog again after the receipt has already rendered.
-    // Default stays false so the customer e-ticket page keeps its behavior.
-    const options = skipGlobalLoadingAlert
-      ? { context: new HttpContext().set(SKIP_GLOBAL_LOADING_ALERT, true) }
-      : {};
+  // OBRS-908 removed this method's loading-alert opt-out parameter. It existed
+  // because every `/api/` request raised the blocking overlay, so the staff
+  // sell-receipt page — which renders its own inline spinner and fetches a token PER
+  // TICKET — had to opt each one out or the dialog popped again over an already
+  // rendered receipt. Fetching a QR token is a page loading its own data, so it no
+  // longer raises anything and both callers are back to the same call.
+  getBoardingToken(ticketId: number): Observable<ResponseAPI<BoardingTokenDto>> {
     return this.http.get<ResponseAPI<BoardingTokenDto>>(
-      `${environment.apiUrl}/api/private/tickets/${ticketId}/boarding-token`,
-      options
+      `${environment.apiUrl}/api/private/tickets/${ticketId}/boarding-token`
     );
   }
 }
