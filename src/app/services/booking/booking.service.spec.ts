@@ -80,6 +80,37 @@ describe('BookingService', () => {
       req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
     });
 
+    // OBRS-25: the header the guard on both create doors reads. Asserted on the GUEST door
+    // because that is the lane the defect lived in - an online booking carries no seat choice,
+    // so a retried request is assigned the next free seat and becomes a second real booking.
+    it('sends the caller-owned Idempotency-Key on the guest door', () => {
+      authStub.isAuthenticated = () => false;
+
+      service.createBooking(PAYLOAD, false, 'KEY-FROM-CALLER').subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings`);
+      expect(req.request.headers.get('Idempotency-Key')).toBe('KEY-FROM-CALLER');
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    it('sends the caller-owned Idempotency-Key on the private door too', () => {
+      authStub.isAuthenticated = () => true;
+
+      service.createBooking(PAYLOAD, false, 'KEY-FROM-CALLER').subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings`);
+      expect(req.request.headers.get('Idempotency-Key')).toBe('KEY-FROM-CALLER');
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    it('still sends a key when the caller supplies none, so a double submit is covered', () => {
+      service.createBooking(PAYLOAD).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings`);
+      expect(req.request.headers.get('Idempotency-Key')).toBeTruthy();
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
     it('does not suppress the global error alert by default (unrelated to a promo code)', () => {
       service.createBooking(PAYLOAD).subscribe();
 

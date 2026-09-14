@@ -1,5 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpContext,
+  HttpHeaders,
+  HttpParams,
+} from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import {
@@ -33,6 +38,7 @@ import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
+import { generateIdempotencyKey } from '../../shared/lib/idempotency-key';
 import { normalizeSeatAssignments } from '../../shared/lib/seat-number';
 import { map, Observable } from 'rxjs';
 import {
@@ -144,10 +150,17 @@ export class BookingService {
    *   PROMO_CODE_* rejection inline on the reverted promo field instead of
    *   the generic global alert (and must show its own fallback alert for any
    *   other error, since the interceptor is opted out for this call).
+   * @param idempotencyKey OBRS-25: both endpoints now accept `Idempotency-Key` and
+   *   answer a repeat of the same key with the booking it already made. The key is
+   *   the CALLER's to own across a retry — a key minted per attempt protects nothing,
+   *   since a retry after a network timeout would carry a new one and book again.
+   *   Omitting it still sends a key (same shape as `PaymentService`), which covers a
+   *   double-submit but not a retry.
    */
   createBooking(
     payload: BookingPayload,
-    suppressGlobalErrorAlert = false
+    suppressGlobalErrorAlert = false,
+    idempotencyKey?: string
   ): Observable<ResponseAPI<CreateBookingResponse>> {
     const url = this.authService.isAuthenticated()
       ? `${environment.apiUrl}/api/private/bookings`
@@ -160,6 +173,9 @@ export class BookingService {
     // BLOCKING_LOADING_DELAY_MS, so a fast confirm stays as silent as every other call.
     return this.http
       .post<ResponseAPI<CreateBookingResponse>>(url, payload, {
+        headers: new HttpHeaders({
+          'Idempotency-Key': idempotencyKey ?? generateIdempotencyKey(),
+        }),
         context: (suppressGlobalErrorAlert
           ? this.silentErrorContext()
           : new HttpContext()

@@ -33,6 +33,7 @@ import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import dayjs from 'dayjs';
 import { toApiOffsetDateTime } from '../../shared/lib/api-date-time';
+import { generateIdempotencyKey } from '../../shared/lib/idempotency-key';
 import { normalizeSeatNumber as stripSeatDigits } from '../../shared/lib/seat-label';
 import { selectProvinceWithStation } from '../../shared/stores/station/station.selector';
 import { StationApi } from '../../shared/interfaces/station.interface';
@@ -61,13 +62,22 @@ export class PassengerInfoComponent {
   isPassengerFormValid = false;
   isBookerFormValid = false;
   /**
-   * 2026-09-11 review: POST /api/bookings carries no Idempotency-Key (see docs/handoff.md contract
-   * request) and this page had no in-flight guard - a double tap or a retried request on a flaky
-   * mobile link could create two seat holds for the same passenger. Until the backend accepts a
-   * key, the submit is single-flight on the client: the Next button is disabled while a create is
-   * outstanding and a re-entrant call returns without sending.
+   * 2026-09-11 review: this page had no in-flight guard - a double tap could create two seat holds
+   * for the same passenger. The submit is single-flight on the client: the Next button is disabled
+   * while a create is outstanding and a re-entrant call returns without sending.
+   *
+   * <p>OBRS-25: this closes the double TAP only. A request the server received and answered into a
+   * dead connection is retried by the platform with this flag already back to false, and only the
+   * server can recognise that one - which is what `pendingIdempotencyKey` below is for.
    */
   isSubmitting = false;
+  /**
+   * OBRS-25: minted ONCE per booking attempt and reused for as long as the payload is unchanged,
+   * the same shape `StaffRemittanceTabComponent#onSubmit` uses. A key minted per call would defeat
+   * the server-side guard entirely: the retry would carry a new key and be a new booking.
+   */
+  private pendingIdempotencyKey: string | null = null;
+  private pendingPayloadSignature: string | null = null;
   // OBRS-109 (#37): the confirmed-applied promo code (from the summary
   // sidebar's instant preview). Only this value — never a guessed/typed one
   // that wasn't confirmed — is ever sent on the create-booking call.
@@ -176,7 +186,11 @@ export class PassengerInfoComponent {
       try {
         const response = await firstValueFrom(
           this.bookingService
-            .createBooking(bookingPayload, suppressGlobalErrorAlert)
+            .createBooking(
+              bookingPayload,
+              suppressGlobalErrorAlert,
+              this.idempotencyKeyFor(bookingPayload)
+            )
             .pipe(take(1))
         );
         if (response?.code === 200 || response?.code === 201) {
@@ -192,6 +206,11 @@ export class PassengerInfoComponent {
             )
           );
           isBookingCreated = true;
+          // The booking exists; the next attempt on this page is a different booking and must
+          // not replay this one. On the error path the key is deliberately KEPT, so a retry of
+          // the same payload is answered with the booking already made.
+          this.pendingIdempotencyKey = null;
+          this.pendingPayloadSignature = null;
         }
       } catch (error) {
         console.error('Booking creation failed', error);
@@ -206,6 +225,19 @@ export class PassengerInfoComponent {
     if (isBookingCreated) {
       await this.router.navigate(['/payment']);
     }
+  }
+
+  /** Same key while the payload is unchanged; a new one the moment the customer edits it. */
+  private idempotencyKeyFor(payload: BookingPayload): string {
+    const signature = JSON.stringify(payload);
+    if (
+      this.pendingIdempotencyKey === null ||
+      this.pendingPayloadSignature !== signature
+    ) {
+      this.pendingIdempotencyKey = generateIdempotencyKey();
+      this.pendingPayloadSignature = signature;
+    }
+    return this.pendingIdempotencyKey;
   }
 
   onBack(): void {
