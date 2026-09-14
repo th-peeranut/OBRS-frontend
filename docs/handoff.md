@@ -14,6 +14,27 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-09-12 — `POST/PUT /api/private/schedule-set` start-after-end now answers a localized 400
+**Risk level**: R1 (error contract only; success shapes unchanged)
+**Triggered by**: code-quality pass — the check threw a raw `IllegalArgumentException`, which the status mapper already turned into a 400 but only as the generic `UNEXPECTED_ERROR` with the generic message (plus an ERROR-level stack trace in the backend log). It is now a specific, localized `DomainException`.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `POST /api/private/schedule-set`, `PUT /api/private/schedule-set/{id}` | Error changed | `startDate` after `endDate` → HTTP 400, `errorCode: "SCHEDULE_SET_RANGE_INVALID"`, message localized via `schedule.set.error.range-invalid` (was HTTP 400 `UNEXPECTED_ERROR` with the generic message) |
+
+### Response shapes before / after
+- **Before**: `400 { "code": 400, "errorCode": "UNEXPECTED_ERROR", "message": "<generic unexpected-error text>" }`
+- **After**: `400 { "code": 400, "errorCode": "SCHEDULE_SET_RANGE_INVALID", "message": "The start date must not be later than the end date." }` (TH/ZH per `Accept-Language`)
+
+### Action required in frontend
+- [ ] None required — the global error interceptor already shows the backend message. Optionally branch on `SCHEDULE_SET_RANGE_INVALID` in the schedules page if a field-level hint is wanted.
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/api/scheduling.md` `POST /api/private/schedule-set`.
+
+---
+
 ## [Backend] 2026-09-11 — security review #3: signup OTP-gated guest claim, OTP attempt cap, staff schedule detail gated, page size cap
 **Risk level**: R1 (additive request fields; new 409/401 error codes; one endpoint newly role-gated)
 **Triggered by**: backend security review 2026-09-11 (report #3; findings B2-H1, B2-H2, B2-F2, B2-L5), branch `claude/determined-ride-lvjeoh`.

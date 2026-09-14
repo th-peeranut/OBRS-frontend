@@ -19,6 +19,7 @@ import {
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 @Component({
     selector: 'app-reports-page',
@@ -80,8 +81,8 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const range = this.store.range;
-    this.fromDate = this.parseDateInputValue(range.from);
-    this.toDate = this.parseDateInputValue(range.to);
+    this.fromDate = toDateControlValue(range.from);
+    this.toDate = toDateControlValue(range.to);
 
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.summary = data;
@@ -212,8 +213,8 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
 
     const errorKey = dateRangeErrorKey(
       this.fromDate,
@@ -262,8 +263,8 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     if (!this.fromDate || !this.toDate) {
       return;
     }
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
     if (from > to) {
       return;
     }
@@ -287,21 +288,6 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
       return this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
     }
     return this.translate.instant('ADMIN.REPORTS.LOAD_FAILED');
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private parseDateInputValue(value: string): Date | null {
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-      return null;
-    }
-    return new Date(year, month - 1, day);
   }
 
   // ── OBRS-960: parcel-share monthly totals ────────────────────────────────
