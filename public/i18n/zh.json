@@ -2334,7 +2334,14 @@
         "VEHICLE": "车牌",
         "CATEGORY": "类别",
         "PAID_BY": "付款方式",
-        "LINE_PART_NONE": "非配件"
+        "LINE_PART_NONE": "非配件",
+        "ODOMETER": "里程数",
+        "ODOMETER_HINT": "账单上有才填 — 非必填",
+        "ODOMETER_INVALID": "请输入大于零的整数",
+        "PLANS_UPDATED": "已更新 {{n}} 条保养计划",
+        "PLAN_UPDATED_LINE": "• {{part}} · {{km}} 公里",
+        "PLAN_UNNAMED_PART": "已从登记表中移除的配件",
+        "GO_TO_PLANS": "查看保养计划"
       }
     },
     "EXPENSE_PAYEES": {
@@ -4640,7 +4647,8 @@
           "AMOUNT": "金额",
           "NOTE": "备注"
         },
-        "WAGE_BASIS": "按 {{rate}} x {{legs}} 趟计算"
+        "WAGE_BASIS": "按 {{rate}} x {{legs}} 趟计算",
+        "OTHER_INCOMPLETE": "\"其他\"一行需同时填写项目名称和金额"
       },
       "REPAIR": {
         "TITLE": "维修费",

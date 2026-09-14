@@ -21,6 +21,12 @@
       "why": "OBRS-640 Phase A: a hit-tested mobile tap-target (>=44x44) + rendered-text-size (>=12px) sweep of six customer routes, plus the my-bookings overflow menu and e-ticket modal. CAPTURE and not GATE because the owner's own call (docs/prod/LANE-BRIEFS.md#obrs-640) is that this lands silently for now -- Phase A measures the baseline, Phase B (a separate card) fixes it, and only then does a gate belong here. Run on the unfixed tree most of its cases fail on purpose; that failure, with the full population/violation detail the console prints, IS the AC-1 baseline. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts's seedCustomerSession/seedStore, with two endpoints (/users/me, /bookings/501/tickets) fulfilled locally for the two entries that map does not carry."
     },
     {
+      "spec": "obrs-1896-settlement-other-row.capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1896capture.config.ts",
+      "why": "OBRS-1896 BEFORE/AFTER evidence for the 6th \"อื่น ๆ\" row on /staff/settlement -- the free-text cost line the API has always accepted (OTHER + categoryOtherLabel, OBRS-1363) and this screen had nowhere to put. Four frames: the five fixed rows, the six, the half-filled row refused on screen instead of by a 400 that would reject the whole day, and the named row with the total it moved in the same frame. CAPTURE and not GATE because the verdict belongs to driver-settlement-page.component.spec.ts, which asserts the payload, the both-directions guard and the amount reaching the box total; this exists so the card carries a picture of the same claim. Hermetic on the gate lane's terms: a synthetic salesperson session plus one in-spec handler for every /api/** call, and it asserts the day-context actually landed before shooting -- its first run stubbed the wrong path and photographed a five-row table for a reason that had nothing to do with this card."
+    },
+    {
       "spec": "obrs-1832-report-trigger.capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1832capture.config.ts",

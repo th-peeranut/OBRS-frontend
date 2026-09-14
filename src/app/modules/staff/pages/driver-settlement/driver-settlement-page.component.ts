@@ -49,6 +49,11 @@ const WAGE_CATEGORY = 'DRIVER_WAGE';
  * `parkingFeeEligible` is true (owner: "ค่าจอดรถขึ้นเฉพาะรถที่ออกเที่ยวแรก"). */
 const PARKING_FEE_CATEGORY = 'PARKING_FEE';
 
+/** OBRS-1896 — the free-text row, and the only one whose ITEM cell is typed. The server has taken
+ * it all along (`OTHER` is in `DriverCashExpensePaidReqDto.ALLOWED_CATEGORIES` and the payload
+ * carries `categoryOtherLabel`, OBRS-1363); what this screen lacked was somewhere to put the name. */
+const OTHER_CATEGORY = 'OTHER';
+
 /**
  * OBRS-1756 — the settlement screen's expense rows, in the owner's order.
  *
@@ -58,10 +63,11 @@ const PARKING_FEE_CATEGORY = 'PARKING_FEE';
  * make the salesperson re-open the same control four times to answer it.
  *
  * <p>Every code here is already in that form's `DRIVER_CASH_EXPENSE_CATEGORIES`, so the backend's
- * `ALLOWED_CATEGORIES` accepts all five and the office's `verify-field-expense-categories.ps1`
- * comparison is unaffected. `OTHER` and `REPAIR` are absent on purpose: `REPAIR` has the bill box
- * below (OBRS-1630), and `OTHER` needs a free-text label this screen's fixed rows have nowhere to
- * put.
+ * `ALLOWED_CATEGORIES` accepts every one of them and the office's
+ * `verify-field-expense-categories.ps1` comparison is unaffected. `REPAIR` is the one code still
+ * absent on purpose: it has the bill box below (OBRS-1630). `OTHER` was absent for its own reason
+ * — a free-text label these fixed rows had nowhere to put — until OBRS-1896 made its ITEM cell the
+ * box that holds it.
  */
 const SETTLEMENT_EXPENSE_CATEGORIES: readonly string[] = [
   WAGE_CATEGORY,
@@ -69,6 +75,7 @@ const SETTLEMENT_EXPENSE_CATEGORIES: readonly string[] = [
   'TOLL',
   'PERMIT_FEE',
   PARKING_FEE_CATEGORY,
+  OTHER_CATEGORY,
 ];
 
 /**
@@ -91,6 +98,8 @@ interface SettlementExpenseRow {
   category: string;
   amountInput: string;
   noteInput: string;
+  /** OBRS-1896 — typed on the `OTHER` row only; every other row is named by its category. */
+  otherLabelInput: string;
 }
 
 interface DayContextRequest {
@@ -342,7 +351,12 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
       // The wage row is deliberately left blank: its amount is the server's (OBRS-1356), and the
       // submission carries null for it precisely because a number there would be discarded.
       return sent
-        ? { category: row.category, amountInput: sent.amount ?? '', noteInput: sent.note ?? '' }
+        ? {
+            category: row.category,
+            amountInput: sent.amount ?? '',
+            noteInput: sent.note ?? '',
+            otherLabelInput: sent.categoryOtherLabel ?? '',
+          }
         : row;
     });
     this.repairBills = (submission.repairBills ?? []).map((bill) =>
@@ -407,6 +421,24 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
 
   protected isWageRow(row: SettlementExpenseRow): boolean {
     return row.category === WAGE_CATEGORY;
+  }
+
+  protected isOtherRow(row: SettlementExpenseRow): boolean {
+    return row.category === OTHER_CATEGORY;
+  }
+
+  /**
+   * OBRS-1896 — the row's two boxes go together or not at all, and each half alone loses what was
+   * typed. A name with no amount is a row `buildPayload` drops, like every other untyped row; an
+   * amount with no name is the one shape the server refuses (`isCategoryOtherLabelValid`,
+   * OBRS-1363) — and it refuses the WHOLE day's submit, not the row.
+   */
+  protected get isOtherRowIncomplete(): boolean {
+    const row = this.expenseRows.find((candidate) => this.isOtherRow(candidate));
+    if (!row) return false;
+    const hasAmount = row.amountInput.trim().length > 0;
+    const hasLabel = row.otherLabelInput.trim().length > 0;
+    return hasAmount !== hasLabel;
   }
 
   /**
@@ -487,6 +519,9 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
     // dropped from the payload and from the total, and the day would settle short.
     if (this.visibleExpenseRows.some((row) => this.isAmountInvalid(row))) {
       return 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID';
+    }
+    if (this.isOtherRowIncomplete) {
+      return 'STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE';
     }
     if (this.repairBills.some((bill) => !bill.valid || this.billTotal(bill) <= 0)) {
       return 'STAFF.SETTLEMENT.BLOCKED.INVALID_REPAIR_BILL';
@@ -586,6 +621,9 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
         category: row.category,
         amount: row.amountInput.trim(),
         note: note || null,
+        // OBRS-1896: `isOther == hasLabel` is the server's rule, so the label travels only with the
+        // row allowed to carry one — and the button refuses that row half-filled.
+        ...(this.isOtherRow(row) ? { categoryOtherLabel: row.otherLabelInput.trim() } : {}),
       });
     }
 
@@ -612,6 +650,7 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
       category,
       amountInput: '',
       noteInput: '',
+      otherLabelInput: '',
     }));
   }
 
