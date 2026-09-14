@@ -55,6 +55,20 @@ function collectFiles(dir, out = []) {
   return out;
 }
 
+// WHAT THIS GATE DOES NOT SEE, on purpose (scrutinize, OBRS-974):
+//   1. A key literal parked on an object property and handed over through a VARIABLE --
+//      `{ labelKey: 'ADMIN.PAGES.DASHBOARD' }` ... `translate.instant(item.labelKey)`, which
+//      is how admin-layout.component.ts builds its nav. Those all resolve today (checked),
+//      but a typo there would still reach the screen.
+//   2. Anything assembled at runtime ('ADMIN.STATUS.' + row.status).
+// Widening rule 1 means trusting EVERY key-shaped literal in src/, and that was measured
+// rather than assumed on 2026-09-14: 39 distinct key-shaped literals in src/ are absent
+// from en.json, and nearly all are legitimate -- namespace PREFIXES the code appends a
+// suffix to (ADMIN.REPORTS.ERROR, ADMIN.SETTLEMENTS.ERROR, 8 and 4 sites), plus spec
+// fixtures (X.RANGE_INVALID). So the broad rule buys one blind spot at the price of a
+// 38-entry allowlist that would rot. Scanning only what is handed DIRECTLY to the pipe or
+// the service is what keeps this gate's failures true.
+
 // A key LITERAL: dotted, upper-snake segments. This shape is what makes the scan safe
 // on expressions rather than on single tokens -- a key assembled at runtime
 // ('ADMIN.STATUS.' + row.status) leaves only the prefix as a literal, and a trailing
