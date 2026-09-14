@@ -690,7 +690,6 @@
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
       "UNLOCK_FAILED": "无法解锁账户。",
-      "CANCEL_TRIP_CONFIRM_TITLE": "确认取消行程",
       "CANCEL_TRIP_REFUND_BODY": "{{count}} 个预订将自动退款并收到通知。",
       "CANCEL_TRIP_NO_REFUND_BODY": "行程将被取消，不会产生退款。",
       "CANCEL_TRIP_BTN": "取消行程",

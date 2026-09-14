@@ -68,6 +68,16 @@ jobs:
       - name: i18n parity, policy-number and privacy-version gates
         run: npm run test:i18n
 
+      # The other axis, and the one the gate above is structurally blind to (OBRS-974):
+      # parity compares the three locale files to EACH OTHER, so a key missing from all
+      # three is perfectly symmetric and passes. This one compares the CODE to en.json --
+      # every key literal handed to `| translate` or translate.instant()/get() must exist.
+      # ADMIN.MESSAGES.DELETE_CONFIRM_TITLE headed two staff confirm dialogs as a raw key
+      # from 3b4b977e onward with parity green the whole time. Also pure-node, also before
+      # npm ci, so it spends no extra runner minutes.
+      - name: i18n code-to-catalogue gate
+        run: npm run test:i18n-keys
+
       # Same shape, and the one drift the gate above cannot see (OBRS-1762). The list
       # of switchable notification types lives in this repo AND in the backend enum,
       # and test:i18n compares en/th/zh only to each other -- so when the backend added

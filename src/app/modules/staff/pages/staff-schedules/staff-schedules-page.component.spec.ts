@@ -3,7 +3,7 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { BehaviorSubject, throwError } from 'rxjs';
 import { StaffSchedulesPageComponent } from './staff-schedules-page.component';
@@ -13,6 +13,7 @@ import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { StaffSchedulesStore } from './staff-schedules.store';
 import { ScheduleRow } from './staff-schedules-page.mappers';
+import enI18n from '../../../../../../public/i18n/en.json';
 
 // OBRS-283: smart delete/cancel branch driven by the row's `deletable` +
 // `confirmedBookingCount` fields, mirroring the admin schedules page's
@@ -500,5 +501,66 @@ describe('StaffSchedulesPageComponent - OBRS-1585 the day filter reads the same 
     const component = componentWithTrips();
     component.onDateChange(new Date(2026, 11, 20));
     expect(component.filteredRows.length).toBe(0);
+  });
+});
+
+// OBRS-974: the delete-mode modal title called ADMIN.MESSAGES.DELETE_CONFIRM_TITLE,
+// a key no locale file defines, so ngx-translate echoed the RAW KEY onto the screen
+// as the heading of the confirm dialog. The parity gate could not see it (missing
+// from en/th/zh alike keeps the three key sets equal), and the OBRS-667 suite above
+// queries the footer button, never the title. Asserting against the REAL en.json
+// (the OBRS-1152 idiom) is what makes this a gate on the string the staff member
+// reads rather than on a hand-typed mirror of it.
+describe('StaffSchedulesPageComponent - OBRS-974 delete-modal title (DOM)', () => {
+  const HARD_DELETE_ROW: ScheduleRow = { ...ROW, deletable: true };
+
+  function setupFixture(): {
+    fixture: ComponentFixture<StaffSchedulesPageComponent>;
+    component: StaffSchedulesPageComponent;
+  } {
+    TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
+      declarations: [StaffSchedulesPageComponent],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: AdminApiService, useValue: {} },
+        { provide: AlertService, useValue: makeAlertStub() },
+        { provide: StaffSchedulesStore, useValue: makeStoreStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false, true) },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { ADMIN: (enI18n as any).ADMIN }, true);
+    translate.use('en');
+
+    const fixture = TestBed.createComponent(StaffSchedulesPageComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges(); // ngOnInit
+    return { fixture, component };
+  }
+
+  it('delete mode: the title renders the translation, not the key string itself', () => {
+    const { fixture, component } = setupFixture();
+    (component as any).openDeleteModal(HARD_DELETE_ROW);
+    fixture.detectChanges();
+
+    const title: HTMLElement | null = fixture.nativeElement.querySelector('.modal-title');
+    expect(title).withContext('the delete modal must be open').not.toBeNull();
+    expect(title!.textContent!.trim())
+      .withContext('a raw i18n key leaked to the screen')
+      .toBe((enI18n as any).ADMIN.COMMON.DELETE_CONFIRM_TITLE);
+  });
+
+  it('cancel mode: the title renders the translation, not the key string itself', () => {
+    const { fixture, component } = setupFixture();
+    (component as any).openDeleteModal({ ...ROW, deletable: false, confirmedBookingCount: 5 });
+    fixture.detectChanges();
+
+    const title: HTMLElement = fixture.nativeElement.querySelector('.modal-title');
+    expect(title.textContent!.trim())
+      .withContext('a raw i18n key leaked to the screen')
+      .toBe((enI18n as any).ADMIN.COMMON.CANCEL_TRIP_CONFIRM_TITLE);
   });
 });
