@@ -60,6 +60,12 @@
   }
 }
 
+/* OBRS-1896 - the อื่น ๆ row's warning sits UNDER its box. Inline, it widens the ITEM
+   column and shoves every amount field on the table sideways while it is up. */
+.ds-other-error {
+  display: block;
+}
+
 .ds-wage-basis {
   margin-inline-start: 0.5rem;
   font-size: 0.8125rem;

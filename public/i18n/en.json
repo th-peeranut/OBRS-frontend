@@ -4611,7 +4611,8 @@
           "AMOUNT": "Amount",
           "NOTE": "Note"
         },
-        "WAGE_BASIS": "Priced at {{rate}} x {{legs}} legs"
+        "WAGE_BASIS": "Priced at {{rate}} x {{legs}} legs",
+        "OTHER_INCOMPLETE": "The \"Other\" row needs both an item name and an amount"
       },
       "REPAIR": {
         "TITLE": "Repairs",

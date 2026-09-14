@@ -4611,7 +4611,8 @@
           "AMOUNT": "金额",
           "NOTE": "备注"
         },
-        "WAGE_BASIS": "按 {{rate}} x {{legs}} 趟计算"
+        "WAGE_BASIS": "按 {{rate}} x {{legs}} 趟计算",
+        "OTHER_INCOMPLETE": "\"其他\"一行需同时填写项目名称和金额"
       },
       "REPAIR": {
         "TITLE": "维修费",

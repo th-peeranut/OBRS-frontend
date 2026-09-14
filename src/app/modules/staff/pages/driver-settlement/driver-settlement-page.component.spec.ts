@@ -551,4 +551,136 @@ describe('DriverSettlementPageComponent (OBRS-1756)', () => {
         .disabled
     ).toBeFalse();
   });
+  it('OBRS-1896: offers a 6th row whose ITEM cell is typed, and sends it as OTHER + categoryOtherLabel', async () => {
+    await setUp();
+    pickVehicle();
+
+    // AC-1: the row exists, after the five fixed ones, and its name is an input rather than a label.
+    expect(component['visibleExpenseRows'].map((r) => r.category)).toEqual([
+      'DRIVER_WAGE',
+      'FUEL',
+      'TOLL',
+      'PERMIT_FEE',
+      'PARKING_FEE',
+      'OTHER',
+    ]);
+    const label: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="settlement-other-label"]'
+    );
+    expect(label).not.toBeNull();
+    // The server's own @Size(max = 100) (OBRS-1363), said on the box so a long name cannot take
+    // the whole day's all-or-nothing submit down with it.
+    expect(label.maxLength).toBe(100);
+
+    const other = component['expenseRows'].find((r) => r.category === 'OTHER')!;
+    other.otherLabelInput = 'ล้างรถ';
+    other.amountInput = '300';
+    fixture.detectChanges();
+
+    component['onSubmit']();
+
+    const payload = api.postDriverCashDaySettle.calls.mostRecent()
+      .args[0] as DriverCashDaySettleReqDto;
+    const sent = payload.expenses.find((e) => e.category === 'OTHER')!;
+    expect(sent.amount).toBe('300');
+    expect(sent.categoryOtherLabel).toBe('ล้างรถ');
+    // AC-2: no new category reaches the server, and the label rides only the row allowed to carry
+    // one — `isCategoryOtherLabelValid` 400s the whole submit if any other row has it.
+    expect(payload.expenses.every((e) => e.category !== 'OTHER' ? !e.categoryOtherLabel : true)).toBeTrue();
+  });
+
+  it('OBRS-1896: refuses a half-filled อื่น ๆ row in BOTH directions, before the server 400s the whole day', async () => {
+    await setUp();
+    pickVehicle();
+    const other = component['expenseRows'].find((r) => r.category === 'OTHER')!;
+
+    // Amount with no name: the one shape `isCategoryOtherLabelValid` rejects — and it rejects the
+    // day, not the row.
+    other.amountInput = '300';
+    fixture.detectChanges();
+    expect(component['blockedReasonKey']).toBe('STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE');
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="settlement-other-incomplete"]'))
+    ).not.toBeNull();
+    component['onSubmit']();
+    expect(api.postDriverCashDaySettle).not.toHaveBeenCalled();
+
+    // Name with no amount: the server would take it, but `buildPayload` drops an amount-less row —
+    // so what was typed would vanish without a word, the same failure OBRS-960 named.
+    other.amountInput = '';
+    other.otherLabelInput = 'ล้างรถ';
+    fixture.detectChanges();
+    expect(component['blockedReasonKey']).toBe('STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE');
+    component['onSubmit']();
+    expect(api.postDriverCashDaySettle).not.toHaveBeenCalled();
+
+    // Positive control: both halves typed and the screen stops objecting.
+    other.amountInput = '300';
+    fixture.detectChanges();
+    expect(component['blockedReasonKey']).toBeNull();
+    expect(
+      fixture.debugElement.query(By.css('[data-testid="settlement-other-incomplete"]'))
+    ).toBeNull();
+    component['onSubmit']();
+    expect(api.postDriverCashDaySettle).toHaveBeenCalledTimes(1);
+
+    // And an EMPTY row is not half-filled: the day settles with no OTHER line at all.
+    other.amountInput = '';
+    other.otherLabelInput = '';
+    fixture.detectChanges();
+    expect(component['blockedReasonKey']).toBeNull();
+    component['onSubmit']();
+    const payload = api.postDriverCashDaySettle.calls.mostRecent()
+      .args[0] as DriverCashDaySettleReqDto;
+    expect(payload.expenses.some((e) => e.category === 'OTHER')).toBeFalse();
+  });
+
+  it('OBRS-1896: the อื่น ๆ amount is charged to the box like every other row (AC-4)', async () => {
+    await setUp();
+    pickVehicle();
+    const other = component['expenseRows'].find((r) => r.category === 'OTHER')!;
+
+    // Wage 600 (300 x 2 legs, priced by the server) and nothing typed yet.
+    const before = component['settlementTotal'];
+    expect(before).toBe(600);
+
+    other.otherLabelInput = 'ค่าส่งของ';
+    other.amountInput = '120.50';
+    fixture.detectChanges();
+
+    // The whole point of the card: this cash left the box, so what the counter owes back drops by
+    // exactly it. A row that showed on screen but not here would settle the day 120.50 short.
+    expect(component['settlementTotal']).toBe(720.5);
+  });
+
+  it('OBRS-1896: re-opens an amended day on the name that was sent, not on a blank box', async () => {
+    // Without this the second submit would carry OTHER with an empty label — the one payload the
+    // server refuses (OBRS-1363) — and it would refuse the whole day, not the row.
+    await setUp(
+      context({
+        alreadySettled: true,
+        lastSubmission: {
+          businessDate: '2026-09-08',
+          vehicleId: 3,
+          driverId: 44,
+          expenses: [
+            { category: 'DRIVER_WAGE', amount: null, note: null },
+            { category: 'OTHER', amount: '300', note: 'จ่ายสด', categoryOtherLabel: 'ล้างรถ' },
+          ],
+          repairBills: [],
+        },
+      })
+    );
+    pickVehicle();
+
+    const other = component['expenseRows'].find((r) => r.category === 'OTHER')!;
+    expect(other.otherLabelInput).toBe('ล้างรถ');
+    expect(other.amountInput).toBe('300');
+    expect(component['blockedReasonKey']).toBeNull();
+
+    component['onSubmit']();
+    const payload = api.postDriverCashDaySettle.calls.mostRecent()
+      .args[0] as DriverCashDaySettleReqDto;
+    expect(payload.expenses.find((e) => e.category === 'OTHER')!.categoryOtherLabel).toBe('ล้างรถ');
+  });
 });
