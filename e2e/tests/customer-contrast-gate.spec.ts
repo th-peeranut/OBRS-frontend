@@ -47,6 +47,7 @@ import {
 import {
   CUSTOMER_PAGES,
   customerSweepBudgetMs,
+  flushAngular,
   seedCustomerSession,
   seedStore,
 } from '../support/customer-pages';
@@ -585,6 +586,11 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           if (target.seed) {
             await seedStore(sheet, target.storeOverride?.());
             await sheet.waitForTimeout(1200);
+            // OBRS-863. The seed dispatches from the root zone, so what it sets
+            // off schedules no tick — see `flushAngular`. Without this the sweep
+            // can score a DOM one render behind the components it is measuring,
+            // and the shortfall it then reports is the harness's, not the page's.
+            await flushAngular(sheet);
           }
 
           const sweep = await sheet.evaluate(MEASURE);

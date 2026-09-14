@@ -5,6 +5,9 @@ import {
   getAdminTranslationLabel,
 } from '../../../../../services/admin/admin-api.service';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
+import { toDateInputValue, toDateControlValue } from '../../../../../shared/lib/date-input-value';
+// Re-exported under the names this page's components and specs already import.
+export { toDateInputValue, toDateControlValue };
 
 // Pure mappers/formatters for AppVehicleMaintenancePanelComponent (OBRS-209),
 // following the pattern established by schedules.mappers.ts (OBRS-214): no
@@ -95,32 +98,6 @@ export function toMaintenanceRow(
       '-',
     notes: dto.notes ?? '',
   };
-}
-
-/** "YYYY-MM-DD" string <-> local calendar Date, mirroring
- * schedules.mappers.ts's toDateInputValue()/toDateControlValue() (kept as a
- * local copy — see the file header note on why this isn't a shared import). */
-export function toDateInputValue(value: Date | null): string {
-  if (!value || !Number.isFinite(value.getTime())) {
-    return '';
-  }
-
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-export function toDateControlValue(dateValue: string | null | undefined): Date | null {
-  const normalizedDate = String(dateValue ?? '').trim();
-  const [year, month, day] = normalizedDate.split('-').map((part) => Number(part));
-
-  if (!year || !month || !day) {
-    return null;
-  }
-
-  return new Date(year, month - 1, day);
 }
 
 /** endDate >= startDate when both are present — mirrors
