@@ -11,6 +11,7 @@ import {
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 /**
  * OBRS-153 — route performance page. Same `[from, to]` range filter + SWR store as the other
@@ -41,8 +42,8 @@ export class RoutePerformancePageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const range = this.store.range;
-    this.fromDate = this.parseDateInputValue(range.from);
-    this.toDate = this.parseDateInputValue(range.to);
+    this.fromDate = toDateControlValue(range.from);
+    this.toDate = toDateControlValue(range.to);
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((d) => (this.data = d));
     this.store.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((r) => (this.isRefreshing = r));
     this.store.error$.pipe(takeUntil(this.destroy$)).subscribe((f) => (this.loadError = this.resolveLoadError(f)));
@@ -111,8 +112,8 @@ export class RoutePerformancePageComponent implements OnInit, OnDestroy {
     if (!this.fromDate || !this.toDate) {
       return;
     }
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
     const errorKey = dateRangeErrorKey(
       this.fromDate,
       this.toDate,
@@ -139,21 +140,5 @@ export class RoutePerformancePageComponent implements OnInit, OnDestroy {
       return this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
     }
     return this.translate.instant('ADMIN.ROUTE_PERFORMANCE.LOAD_FAILED');
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private parseDateInputValue(value: string): Date | null {
-    const parts = value.split('-');
-    if (parts.length !== 3) {
-      return null;
-    }
-    const [year, month, day] = parts.map(Number);
-    return new Date(year, month - 1, day);
   }
 }

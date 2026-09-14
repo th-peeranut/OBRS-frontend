@@ -320,6 +320,23 @@ jobs:
       - name: Material Symbols translate gate
         run: npm run test:icon-translate
 
+      # Pure-node gate (OBRS-892). The app labels its icon-only buttons for
+      # assistive tech only, so a screen-reader user has always been fine and a
+      # sighted mouse user has not: a bare glyph with no hover text, and `build`
+      # vs `checklist` on the vehicle row is genuinely unguessable. Nothing can
+      # notice the gap on its own -- the button renders, the tests pass, the
+      # screenshot looks right -- which is why it grew instead of shrinking:
+      # measured 65 icon-only buttons with 3 hover titles on 2026-07-30, and 75
+      # with 5 on 2026-09-14, every one of the 10 new buttons arriving without
+      # one. So the count runs here rather than in somebody's head. It fails a
+      # button with no hover title, a button with no [attr.aria-label], and a
+      # hover title with hardcoded text that no locale can translate; it does NOT
+      # force the title to equal the aria-label, because four buttons already say
+      # MORE on hover on purpose (the sidebar pin's own *_MENU_TITLE keys, and the
+      # expense rows explaining why they are disabled).
+      - name: icon-only button tooltip gate
+        run: npm run test:icon-button-title
+
       # Eleventh pure-node gate (OBRS-911). netlify.toml now carries an `ignore` command,
       # and its polarity is the opposite of everything else in this file: exit 0 CANCELS
       # the Netlify build. That makes a mistake in it INVISIBLE by construction - a wrong

@@ -473,6 +473,57 @@ describe('StaffApiService', () => {
     });
   });
 
+  // OBRS-1755 - the salesperson's own remittance for one round.
+  //
+  // The base path matters more than it looks: the OWNER's settlement endpoints
+  // live under the SAME `/api/private/settlements` prefix (no `/admin/`
+  // segment), so a typo here does not 404 - it can reach a neighbouring,
+  // owner-only route.
+  describe('OBRS-1755 my-remittance', () => {
+    it('getMyRemittance() GETs /private/settlements/schedules/{id}/my-remittance', () => {
+      service.getMyRemittance(42).subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/settlements/schedules/42/my-remittance`,
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+
+    it('postRemittanceSubmit() POSTs the body and carries the Idempotency-Key header', () => {
+      const payload = {
+        advanceAmount: '300.00',
+        perHead: [{ stopId: 11, headCount: 10 }],
+        expectedCashAmount: '-240.00',
+      };
+
+      service.postRemittanceSubmit(42, payload, 'key-abc').subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/settlements/schedules/42/submit`,
+      );
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.get('Idempotency-Key')).toBe('key-abc');
+      expect(req.request.body).toEqual(payload);
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+
+    // Nine distinct 409s answer this endpoint; a forced logout or a second
+    // global alert on any of them would be wrong, so it opts out like every
+    // other retryable salesperson money action.
+    it('postRemittanceSubmit() opts out of the auth-logout interceptor', () => {
+      service
+        .postRemittanceSubmit(42, { advanceAmount: null, perHead: [], expectedCashAmount: '0.00' }, 'k')
+        .subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/settlements/schedules/42/submit`,
+      );
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+  });
+
   // OBRS-324 (Epic OBRS-318 open seating, 318-d)
   describe('isOpenSeatingTrip', () => {
     it('returns true when seatingMode is OPEN', () => {

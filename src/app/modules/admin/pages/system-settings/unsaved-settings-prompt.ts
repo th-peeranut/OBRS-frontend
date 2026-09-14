@@ -1,6 +1,25 @@
-import { FormGroup } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../../../shared/services/alert.service';
+
+/**
+ * OBRS-1755 — the four strings this prompt is made of, so a screen whose
+ * warning has to name what it is about to destroy can supply its own without
+ * forking the function. Optional and defaulted below, so every /admin/settings
+ * caller is untouched.
+ */
+export interface UnsavedPromptKeys {
+  titleKey: string;
+  textKey: string;
+  confirmKey: string;
+  cancelKey: string;
+}
+
+const SETTINGS_PROMPT_KEYS: UnsavedPromptKeys = {
+  titleKey: 'ADMIN.SYSTEM_SETTINGS.UNSAVED_CHANGES_TITLE',
+  textKey: 'ADMIN.SYSTEM_SETTINGS.UNSAVED_CHANGES_TEXT',
+  confirmKey: 'ADMIN.SYSTEM_SETTINGS.UNSAVED_CHANGES_CONFIRM',
+  cancelKey: 'ADMIN.SYSTEM_SETTINGS.UNSAVED_CHANGES_CANCEL',
+};
 
 /**
  * OBRS-702: the confirm every editable /admin/settings tab shows before its
@@ -20,20 +39,27 @@ import { AlertService } from '../../../../shared/services/alert.service';
  * question with three copies of the wording is how one of them ends up saying
  * something slightly different, and this text is a promise about what is about
  * to be destroyed.
+ *
+ * <p>OBRS-1755 widened `form` from `FormGroup` to the one member this function
+ * ever read, so a screen holding its dirty state in plain fields (the "ส่งยอด"
+ * tab: a typed advance, an overridden head count) can pass `{ pristine }` and
+ * reuse the guard instead of open-coding a second `alertService.confirm`. Every
+ * FormGroup caller is assignable to it unchanged.
  */
 export function confirmDiscardUnsavedSettings(
-  form: FormGroup,
+  form: { pristine: boolean },
   alertService: AlertService,
-  translate: TranslateService
+  translate: TranslateService,
+  keys: UnsavedPromptKeys = SETTINGS_PROMPT_KEYS
 ): boolean | Promise<boolean> {
   if (form.pristine) {
     return true;
   }
 
   return alertService.confirm({
-    title: translate.instant('ADMIN.SYSTEM_SETTINGS.UNSAVED_CHANGES_TITLE'),
-    text: translate.instant('ADMIN.SYSTEM_SETTINGS.UNSAVED_CHANGES_TEXT'),
-    confirmButtonText: translate.instant('ADMIN.SYSTEM_SETTINGS.UNSAVED_CHANGES_CONFIRM'),
-    cancelButtonText: translate.instant('ADMIN.SYSTEM_SETTINGS.UNSAVED_CHANGES_CANCEL'),
+    title: translate.instant(keys.titleKey),
+    text: translate.instant(keys.textKey),
+    confirmButtonText: translate.instant(keys.confirmKey),
+    cancelButtonText: translate.instant(keys.cancelKey),
   });
 }

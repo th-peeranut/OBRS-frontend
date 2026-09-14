@@ -1,5 +1,24 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-09-13 — SELF-FIXED (DRY, 10 lines): OBRS-1755 re-derived `toSignedCents` locally instead of reusing `money-cents.ts`'s
+
+`staff-remittance-tab.component.ts` defined its own module-private `toSignedCents(value: string | null |
+undefined): number` (`Number(value ?? 0)`, no format validation, defaults to 0) to turn the server's
+signed decimal strings (`myExpectedCash`, `returnLeg.cashAmount`, `deductions.*`, `submission.submittedExpectedCash`)
+into satang for the on-screen equation. `shared/lib/money-cents.ts` already exports a `toSignedCents(value:
+string): number | null` (added OBRS-1144, precisely for a server-derived BALANCE that may legally be
+negative — the same fact BR-4/BR-19 states here) with a real regex validator instead of a bare `Number()`
+coercion. Same shape, same purpose, differing only in null/undefined-input handling — exactly the "lift the
+common part, parameterize the difference" case, not a new copy. Fixed by importing the shared one under an
+alias (`toSignedCents as parseSignedCents`) and rewriting the local wrapper to delegate: `if (value == null)
+return 0; return parseSignedCents(value) ?? 0;`. All 9 call sites were untouched (same local name, same
+signature). Verified with `ng test --include='**/staff-remittance-tab.component.spec.ts'` — `Executed 36 of
+36 SUCCESS`, plus the 3 sibling spec files touched by this card's other reuse points (`driver-cash-advance-
+form`, `unsaved-settings-prompt`, `walk-in-center-panel`, `sell-page`) — `Executed 226 of 226 SUCCESS`. When a
+component needs "signed decimal string → cents, tolerant of null", check `money-cents.ts` first; it is the
+established home for every money-string parser on this codebase (`toCents`, `toSignedCents`,
+`centsToDecimalString`).
+
 ## 2026-09-11 — SELF-FIXED (DRY, ~15 lines): OBRS-640 pasted the same `.form-check-inline .form-check-label` tap-target rule into two component scss files
 
 `booker-info-form.component.scss` and `passenger-info-form.component.scss` each added a byte-identical

@@ -6,8 +6,49 @@
 // which the host's own border box describes nothing. That is what made a
 // Playwright hit test resolve to the host on OBRS-753. Measured to move no
 // geometry at 1280/1024/768/576 -- e2e/tests/obrs-775-geometry.spec.ts.
+// OBRS-931. The customer navbar scrolled away with the page while the admin and staff
+// shells kept theirs (`admin-theme.scss` .admin-topbar: `position: sticky; top: 0`), so a
+// customer reading the stop list had to scroll back to the very top to switch language,
+// open their profile or go anywhere else. The customer side was the inconsistent one.
+//
+// `z-index: 110` places it above every in-page value the customer area uses (the highest
+// is 100 - the mobile floating search bar and the passenger-info summary, both anchored to
+// the BOTTOM of the viewport, so neither shares screen space with this bar) and below
+// everything that is meant to cover it: the consent banner (1000), PrimeNG's overlays
+// (1100+) and the report modal (1350). It also makes the host a stacking context, which is
+// what keeps the navbar's own dropdown (z-index 50) and mobile panel (40) painting over the
+// page instead of under it - asserted, not assumed, by obrs-931-sticky-navbar.spec.ts,
+// which opens both on a scrolled page and hit-tests them.
+//
+// There is deliberately no entry here for the usability FAB. It used to float at 900
+// (ADR-006) and ADR-0044 deleted it: the report entry point is now <app-report-trigger>
+// inside `.navbar-tools`, a descendant of this host, so it rides this stacking context
+// rather than competing with it. `grep -rn 'z-index: 900' src/` finds nothing.
+//
+// The container already carries an opaque `background-color`, without which the page would
+// show through a stuck bar.
+//
+// `min-height: 700px` is NOT a taste threshold - it is where this change was measured to stop
+// being free. A stuck bar costs its own height out of the viewport permanently, and on a short
+// screen that height is spent on top of two things the customer area already reserves at the
+// bottom: the consent banner and the floating Search bar. Made sticky unconditionally,
+// `obrs-639-stepper-geometry` went red at 390x664 in EN - the trip's `.select-btn` could no
+// longer be clicked because the floating Search button intercepted it - while every 360x740
+// case stayed green, and EN failed where TH passed because the English consent text is the
+// taller of the two. Measured both ways on this branch: with the rule, 1 failed / 6 passed;
+// with the three declarations removed, 7 passed. So the bar sticks where there is room for it
+// and scrolls away where there is not, and the gap between the two measured heights (664 red,
+// 740 green) is where the threshold sits.
 :host {
   display: block;
+}
+
+@media (min-height: 700px) {
+  :host {
+    position: sticky;
+    top: 0;
+    z-index: 110;
+  }
 }
 
 %mat-icon {

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, firstValueFrom, forkJoin, of, take } from 'rxjs';
@@ -39,8 +39,12 @@ import {
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
 import { WalkInTripSelection } from '../../components/walk-in-trip-browser/walk-in-trip-browser.component';
-import { TripDetailsUpdatedEvent } from '../../components/walk-in-center-panel/walk-in-center-panel.component';
+import {
+  TripDetailsUpdatedEvent,
+  WalkInCenterPanelComponent,
+} from '../../components/walk-in-center-panel/walk-in-center-panel.component';
 import { StaffSchedulesStore, StaffSchedulesData } from '../staff-schedules/staff-schedules.store';
+import { CanComponentDeactivate } from '../../../../shared/guards/can-deactivate.guard';
 
 /** Stop option enriched with a computed departure time string. */
 export interface StopOption extends SegmentStopRefDto {
@@ -101,7 +105,7 @@ interface WalkInBookingPayloadDraft {
     styleUrl: './sell-page.component.scss',
     standalone: false
 })
-export class SellPageComponent implements OnInit, OnDestroy {
+export class SellPageComponent implements OnInit, OnDestroy, CanComponentDeactivate {
   protected today: Date = new Date();
   protected selectedDate: Date = new Date();
   protected isLoadingTrips = false;
@@ -116,6 +120,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
    * PrimeNG state — this keeps the tracked index in sync without depending on
    * child-component remount timing. */
   protected activeTabIndex = 0;
+  /** OBRS-1755 — read ONLY by `canDeactivate()` below; `undefined` until a trip is selected. */
+  @ViewChild(WalkInCenterPanelComponent) private readonly centerPanel?: WalkInCenterPanelComponent;
   protected selectedRouteSlug: string | null = null;
   protected selectedSeats: string[] = [];
   // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN-mode headcount —
@@ -281,6 +287,24 @@ export class SellPageComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * OBRS-1755 (BR-18) — implements `CanComponentDeactivate` for the route guard.
+   *
+   * <p>The "ส่งยอด" tab is the only place on this page where money can leave the
+   * drawer before the server is told: since the owner removed the standalone
+   * "บันทึกเงินทดรอง" button (2026-09-09), a typed driver advance is recorded
+   * only by the single "ส่งยอด" submit. Navigating away with one typed leaves
+   * the cash gone and the system unaware, so the question is asked first.
+   *
+   * <p>Delegated, not re-implemented: the tab owns the state and the wording, the
+   * panel owns the reference to the tab, and this page owns the route. With no
+   * panel mounted (no trip selected) there is nothing to lose, so it returns
+   * `true` synchronously and the ordinary sell flow never sees a dialog.
+   */
+  canDeactivate(): boolean | Promise<boolean> {
+    return this.centerPanel ? this.centerPanel.canDeactivate() : true;
   }
 
   protected onDateChanged(date: Date): void {
