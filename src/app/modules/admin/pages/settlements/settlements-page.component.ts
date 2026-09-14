@@ -27,6 +27,7 @@ import {
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 const DRIVER_CASH_RETURN_ERROR_KEYS: Record<string, string> = {
   DRIVER_CASH_DISCREPANCY_REASON_REQUIRED: 'ADMIN.SETTLEMENTS.DRIVER_CASH.ERROR.REASON_REQUIRED',
@@ -116,8 +117,8 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const range = this.store.range;
-    this.fromDate = this.parseDateInputValue(range.from);
-    this.toDate = this.parseDateInputValue(range.to);
+    this.fromDate = toDateControlValue(range.from);
+    this.toDate = toDateControlValue(range.to);
 
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.items = data?.items ?? [];
@@ -136,8 +137,8 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
 
     // OBRS-960 — own section, own range.
     const dcRange = this.driverCashDaysStore.range;
-    this.driverCashFromDate = this.parseDateInputValue(dcRange.from);
-    this.driverCashToDate = this.parseDateInputValue(dcRange.to);
+    this.driverCashFromDate = toDateControlValue(dcRange.from);
+    this.driverCashToDate = toDateControlValue(dcRange.to);
 
     // ⚠️ CORRECTED — the store's data$ is now a flat array (the real
     // endpoint has no {range, items} wrapper), not `data?.items`.
@@ -474,8 +475,8 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
 
     const errorKey = dateRangeErrorKey(
       this.fromDate,
@@ -513,21 +514,6 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   private extractErrorCode(error: unknown): string | null {
     const httpError = error as { error?: { errorCode?: string } };
     return httpError?.error?.errorCode ?? null;
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private parseDateInputValue(value: string): Date | null {
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-      return null;
-    }
-    return new Date(year, month - 1, day);
   }
 
   // ── OBRS-960: driver cash — daily-return close ────────────────────────────
@@ -571,8 +557,8 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     if (!this.driverCashFromDate || !this.driverCashToDate) {
       return;
     }
-    const from = this.toDateInputValue(this.driverCashFromDate);
-    const to = this.toDateInputValue(this.driverCashToDate);
+    const from = toDateInputValue(this.driverCashFromDate);
+    const to = toDateInputValue(this.driverCashToDate);
     // OBRS-1736: the same 366-day cap applyRange() applies to this page's main range,
     // and every other report page applies to its own. This was the last REPORT-style range without it;
     // config-change-history (open-ended by design) and staff/my-earnings still have none.
