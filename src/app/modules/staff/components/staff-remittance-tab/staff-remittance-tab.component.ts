@@ -366,6 +366,35 @@ export class StaffRemittanceTabComponent implements OnChanges, OnDestroy {
   }
 
   /**
+   * ⑦ — the per-head deduction ROW (OBRS-1890, owner ruling 2026-09-14).
+   *
+   * <p>Drawn whenever the round deducts a per-head fee — ⛔ NOT only where this
+   * counter keeps it. A ROUND counter does not record head counts (BR-6, so
+   * box ⑩ stays hidden and {@link showPerHeadBox} is still the gate for it),
+   * but the WHOLE-ROUND figure (BR-3) still comes off the cash it has to hand
+   * over: หนองชาก is ROUND and has a `driver_per_head_rates` row of its own, so
+   * this is reachable, not a fixture artefact. A deduction with no row is a gap
+   * the reader cannot close — measured on schedule 125: 350 + 300 on screen,
+   * 593 on the total line, 57 unexplained.
+   *
+   * <p>`showPerHeadBox ||` keeps the DAY side's `0` row, which is its "no head
+   * count entered yet" state and must stay visible.
+   */
+  protected get showPerHeadDeductionRow(): boolean {
+    return this.showPerHeadBox || this.pendingPerHeadCents !== 0;
+  }
+
+  /**
+   * ⑧ — "this counter is on a daily wage, so there is no per-head line".
+   * True only when that is actually true: the same round can still carry a
+   * whole-round per-head deduction (OBRS-1890), and the note used to assert
+   * the opposite of the arithmetic right above it.
+   */
+  protected get showNoPerHeadNote(): boolean {
+    return this.isRoundCadence && this.pendingPerHeadCents === 0;
+  }
+
+  /**
    * What the clerk is about to hand over, in satang.
    *
    * ⛔ NOT a re-derivation of BR-4. It starts from the server's own

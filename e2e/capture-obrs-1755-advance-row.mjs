@@ -71,6 +71,12 @@ check('remittance-advance box (③)', await count('[data-testid="remittance-adva
 check('remittance-eq-cash-in row', await count('[data-testid="remittance-eq-cash-in"]'), 1);
 check('remittance-eq-return-leg row', await count('[data-testid="remittance-eq-return-leg"]'), 1);
 
+// OBRS-1890 — the same round deducts a whole-round ค่าหัว (57.00, measured on
+// schedule 125). It must have a row, and the "no per-head here" note must not
+// be denying it: 350 + 300 − 57 has to read as 593 on screen.
+check('remittance-eq-per-head row', await count('[data-testid="remittance-eq-per-head"]'), 1);
+check('remittance-no-per-head-note', await count('[data-testid="remittance-no-per-head-note"]'), 0);
+
 await page.locator('.srt-eq').first().scrollIntoViewIfNeeded();
 await page.screenshot({ path: path.join(OUT, `OBRS-1755-${LABEL}-no-advance-row.png`), fullPage: false });
 

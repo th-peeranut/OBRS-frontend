@@ -201,7 +201,7 @@ re-derived. -->
         </div>
       }
 
-      @if (showPerHeadBox) {
+      @if (showPerHeadDeductionRow) {
         <!-- WHOLE-ROUND (BR-3), so it can be larger than the head counts below
         add up to: another counter's ค่าหัว on the same round is inside it and
         this counter may not see the breakdown. The sub-line below names that
@@ -293,8 +293,10 @@ re-derived. -->
       <p class="admin-muted" data-testid="remittance-keep-note">
         {{ 'STAFF.REMITTANCE.EQUATION.KEEP_NOTE' | translate }}
       </p>
-    } @else {
-      <!-- ⑧ หนองชาก pays a daily wage, so there is no per-head line to misread. -->
+    } @else if (showNoPerHeadNote) {
+      <!-- ⑧ หนองชาก pays a daily wage, so there is no per-head line to misread.
+      OBRS-1890: only when the round really deducts none — the same round can
+      carry a whole-round per-head, and this used to deny it. -->
       <p class="admin-muted" data-testid="remittance-no-per-head-note">
         {{ 'STAFF.REMITTANCE.EQUATION.NO_PER_HEAD_NOTE' | translate }}
       </p>

@@ -342,6 +342,44 @@ describe('StaffRemittanceTabComponent', () => {
     expect(present('remittance-advance')).toBeTrue();
   });
 
+  // ── OBRS-1890: a ROUND counter's round can still deduct ค่าหัว ───────────
+
+  /**
+   * ROUND cadence, and the round DOES carry a whole-round per-head (BR-3).
+   * Measured on schedule 125 (2026-09-14): 57.00 off, 45.00 of it another
+   * counter's. หนองชาก is ROUND and has a rate of its own, so this is a real
+   * shape, not a fixture artefact.
+   */
+  function roundPayloadWithPerHead(): StaffRemittanceDto {
+    return roundPayload({
+      hasPerHead: true,
+      perHeadOtherCountersAmount: '45.00',
+      deductions: { perHeadDeducted: '57.00', advancePaidOut: '500.00', deferredTicketCash: '0.00' },
+      myExpectedCash: '1623.00',
+      roundExpectedCash: '1623.00',
+    });
+  }
+
+  it('shows the per-head deduction row on a ROUND counter when the round deducts one', () => {
+    open(roundPayloadWithPerHead());
+
+    // The gap this card exists to close: 2180 - 500 - 57 must be readable.
+    expect(present('remittance-eq-per-head')).toBeTrue();
+    expect(text('remittance-eq-per-head')).toContain('57');
+    // ...and the note must stop denying it.
+    expect(present('remittance-no-per-head-note')).toBeFalse();
+    // BR-6 still holds: the ROW appears, the per-head BOX does not — this
+    // counter records no head counts, so its breakdown sub-line stays off.
+    expect(present('remittance-per-head-other-counters')).toBeFalse();
+  });
+
+  it('keeps the daily-wage note on a ROUND counter that really deducts none', () => {
+    open(roundPayload());
+
+    expect(present('remittance-eq-per-head')).toBeFalse();
+    expect(present('remittance-no-per-head-note')).toBeTrue();
+  });
+
   it('brings the advance row back the moment the box is typed into', () => {
     open(roundPayloadNoAdvance());
     expect(present('remittance-eq-advance')).toBeFalse();
