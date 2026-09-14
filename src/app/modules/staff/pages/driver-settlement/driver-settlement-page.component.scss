@@ -66,6 +66,27 @@
   display: block;
 }
 
+/* OBRS-1903 - the row's X shares the NOTE cell with the note box; see the template for why
+   it is not a fourth column. The input takes the slack so the X keeps its size as the
+   table's columns move. */
+.ds-other-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* The quota line sits under its own button, not beside it: at narrow widths a sentence
+   beside a button is what pushes the button off the card. */
+.ds-other-full {
+  display: block;
+  margin-top: 0.35rem;
+}
+
 .ds-wage-basis {
   margin-inline-start: 0.5rem;
   font-size: 0.8125rem;

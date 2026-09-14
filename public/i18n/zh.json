@@ -4612,7 +4612,10 @@
           "NOTE": "备注"
         },
         "WAGE_BASIS": "按 {{rate}} x {{legs}} 趟计算",
-        "OTHER_INCOMPLETE": "\"其他\"一行需同时填写项目名称和金额"
+        "OTHER_INCOMPLETE": "\"其他\"一行需同时填写项目名称和金额",
+        "ADD_OTHER": "+ 添加其他费用",
+        "REMOVE_OTHER": "删除此项目",
+        "OTHER_FULL": "每天最多 {{max}} 项其他费用"
       },
       "REPAIR": {
         "TITLE": "维修费",

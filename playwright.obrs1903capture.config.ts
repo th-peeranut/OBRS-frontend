@@ -1,18 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * OBRS-1896 - evidence capture lane. Same shape as playwright.obrs1832capture.config.ts
- * (same `--configuration gate` build, same guard), its own port so it never attaches to
- * another tree's server.
+ * OBRS-1903 - evidence capture lane. Same shape as playwright.obrs1896capture.config.ts, the
+ * lane this one replaces (same `--configuration gate` build, same guard), on its own port so it
+ * never attaches to another tree's server.
  *
- *   npx playwright test --config=playwright.obrs1896capture.config.ts
+ *   npx playwright test --config=playwright.obrs1903capture.config.ts
  */
-const PORT = process.env['OBRS1896_PORT'] ?? '4298';
+const PORT = process.env['OBRS1903_PORT'] ?? '4299';
 
 export default defineConfig({
   globalSetup: './e2e/support/lane-tree-guard.ts',
   testDir: './e2e/tests',
-  testMatch: ['obrs-1896-settlement-other-row.capture.spec.ts'],
+  testMatch: ['obrs-1903-settlement-other-rows.capture.spec.ts'],
   fullyParallel: false,
   workers: 1,
   retries: 0,
