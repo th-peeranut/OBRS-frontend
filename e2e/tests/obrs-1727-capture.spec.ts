@@ -163,6 +163,43 @@ test('AC-4 AFTER: /admin/expenses keeps the form and the log, and no longer hold
   await page.screenshot({ path: `${ASSETS}/after-admin-expenses-menu.png`, fullPage: true });
 });
 
+/**
+ * OBRS-1728 AC-4 rides this lane rather than opening a second one: it renames a button and a
+ * menu entry on the page the frame above already shoots, and the two cards are stacked, so one
+ * lane keeps the pair of AFTERs describing the same build.
+ */
+test('OBRS-1728 AFTER: the bill-batch entry point reads "บันทึกบิล", not "รับซองบิล"', async ({ page }) => {
+  await page.goto('/admin/expenses');
+
+  const openBatch = page.getByTestId('expenses-open-batch');
+  await expect(openBatch).toBeVisible({ timeout: 30_000 });
+  await expect(openBatch).toHaveText(/บันทึกบิล/);
+  // The old name is gone from the whole shell, menu entry included - not merely from the button.
+  await expect(page.locator('app-admin-layout').first()).not.toContainText('รับซองบิล');
+
+  await page.screenshot({ path: `${ASSETS}/after-bill-batch-renamed.png`, fullPage: true });
+
+  // ...and on the page the button opens, where the supporting copy had to stop saying
+  // "ซอง"/"อู่" to agree with the new name (AC-2).
+  await page.goto('/admin/expenses/batch');
+  await expect(page.locator('app-expense-batch-page')).toBeVisible({ timeout: 30_000 });
+  const shell = page.locator('app-admin-layout').first();
+  // Every "ซอง" (envelope) on this page is gone — that is the half of AC-2 the owner's
+  // reasoning settles outright: the name must not say how many bills there are.
+  await expect(shell).not.toContainText('ซอง');
+  // ⚠️ NOT `not.toContainText('อู่')`. The payee field keeps that word on purpose: the owner
+  // ruled on 2026-08-24 that THIS screen's picker is garage-only, and the picker's code cites
+  // that label as the reason (`expense-payee-picker.component.ts:108`). Reconciling that ruling
+  // with OBRS-1728's "a bill need not come from a garage" is a question for the owner, raised on
+  // the card rather than answered here — so the label stays as it is and this guard does not
+  // pretend otherwise.
+  await expect(shell).toContainText('อู่ซ่อมรถ');
+  // The warning AC-2 says must survive the rewording.
+  await expect(shell).toContainText('จะไม่มีใบไหนถูกบันทึกเลย');
+
+  await page.screenshot({ path: `${ASSETS}/after-bill-batch-page-copy.png`, fullPage: true });
+});
+
 test('AC-3 AFTER: the salesperson cash panel is read-only - the button row is gone', async ({ page }) => {
   await page.route((u) => /\/private\/driver-cash\/schedules\/\d+\/day$/.test(u.pathname), (route) =>
     route.fulfill(ok(DRIVER_CASH_DAY))

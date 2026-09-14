@@ -40,7 +40,7 @@ import {
  *
  * <p>The owner is not handed one repair bill at a time; a garage gives him the month in a stack.
  * Until this card the only way to record that was the single-bill modal, opened once per slip, with
- * the header retyped every time. This page takes the stack: N bills, one `บันทึกทั้งซอง`, one
+ * the header retyped every time. This page takes the stack: N bills, one `บันทึกทั้งหมด`, one
  * transaction on the server (AC3), so the outcome is never "two of your three went in".
  *
  * <p><b>It does not replace the modal.</b> `เพิ่มค่าใช้จ่าย` on the expense log still opens it, and

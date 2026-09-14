@@ -576,7 +576,7 @@
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "Cancel & Reschedule",
       "NOTIFICATION_MESSAGES": "Notification Messages",
       "OPERATIONS_CONFIG": "Operations",
-      "EXPENSE_BATCH": "Envelope of bills"
+      "EXPENSE_BATCH": "Record bills"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -2285,9 +2285,9 @@
       "SOURCE_FIELD": "Auto-generated (from driver)",
       "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here.",
       "BATCH": {
-        "OPEN": "Take an envelope of bills",
-        "SUBTITLE": "Record a whole stack of bills in one save",
-        "PAGE_PURPOSE": "A garage hands over several bills at once. Enter them all here and press save once — either every bill is recorded or none of them is, never half a stack.",
+        "OPEN": "Record bills",
+        "SUBTITLE": "Record several bills in one save",
+        "PAGE_PURPOSE": "Bills that arrive together. Enter them all here and press save once — either every bill is recorded or none of them is, never half of them.",
         "BILL_N": "Bill {{n}}",
         "BILL_TOTAL": "This bill",
         "BILL_COUNT": "{{n}} bills",
@@ -2299,9 +2299,9 @@
         "GARAGE": "Garage",
         "LINE_DESCRIPTION": "Line (as the garage wrote it)",
         "LINE_PART": "Part / labour",
-        "SAVE_ENVELOPE": "Save the whole envelope",
+        "SAVE_ENVELOPE": "Save them all",
         "SAVED": "{{n}} bills recorded",
-        "OWNER_HINT": "Every bill in this envelope is filed against this operator.",
+        "OWNER_HINT": "Every bill saved here is filed against this operator.",
         "BILL_DATE": "Bill date",
         "VEHICLE": "Plate",
         "CATEGORY": "Category",
