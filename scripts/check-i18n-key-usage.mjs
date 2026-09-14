@@ -137,7 +137,6 @@ for (const file of collectFiles(SRC_DIR)) {
 // gate. Each entry names the card that closes it; closing that card means deleting the
 // entry, and the gate's own failure is what proves it was really fixed.
 const KNOWN_MISSING = new Map([
-  ['ADMIN.MESSAGES.LOAD_FAILED', 'OBRS-1884'], // maintenance-parts registry, first-load error
 ]);
 
 const catalogue = flatten(JSON.parse(readFileSync(EN_JSON, 'utf8')));
