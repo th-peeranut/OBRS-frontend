@@ -14,9 +14,20 @@ import { EventEmitter } from '@angular/core';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../services/alert.service';
 import { APP_LANGUAGE_KEY } from '../services/language.service';
-import { errorInterceptor, IDEMPOTENT_REQUEST_TIMEOUT_MS } from './error.interceptor';
+import {
+  BLOCKING_LOADING_DELAY_MS,
+  errorInterceptor,
+  IDEMPOTENT_REQUEST_TIMEOUT_MS,
+} from './error.interceptor';
 import { ApiLatencyTelemetryService } from '../../services/analytics/api-latency-telemetry.service';
-import { SKIP_REQUEST_TIMEOUT } from './http-context-tokens';
+import { SHOW_BLOCKING_LOADING, SKIP_REQUEST_TIMEOUT } from './http-context-tokens';
+
+/**
+ * OBRS-908 made the overlay opt-in, so every test below that is ABOUT the overlay has
+ * to ask for it — a plain `/api/` GET no longer raises one, which is the card. Kept as
+ * one helper so the request shape those tests exercise cannot drift apart.
+ */
+const blocking = () => new HttpContext().set(SHOW_BLOCKING_LOADING, true);
 
 // Regression guard for OBRS-352: errorInterceptor injected TranslateService
 // unconditionally at the top of the functional interceptor, so it re-entered
@@ -254,14 +265,15 @@ describe('errorInterceptor', () => {
   // call site, so a source-scanning gate cannot see it — only asserting the
   // argument can. Every /api/ request in the app went through this line, so the
   // English word was on screen for a moment on literally every page.
-  it('translates the loading spinner title instead of the English default', () => {
+  it('translates the loading spinner title instead of the English default', fakeAsync(() => {
     const translate = loadedTranslateSpy();
     translate.instant.and.returnValue('กำลังโหลด…');
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);
 
-    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+    http.get('/api/foo', { context: blocking() }).subscribe({ next: () => {}, error: () => {} });
+    tick(BLOCKING_LOADING_DELAY_MS);
 
     expect(translate.instant).toHaveBeenCalledWith('COMMON.LOADING');
     // OBRS-642 added two further arguments (the slow-load hint and the close-button
@@ -275,7 +287,7 @@ describe('errorInterceptor', () => {
 
     httpMock.expectOne('/api/foo').flush({});
     httpMock.verify();
-  });
+  }));
 
   /**
    * OBRS-930, and the test above is its positive control: same call, same
@@ -291,13 +303,14 @@ describe('errorInterceptor', () => {
    * `COMMON.LOADING` off the spinner (reproduced on SIT by delaying the bundle
    * 4s).
    */
-  it('never puts a raw i18n key on the spinner while the chosen language bundle is still loading', () => {
+  it('never puts a raw i18n key on the spinner while the chosen language bundle is still loading', fakeAsync(() => {
     const translate = translateDouble([]);
     configure([{ provide: TranslateService, useValue: translate }]);
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);
 
-    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+    http.get('/api/foo', { context: blocking() }).subscribe({ next: () => {}, error: () => {} });
+    tick(BLOCKING_LOADING_DELAY_MS);
 
     // All three, not just the title: the slow-load hint is rendered as the
     // popup's text once the escape hatch opens, so a key there reaches the
@@ -323,9 +336,9 @@ describe('errorInterceptor', () => {
     expect(alertService.updateLoadingTitle).not.toHaveBeenCalled();
 
     httpMock.verify();
-  });
+  }));
 
-  it('never shows the default language while the chosen one is still loading, and switches to it when it lands', () => {
+  it('never shows the default language while the chosen one is still loading, and switches to it when it lands', fakeAsync(() => {
     // The other face of the same race, and the one that survived the first
     // attempt at this fix: `app_language` is `en`, but `use('en')` leaves
     // `currentLang` on `th` until en.json lands, and `getParsedResult` falls
@@ -340,7 +353,8 @@ describe('errorInterceptor', () => {
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);
 
-    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+    http.get('/api/foo', { context: blocking() }).subscribe({ next: () => {}, error: () => {} });
+    tick(BLOCKING_LOADING_DELAY_MS);
 
     expect(alertService.showLoading.calls.mostRecent().args[0]).toBeUndefined();
     expect(translate.instant).not.toHaveBeenCalledWith('COMMON.LOADING');
@@ -357,9 +371,9 @@ describe('errorInterceptor', () => {
 
     httpMock.expectOne('/api/foo').flush({});
     httpMock.verify();
-  });
+  }));
 
-  it('does not repaint the overlay when a language change resolves to the title it already has', () => {
+  it('does not repaint the overlay when a language change resolves to the title it already has', fakeAsync(() => {
     // `Swal.update()` re-renders the popup and drops the spinner (armEscapeHatch
     // documents the same), so repainting to the identical string is a flicker
     // with no reader.
@@ -369,7 +383,8 @@ describe('errorInterceptor', () => {
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);
 
-    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+    http.get('/api/foo', { context: blocking() }).subscribe({ next: () => {}, error: () => {} });
+    tick(BLOCKING_LOADING_DELAY_MS);
 
     expect(alertService.showLoading.calls.mostRecent().args[0]).toBe('กำลังโหลด…');
     translate.onLangChange.emit({ lang: 'th' } as LangChangeEvent);
@@ -377,7 +392,7 @@ describe('errorInterceptor', () => {
 
     httpMock.expectOne('/api/foo').flush({});
     httpMock.verify();
-  });
+  }));
 
   it('leaves the spinner title to the service default when TranslateService is unavailable (non-/api/ path stays cycle-free)', () => {
     // Guards the OBRS-352 cycle from creeping back in through the new call:
@@ -391,6 +406,130 @@ describe('errorInterceptor', () => {
 
     expect(alertService.showLoading).not.toHaveBeenCalled();
     httpMock.verify();
+  });
+
+  /**
+   * OBRS-908. The card's AC1/AC2 are Playwright's job (`e2e/tests/obrs-908-*.spec.ts`) —
+   * they are about what a real page puts on screen. What belongs HERE is the rule those
+   * pages inherit, in the one place that decides it, and the three ways it can regress:
+   * the default coming back inverted, the delay being dropped, and a payment quietly
+   * losing its lock.
+   */
+  describe('blocking overlay is opt-in and delayed (OBRS-908)', () => {
+    it('AC1/AC2 root cause — an ordinary /api/ request raises nothing, however long it runs', fakeAsync(() => {
+      configure([{ provide: TranslateService, useValue: loadedTranslateSpy() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      http.get('/api/schedules').subscribe({ next: () => {}, error: () => {} });
+      // Far past the delay: this is not "it had not shown YET", it is "it never will".
+      tick(BLOCKING_LOADING_DELAY_MS * 10);
+
+      expect(alertService.showLoading).not.toHaveBeenCalled();
+
+      httpMock.expectOne('/api/schedules').flush({});
+      // And nothing is torn down either — `hideLoading()` decrements a shared counter,
+      // so calling it for a request that never opened would close somebody else's.
+      expect(alertService.hideLoading).not.toHaveBeenCalled();
+      httpMock.verify();
+    }));
+
+    it('AC4 — a request that answers INSIDE the threshold shows nothing at all', fakeAsync(() => {
+      configure([{ provide: TranslateService, useValue: loadedTranslateSpy() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      http.post('/api/private/payments', {}, { context: blocking() }).subscribe({
+        next: () => {},
+        error: () => {},
+      });
+
+      tick(BLOCKING_LOADING_DELAY_MS - 1);
+      httpMock.expectOne('/api/private/payments').flush({});
+
+      // The timer is still pending at this point; the assertion that matters is that
+      // finishing the request KILLED it rather than merely outrunning it.
+      tick(BLOCKING_LOADING_DELAY_MS * 5);
+      expect(alertService.showLoading).not.toHaveBeenCalled();
+      expect(alertService.hideLoading).not.toHaveBeenCalled();
+      httpMock.verify();
+    }));
+
+    it('AC4 — a request still running PAST the threshold does show the overlay, and closes it', fakeAsync(() => {
+      configure([{ provide: TranslateService, useValue: loadedTranslateSpy() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      http.post('/api/private/payments', {}, { context: blocking() }).subscribe({
+        next: () => {},
+        error: () => {},
+      });
+
+      tick(BLOCKING_LOADING_DELAY_MS - 1);
+      expect(alertService.showLoading).not.toHaveBeenCalled();
+
+      tick(1);
+      expect(alertService.showLoading).toHaveBeenCalledTimes(1);
+
+      httpMock.expectOne('/api/private/payments').flush({});
+      expect(alertService.hideLoading).toHaveBeenCalledTimes(1);
+      httpMock.verify();
+    }));
+
+    it('AC3 — a payment that fails still releases the screen, and only once', fakeAsync(() => {
+      configure([{ provide: TranslateService, useValue: loadedTranslateSpy() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      http.post('/api/private/payments', {}, { context: blocking() }).subscribe({
+        next: () => {},
+        error: () => {},
+      });
+      tick(BLOCKING_LOADING_DELAY_MS);
+
+      httpMock
+        .expectOne('/api/private/payments')
+        .flush({ message: 'declined' }, { status: 502, statusText: 'Bad Gateway' });
+
+      expect(alertService.showLoading).toHaveBeenCalledTimes(1);
+      expect(alertService.hideLoading).toHaveBeenCalledTimes(1);
+      httpMock.verify();
+    }));
+
+    it('an abandoned request leaves no timer behind to open an overlay nothing would close', fakeAsync(() => {
+      configure([{ provide: TranslateService, useValue: loadedTranslateSpy() }]);
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      // A component destroyed mid-flight: the subscription goes, the request is
+      // cancelled, and `finalize` is the only thing that runs.
+      const sub = http
+        .post('/api/private/bookings', {}, { context: blocking() })
+        .subscribe({ next: () => {}, error: () => {} });
+      httpMock.expectOne('/api/private/bookings');
+      sub.unsubscribe();
+
+      tick(BLOCKING_LOADING_DELAY_MS * 5);
+      expect(alertService.showLoading).not.toHaveBeenCalled();
+      expect(alertService.hideLoading).not.toHaveBeenCalled();
+      httpMock.verify({ ignoreCancelled: true });
+    }));
+
+    it('a non-/api/ request cannot opt in — the i18n bundle stays outside this lane', fakeAsync(() => {
+      configure();
+      const http = TestBed.inject(HttpClient);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      http.get('/i18n/en.json', { context: blocking() }).subscribe({ next: () => {} });
+      tick(BLOCKING_LOADING_DELAY_MS * 5);
+      httpMock.expectOne('/i18n/en.json').flush({});
+
+      // `shouldShowLoading` is gated on isApiRequest first, and it has to stay that
+      // way: the overlay's title is resolved through TranslateService, so letting the
+      // translation loader raise one re-enters the NG0200 cycle of OBRS-352.
+      expect(alertService.showLoading).not.toHaveBeenCalled();
+      httpMock.verify();
+    }));
   });
 
   /**
@@ -416,7 +555,10 @@ describe('errorInterceptor', () => {
       const httpMock = TestBed.inject(HttpTestingController);
 
       let error: unknown = null;
-      http.get('/api/stops').subscribe({ error: (e) => (error = e) });
+      // OBRS-908: opted in, because the "overlay comes down with it" assertion below is
+      // the half of this test that is about the overlay, and a request that never
+      // raised one could not prove the ceiling takes it down.
+      http.get('/api/stops', { context: blocking() }).subscribe({ error: (e) => (error = e) });
       httpMock.expectOne('/api/stops'); // deliberately never flushed
 
       tick(IDEMPOTENT_REQUEST_TIMEOUT_MS - 1);

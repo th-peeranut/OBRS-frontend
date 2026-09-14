@@ -90,11 +90,10 @@ export class ETicketCardComponent implements OnChanges {
         // Flattened across legs: one fetch pass covers the return leg's tickets
         // too, and the service dedupes by ticket id anyway.
         this.legPassengerRows.flatMap((rows) => rows.map((row) => row.ticketId)),
-        () => this.applyBoardingQrStates(),
-        // The modal renders its own state; a global "Loading…" dialog per
-        // ticket on top of an already-rendered ticket is noise. The per-row
-        // placeholder is the loading indicator.
-        true
+        // The modal renders its own state; the per-row placeholder is the loading
+        // indicator. OBRS-908: the global per-ticket "Loading…" dialog this used to
+        // opt out of no longer exists.
+        () => this.applyBoardingQrStates()
       );
     }
   }

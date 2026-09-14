@@ -6,9 +6,9 @@ import {
 import { BookingLookupService } from './booking-lookup.service';
 import { environment } from '../../../environments/environment';
 import {
+  SHOW_BLOCKING_LOADING,
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 describe('BookingLookupService', () => {
@@ -71,7 +71,7 @@ describe('BookingLookupService', () => {
 
     const req = httpMock.expectOne(url);
     expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
-    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeTrue();
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
     req.flush({ errorCode: 'NOT_FOUND' }, { status: 404, statusText: 'Not Found' });
   });
 });

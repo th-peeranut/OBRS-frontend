@@ -3,7 +3,6 @@ import {
   extractRescheduleErrorCode,
   isTerminalRescheduleError,
   mapRescheduleErrorCode,
-  shouldReturnToOptions,
 } from './reschedule-error';
 
 describe('mapRescheduleErrorCode', () => {
@@ -46,13 +45,6 @@ describe('isTerminalRescheduleError', () => {
     expect(isTerminalRescheduleError('RESCHEDULE_ERROR_MAX_COUNT')).toBeTrue();
     expect(isTerminalRescheduleError('RESCHEDULE_ERROR_NO_SEATS')).toBeFalse();
     expect(isTerminalRescheduleError(undefined)).toBeFalse();
-  });
-});
-
-describe('shouldReturnToOptions', () => {
-  it('is true only for NO_SEATS', () => {
-    expect(shouldReturnToOptions('RESCHEDULE_ERROR_NO_SEATS')).toBeTrue();
-    expect(shouldReturnToOptions('RESCHEDULE_ERROR_MAX_COUNT')).toBeFalse();
   });
 });
 

@@ -1,0 +1,168 @@
+/* OBRS-1755 — component-local only. Everything structural (admin-card,
+   admin-table, admin-field, admin-btn, admin-muted, admin-error) comes from the
+   shared admin surface classes the rest of the staff portal already uses; this
+   file adds no restyle of any of them. Every colour reads an --admin-* token, so
+   light/dark and the staff accent stay the shell's decision — no raw hex
+   (design-system §2.2/§11), and nothing lives only inside a @media block. */
+
+.srt-scope {
+  margin: 0.75rem 0 0;
+}
+
+.srt-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.srt-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  background: var(--admin-surface-soft);
+}
+
+.srt-subhead {
+  margin: 1rem 0 0.35rem;
+  font-weight: 600;
+}
+
+.srt-num {
+  text-align: end;
+}
+
+/* The สรุป row of a breakdown table. */
+.srt-sum {
+  font-weight: 600;
+  border-top: 1px solid var(--admin-outline);
+}
+
+/* ⑭/BR-21 — the โอน/พร้อมเพย์ placeholder. Recessed, never disabled-looking
+   enough to read as "broken": the channel is not open yet (OBRS-1714). */
+.srt-muted-row {
+  color: var(--admin-neutral-text);
+}
+
+.srt-chip {
+  display: inline-block;
+  margin-inline-start: 0.4rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--admin-neutral-bg);
+  color: var(--admin-neutral-text);
+}
+
+/* The equation box ⑦: one row per term, the total separated by a rule. */
+.srt-eq {
+  margin-top: 0.5rem;
+}
+
+.srt-eq-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--admin-outline-soft);
+}
+
+.srt-minus {
+  color: var(--admin-danger-fg);
+}
+
+/* BR-25 - the return-leg term. A positive row, so it reads with the ticket cash
+   above it rather than with the deductions below. */
+.srt-plus {
+  color: var(--admin-success-fg);
+}
+
+/* Supporting detail under a term — smaller, never the only carrier of meaning. */
+.srt-info {
+  font-size: 0.85rem;
+  color: var(--admin-neutral-text);
+}
+
+.srt-total {
+  font-weight: 700;
+  border-bottom: none;
+  border-top: 2px solid var(--admin-outline);
+  padding-top: 0.6rem;
+}
+
+/* ⑮ — a round the owner owes money on. Colour is an EXTRA signal; the sentence
+   beside it already says who pays whom. */
+.srt-total-neg {
+  color: var(--admin-danger-fg);
+}
+
+.srt-payout {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-inline-start: 4px solid var(--admin-danger-fg);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: var(--admin-danger-surface);
+  color: var(--admin-danger-fg);
+}
+
+.srt-head-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.srt-head-input {
+  width: 5.5rem;
+  text-align: end;
+}
+
+/* The one box that carries the screen's single primary action — outlined in the
+   shell's runtime accent so it reads as the destination, in either theme. */
+.srt-submit-card {
+  border: 1px solid var(--accent, var(--admin-outline));
+}
+
+.srt-sent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-inline-start: 4px solid var(--admin-warning-text);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+}
+
+/* ⑩ — the figure moved after it was sent. */
+.srt-stale {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-inline-start: 4px solid var(--admin-danger-fg);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: var(--admin-danger-surface);
+  color: var(--admin-danger-fg);
+
+  p {
+    margin: 0;
+
+    & + p {
+      margin-top: 0.25rem;
+    }
+  }
+}
+
+.srt-submit-btn {
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
+/* A re-submit is not the same act as a first submit — the button says so in
+   words (BR-17) and the surface backs the words up. */
+.srt-submit-btn-stale {
+  background: var(--admin-warning-text);
+  border-color: var(--admin-warning-text);
+}
+

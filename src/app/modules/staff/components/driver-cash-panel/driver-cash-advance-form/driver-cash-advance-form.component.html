@@ -9,7 +9,8 @@
       inputmode="decimal"
       class="admin-field"
       [placeholder]="'STAFF.DRIVER_CASH.ADVANCE.AMOUNT_PLACEHOLDER' | translate"
-      [(ngModel)]="amountInput"
+      [ngModel]="amountInput"
+      (ngModelChange)="onAmountInput($event)"
       name="advanceAmount"
       />
       <!-- OBRS-1015: ADVANCE is the only one of the 3 panels whose amount is
@@ -35,12 +36,17 @@
       <div class="admin-error">{{ err | translate }}</div>
     }
 
-    <button
-      type="submit"
-      class="admin-btn admin-btn-primary dcp-action-btn"
-      [disabled]="!canSubmit"
-      data-testid="driver-cash-advance-submit"
-      >
-      {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.DRIVER_CASH.ADVANCE.SUBMIT') | translate }}
-    </button>
+    <!-- OBRS-1755: hidden only where the HOST screen owns the single primary
+    button (the "ส่งยอด" tab). `showSubmit` defaults true, so driver-cash-panel
+    renders exactly as before. -->
+    @if (showSubmit) {
+      <button
+        type="submit"
+        class="admin-btn admin-btn-primary dcp-action-btn"
+        [disabled]="!canSubmit"
+        data-testid="driver-cash-advance-submit"
+        >
+        {{ (isSubmitting ? 'STAFF.DRIVER_CASH.SUBMITTING' : 'STAFF.DRIVER_CASH.ADVANCE.SUBMIT') | translate }}
+      </button>
+    }
   </form>

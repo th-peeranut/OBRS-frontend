@@ -1,6 +1,7 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AdminApiService } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
@@ -18,7 +19,7 @@ import {
     styleUrl: './segment-edit-modal.component.scss',
     standalone: false
 })
-export class SegmentEditModalComponent {
+export class SegmentEditModalComponent implements OnDestroy {
   @Input() stops: StopPoint[] = [];
   @Input() allSegments: SegmentRow[] = [];
   @Input() routeSlug = '';
@@ -50,6 +51,8 @@ export class SegmentEditModalComponent {
 
   protected readonly editSegmentForm: FormGroup;
 
+  private readonly destroy$ = new Subject<void>();
+
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
@@ -79,7 +82,8 @@ export class SegmentEditModalComponent {
 
     this.editSegmentForm
       .get('toStopSlug')
-      ?.valueChanges.subscribe(() => this.recountAffectedPairs());
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.recountAffectedPairs());
   }
 
   /** Called by the parent page when a segment row's Edit action is triggered. */
@@ -211,5 +215,10 @@ export class SegmentEditModalComponent {
   private getStopPointBySlug(slug: string): StopPoint | undefined {
     const normalizedSlug = String(slug ?? '').trim();
     return this.stops.find((stop) => stop.slug === normalizedSlug);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

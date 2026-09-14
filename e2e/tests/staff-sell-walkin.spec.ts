@@ -681,7 +681,10 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
 
   // ── AC-10  Center panel: 3 tabs ───────────────────────────────────────────
 
-  test('AC-10: center panel shows 3 tabs after trip selection', async ({ page }) => {
+  // OBRS-1755 added the fourth tab ("Remittance"); the count and the labels
+  // below move with it deliberately — a tab appearing unannounced is exactly
+  // what this assertion is for.
+  test('AC-10: center panel shows 4 tabs after trip selection', async ({ page }) => {
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
       route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
     );
@@ -691,17 +694,18 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
     await page.locator('.trip-row').first().click();
 
-    // p-tabView appears with 3 tabs
+    // p-tabView appears with 4 tabs
     await expect(page.locator('p-tabs')).toBeVisible({ timeout: 10_000 });
 
-    // PrimeNG tabview: 3 li[role="presentation"] for real tabs + 1 ink-bar li[aria-hidden="true"].
+    // PrimeNG tabview: 4 li[role="presentation"] for real tabs + 1 ink-bar li[aria-hidden="true"].
     // The real tab anchors have role="tab" inside each presentation li.
-    await expect(page.locator('.p-tablist-tab-list [role="tab"]')).toHaveCount(3, { timeout: 5_000 });
+    await expect(page.locator('.p-tablist-tab-list [role="tab"]')).toHaveCount(4, { timeout: 5_000 });
 
     // Tab labels
     await expect(page.locator('.p-tablist-tab-list')).toContainText('Ticket Sales');
     await expect(page.locator('.p-tablist-tab-list')).toContainText('Trip Details');
     await expect(page.locator('.p-tablist-tab-list')).toContainText('Boarding');
+    await expect(page.locator('.p-tablist-tab-list')).toContainText('Remittance');
   });
 
   test('AC-10: Trip Details tab loads the directly-editable form (app-trip-details-edit-form)', async ({ page }) => {

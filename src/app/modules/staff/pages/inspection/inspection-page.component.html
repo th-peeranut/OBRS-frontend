@@ -70,7 +70,8 @@
         <button
           type="button"
           class="inspection-banner-dismiss"
-          [attr.aria-label]="'COMMON.CLOSE' | translate"
+          [attr.aria-label]="'COMMON.DISMISS' | translate"
+          [title]="'COMMON.DISMISS' | translate"
           (click)="dismissBanner()"
           >
           <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>

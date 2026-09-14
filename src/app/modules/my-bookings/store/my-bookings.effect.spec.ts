@@ -320,7 +320,6 @@ describe('MyBookingsEffect (OBRS-286)', () => {
         status: null,
         page: 0,
         size: MY_BOOKINGS_PAGE_SIZE,
-        showLoadingDialog: undefined,
       });
     });
 
@@ -338,7 +337,6 @@ describe('MyBookingsEffect (OBRS-286)', () => {
         status: 'confirmed',
         page: 0,
         size: 5 * MY_BOOKINGS_PAGE_SIZE,
-        showLoadingDialog: undefined,
       });
     });
 
@@ -396,7 +394,6 @@ describe('MyBookingsEffect (OBRS-286)', () => {
         status: 'confirmed',
         page: 5,
         size: MY_BOOKINGS_PAGE_SIZE,
-        showLoadingDialog: false,
       });
     });
 

@@ -80,6 +80,7 @@
                     class="admin-icon-btn"
                     [disabled]="!canMoveUp(i)"
                     [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_UP' | translate: { label: displayLabel(row) }"
+                    [title]="'ADMIN.INSPECTION_ITEMS.MOVE_UP' | translate: { label: displayLabel(row) }"
                     (click)="moveUp(i)"
                     >
                     <span class="material-symbols-outlined" [attr.translate]="'no'">arrow_upward</span>
@@ -89,6 +90,7 @@
                     class="admin-icon-btn"
                     [disabled]="!canMoveDown(i)"
                     [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_DOWN' | translate: { label: displayLabel(row) }"
+                    [title]="'ADMIN.INSPECTION_ITEMS.MOVE_DOWN' | translate: { label: displayLabel(row) }"
                     (click)="moveDown(i)"
                     >
                     <span class="material-symbols-outlined" [attr.translate]="'no'">arrow_downward</span>
@@ -98,6 +100,7 @@
                     class="admin-icon-btn"
                     [disabled]="!canMoveUp(i)"
                     [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_TOP' | translate: { label: displayLabel(row) }"
+                    [title]="'ADMIN.INSPECTION_ITEMS.MOVE_TOP' | translate: { label: displayLabel(row) }"
                     (click)="moveToTop(i)"
                     >
                     <span class="material-symbols-outlined" [attr.translate]="'no'">keyboard_double_arrow_up</span>
@@ -107,6 +110,7 @@
                     class="admin-icon-btn"
                     [disabled]="!canMoveDown(i)"
                     [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_BOTTOM' | translate: { label: displayLabel(row) }"
+                    [title]="'ADMIN.INSPECTION_ITEMS.MOVE_BOTTOM' | translate: { label: displayLabel(row) }"
                     (click)="moveToBottom(i)"
                     >
                     <span class="material-symbols-outlined" [attr.translate]="'no'">keyboard_double_arrow_down</span>
@@ -144,6 +148,7 @@
                     type="button"
                     class="admin-icon-btn"
                     [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                    [title]="'ADMIN.COMMON.EDIT' | translate"
                     (click)="openEditModal(row)"
                     >
                     <span class="material-symbols-outlined" [attr.translate]="'no'">edit</span>
@@ -156,6 +161,7 @@
                       class="admin-icon-btn"
                       [disabled]="isRowSaving(row)"
                       [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.RETIRE_CONFIRM_BUTTON' | translate"
+                      [title]="'ADMIN.INSPECTION_ITEMS.RETIRE_CONFIRM_BUTTON' | translate"
                       (click)="toggleActive(row)"
                       >
                       <span class="material-symbols-outlined" [attr.translate]="'no'">visibility_off</span>
@@ -167,6 +173,7 @@
                       class="admin-icon-btn"
                       [disabled]="isRowSaving(row)"
                       [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.RESTORE_BTN' | translate"
+                      [title]="'ADMIN.INSPECTION_ITEMS.RESTORE_BTN' | translate"
                       (click)="toggleActive(row)"
                       >
                       <span class="material-symbols-outlined" [attr.translate]="'no'">visibility</span>

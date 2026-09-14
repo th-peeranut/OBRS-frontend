@@ -12,6 +12,7 @@ import {
 } from '../../../../shared/interfaces/booking-trend.interface';
 import { DateRange } from '../../../../shared/components/date-range-picker/date-range-picker.component';
 import { dateRangeErrorKey } from '../../../../shared/lib/date-range-guard';
+import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
 
 /**
  * OBRS-152 — booking trend analysis page. A sibling of ReportsPage/RevenueAnalyticsPage: same
@@ -42,8 +43,8 @@ export class BookingTrendPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const range = this.store.range;
-    this.fromDate = this.parseDateInputValue(range.from);
-    this.toDate = this.parseDateInputValue(range.to);
+    this.fromDate = toDateControlValue(range.from);
+    this.toDate = toDateControlValue(range.to);
 
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => (this.trend = data));
     this.store.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((r) => (this.isRefreshing = r));
@@ -162,8 +163,8 @@ export class BookingTrendPageComponent implements OnInit, OnDestroy {
     if (!this.fromDate || !this.toDate) {
       return;
     }
-    const from = this.toDateInputValue(this.fromDate);
-    const to = this.toDateInputValue(this.toDate);
+    const from = toDateInputValue(this.fromDate);
+    const to = toDateInputValue(this.toDate);
     const errorKey = dateRangeErrorKey(
       this.fromDate,
       this.toDate,
@@ -190,21 +191,5 @@ export class BookingTrendPageComponent implements OnInit, OnDestroy {
       return this.translate.instant('ADMIN.REPORTS.ERROR.RANGE_TOO_LARGE');
     }
     return this.translate.instant('ADMIN.BOOKING_TREND.LOAD_FAILED');
-  }
-
-  private toDateInputValue(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private parseDateInputValue(value: string): Date | null {
-    const parts = value.split('-');
-    if (parts.length !== 3) {
-      return null;
-    }
-    const [year, month, day] = parts.map(Number);
-    return new Date(year, month - 1, day);
   }
 }

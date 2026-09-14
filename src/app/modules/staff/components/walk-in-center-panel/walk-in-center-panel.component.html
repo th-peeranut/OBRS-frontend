@@ -36,6 +36,8 @@
         <p-tab [value]="0">{{ 'STAFF.SELL.TAB_TICKET_SALES' | translate }}</p-tab>
         <p-tab [value]="1">{{ 'STAFF.SELL.TAB_TRIP_DETAILS' | translate }}</p-tab>
         <p-tab [value]="2">{{ 'STAFF.SELL.TAB_BOARDING' | translate }}</p-tab>
+        <!-- OBRS-1755: 4th tab, after ขึ้นรถ. -->
+        <p-tab [value]="3">{{ 'STAFF.SELL.TAB_REMITTANCE' | translate }}</p-tab>
       </p-tablist>
       <p-tabpanels>
         <!-- Tab 1: Ticket Sales (seat map) -->
@@ -387,6 +389,17 @@
             empty-state is needed here. -->
             <p-tabpanel [value]="2">
               <app-boarding-list [scheduleId]="selectedTrip!.scheduleId"></app-boarding-list>
+            </p-tabpanel>
+            <!-- Tab 4: ส่งยอด (OBRS-1755) — bound to the SAME selected round as
+            ขึ้นรถ above, so changing rounds in the left-hand list changes the
+            money shown here. `[active]` is not decoration: `p-tabpanel` is eager
+            (`lazy` defaults false), so without it this tab would fetch a round's
+            cash position on every row the clerk clicks. -->
+            <p-tabpanel [value]="3">
+              <app-staff-remittance-tab
+                [scheduleId]="selectedTrip!.scheduleId"
+                [active]="isRemittanceTabActive"
+              ></app-staff-remittance-tab>
             </p-tabpanel>
           </p-tabpanels>
         </p-tabs>

@@ -130,7 +130,7 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
         .getBookingTickets(bookingId, true)
         .pipe(catchError(() => of(null))),
       payments: this.paymentService
-        .getBookingPayments(bookingId, { skipGlobalLoadingAlert: true })
+        .getBookingPayments(bookingId)
         .pipe(catchError(() => of(null))),
     })
       .pipe(takeUntil(this.destroy$))
@@ -235,16 +235,15 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
    * instance-scoped dedupe/isolation/rendering pipeline used by
    * `ETicketComponent.fetchBoardingTokensForPassengers` on the customer
    * e-ticket page, so there is exactly one QR pipeline in the codebase.
-   * `skipGlobalLoadingAlert: true` keeps this page's own inline spinner from
-   * doubling up with the global loading dialog (OBRS-195).
+   * OBRS-195 used to pass a loading-alert opt-out here so this page's own inline
+   * spinner did not double up with the global loading dialog; OBRS-908 made
+   * that dialog opt-in, so there is nothing left to suppress.
    */
   private fetchBoardingTokens(): void {
     const ticketIds = this.tickets.map((t) => t.ticketId);
 
-    this.boardingQrService.fetchBoardingTokens(
-      ticketIds,
-      () => this.applyBoardingQrStates(),
-      true
+    this.boardingQrService.fetchBoardingTokens(ticketIds, () =>
+      this.applyBoardingQrStates()
     );
   }
 

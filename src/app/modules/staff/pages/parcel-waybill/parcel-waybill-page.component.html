@@ -32,7 +32,7 @@
     <div class="admin-modal parcel-waybill-terms-modal" data-testid="parcel-waybill-terms-modal">
       <div class="admin-modal-header">
         <h5 class="admin-modal-title">{{ 'STAFF.PARCEL_WAYBILL.TERMS_MODAL_TITLE' | translate }}</h5>
-        <button type="button" class="admin-icon-btn" (click)="closeTerms()" [attr.aria-label]="'COMMON.CLOSE' | translate">
+        <button type="button" class="admin-icon-btn" (click)="closeTerms()" [attr.aria-label]="'COMMON.CLOSE' | translate" [title]="'COMMON.CLOSE' | translate">
           <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
         </button>
       </div>

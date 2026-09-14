@@ -2023,6 +2023,64 @@ describe('SellPageComponent — OBRS-667 owner-only cancel gate (DOM)', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// OBRS-1755 (BR-18): the route's unsaved-work guard.
+//
+// The ส่งยอด tab is the only place on this page where cash can leave the drawer
+// before the server hears about it - since the owner removed the standalone
+// "บันทึกเงินทดรอง" button (2026-09-09), a typed advance is recorded ONLY by the
+// single "ส่งยอด" submit. This page owns the route, so it owns the guard; the
+// answer itself comes from the tab, through the center panel.
+// ---------------------------------------------------------------------------
+describe('SellPageComponent — OBRS-1755 canDeactivate', () => {
+  function setup(): SellPageComponent {
+    TestBed.configureTestingModule({
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      declarations: [SellPageComponent],
+      providers: [
+        { provide: StaffApiService, useValue: createStaffApiStub() },
+        { provide: AlertService, useValue: createAlertStub() },
+        { provide: AdminApiService, useValue: createAdminApiStub() },
+        { provide: StaffSchedulesStore, useValue: createScheduleStoreStub() },
+        { provide: Router, useValue: createRouterStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false, false) },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(SellPageComponent);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  function setPanel(component: SellPageComponent, panel: unknown): void {
+    (component as unknown as { centerPanel?: unknown }).centerPanel = panel;
+  }
+
+  // The ordinary sell flow must never meet a dialog: no trip selected means no
+  // panel, which means nothing can be holding money.
+  it('leaves synchronously when no center panel is mounted', () => {
+    const component = setup();
+    expect(component.canDeactivate()).toBeTrue();
+  });
+
+  it('delegates to the center panel when one is mounted', () => {
+    const component = setup();
+    const canDeactivate = jasmine.createSpy('canDeactivate').and.returnValue(false);
+    setPanel(component, { canDeactivate });
+
+    expect(component.canDeactivate()).toBeFalse();
+    expect(canDeactivate).toHaveBeenCalled();
+  });
+
+  it('passes a pending promise through rather than collapsing it to a boolean', async () => {
+    const component = setup();
+    setPanel(component, { canDeactivate: () => Promise.resolve(true) });
+
+    await expectAsync(Promise.resolve(component.canDeactivate())).toBeResolvedTo(true);
+  });
+});
+
 // OBRS-974: same defect as the staff-schedules page, same ternary - the delete arm
 // pointed at ADMIN.MESSAGES.DELETE_CONFIRM_TITLE, which no locale file defines, so
 // the confirm dialog was headed by the raw key. The OBRS-667 suite above renders this
