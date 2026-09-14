@@ -135,6 +135,32 @@ fresh instances of the defect it was written to remove; the sweep caught them on
 straight after the batch landed. `ALLOW` cannot rot either: a separate case fails on any
 entry the sweep no longer sees malformed.
 
+**And the third sweep over the same 47 screens asks how BIG everything is.**
+`target-size-sweep.spec.ts` (OBRS-925) measures every visible, enabled interactive
+control — `button`, `a[href]`, `[role="button"]`, `input`, `select`, `summary`,
+`[tabindex]` other than `-1` — with `getBoundingClientRect()` and fails anything under
+WCAG 2.2 SC 2.5.8's 24×24 CSS px. Same argument as the two above for why it is here and
+not in `scripts/`: OBRS-913's `.admin-sidebar-pin` *declared* 28px and *rendered* 20,
+because it is a `flex-shrink: 1` item of a column that overflows on a laptop-height
+viewport — a declaration is an input to layout, so every source parser in `scripts/` read
+28 and passed it while the button was 20px on prod. SC 2.5.8's own exceptions are four
+separate predicates, each decided per element and **counted**, never a skip list:
+user-agent-sized (proven by inserting a bare control of the same kind beside it and
+measuring both — an author rule that resized *this* one leaves the probe behind),
+inline in a sentence (`display: inline` **and** real non-target text in the same flow),
+the 24px-circle spacing rule, and a declared, verified `EQUIVALENT`. First run, measured
+2026-09-14 on `origin/dev` b9c4f7c3: **2,576 controls** over 47 pages, 122 skipped
+(20 disabled, 102 invisible), **86 exempt** (41 inline, 45 spacing, 0 user-agent,
+0 equivalent) and **3 violations** — `button.btn-close` 16×16, `button.p-datepicker-dropdown`
+40×20, `a.obrs-link` 132.5×21 — all three on `ALLOW` against OBRS-1882, because fixing
+them is a layout change per control and the card scopes itself to the gate. Two checks run
+**before** any sweep and are what make a green run mean anything: a must-catch/must-NOT-catch
+self-test against synthetic DOM (a 20px button beside a neighbour must fail; 24px exactly,
+an isolated 20px one, a bare checkbox and a tiny link in a sentence must not; an
+author-squashed checkbox must), and an assertion that the admin sidebar column **still
+overflows** at 1280×720 — without that, a viewport change would leave the sweep measuring
+a layout where nothing can be squeezed and reporting it in the same voice as a real pass.
+
 **And "can the visitor reach it at all" is a lane member too.**
 `obrs-1372-consent-banner-reachability.spec.ts` sweeps the same eleven customer pages at
 the iPhone 14's 390×664 in Thai, with the PDPA question deliberately UNanswered, and

@@ -294,6 +294,14 @@ export default defineConfig({
     // terms as the rest: public fixtures for three families, a synthetic session
     // for the admin one.
     '**/obrs-568-dropdown-panel-geometry.spec.ts',
+    // OBRS-925. The generalisation of the two entries above: instead of one
+    // control's rendered size, every interactive control on all 47 screens this
+    // lane reaches, against WCAG 2.2 SC 2.5.8's 24x24 minimum. The argument for
+    // a browser is the one OBRS-913 paid for -- a declaration is an input to
+    // layout, so every source parser in scripts/ passed a button that was 20px
+    // on prod. Hermetic on the same terms as the rest: it adds no page
+    // and no session helper, it walks e2e/support/host-boxes.ts.
+    '**/target-size-sweep.spec.ts',
     // OBRS-931. `position: sticky` is a used value, not a declared one: any ancestor
     // with an `overflow` or a `transform` turns it back into a bar that scrolls away,
     // and `<app-navbar>` is mounted per page on 21 customer templates. A stylesheet
