@@ -35,6 +35,94 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ---
 
+## [Backend] 2026-09-11 — security review #3: signup OTP-gated guest claim, OTP attempt cap, staff schedule detail gated, page size cap
+**Risk level**: R1 (additive request fields; new 409/401 error codes; one endpoint newly role-gated)
+**Triggered by**: backend security review 2026-09-11 (report #3; findings B2-H1, B2-H2, B2-F2, B2-L5), branch `claude/determined-ride-lvjeoh`.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `POST /api/auth/signup` | Optional request fields added | `otpToken` (string ≤ 64) and `otpPin` (4-8 digits). Needed ONLY when `phoneNumber` is held by a guest shadow row (a number someone booked with without an account). |
+| `POST /api/auth/signup` | New error | `409` `AUTH_SIGNUP_ERROR_PHONE_GUEST_CLAIM_REQUIRES_OTP` when the number is a guest number and the pair is absent. Before: the row (and its bookings) was claimed silently on the phone number alone. |
+| `POST /api/auth/login/otp`, `POST /api/external/otp/verify` | New error | `401` `OTP_VERIFY_TOO_MANY_ATTEMPTS` after 5 wrong PINs on one token. Remedy: request a new code. |
+| `GET /api/private/schedules/{id}` | Authorization | Now `DRIVER` or `SALESPERSON` (was: any signed-in user). Customer pages never called it (verified by grep); admin/staff pages unaffected. |
+| every paged endpoint | Limit | `size` is capped at 100 (`spring.data.web.pageable.max-page-size`). The largest page the app asks for is 100. |
+| `POST /api/private/payments/walk-in` | New error | `404` `BOOKING_ERROR_ID_NOT_FOUND` when the booking belongs to another operator (tenant scope, same answer as cancel). |
+| `POST /api/private/parcels/{id}/*`, `GET /api/private/parcels/{id}/waybill`, `GET /api/private/schedules/{id}/parcels/*`, parcel claims | New errors | `404` for a parcel/schedule outside the caller's operator; `403` `PARCEL_ERROR_UNAUTHORIZED` for a pure driver not assigned to that schedule. Mirrors the boarding-list rule. |
+| `POST /api/usability-reports` | Validation | `description` is now capped at 5000 characters (`400 VALIDATION_FAILED` beyond it). |
+
+### Response shapes before / after
+- Unchanged. Validation errors on `password`/`pin`/`otp`/`token`/card fields now return `rejectedValue: null` (the field name and message are unchanged).
+
+### Action required in frontend
+- [ ] Register form: on `409 AUTH_SIGNUP_ERROR_PHONE_GUEST_CLAIM_REQUIRES_OTP`, run the existing OTP request/verify step for the typed number and resubmit the signup body with `otpToken` + `otpPin`. Until this lands, a customer who booked as a guest and now registers with the same number sees the backend's 409 message (localized) instead of silently inheriting the bookings. The i18n keys already exist server-side in th/en/zh.
+- [ ] OTP screens: surface the backend message for `OTP_VERIFY_TOO_MANY_ATTEMPTS` (it is a normal `OtpException`; the global error alert already shows it) and offer "request a new code".
+- [ ] Nothing for the other rows.
+
+### Still unfinished on backend
+- None for these rows. See `../OBRS-backend/docs/adr/0154-client-ip-comes-from-the-proxy-only.md` and the review report `../OBRS-backend/docs/security/2026-09-11-security-review-3.md`.
+
+---
+
+## [Backend] 2026-09-11 — `409` for `PAYMENT_CHARGE_RECONCILIATION_REQUIRED`; `429` on `GET /api/users/check-duplicate/*`
+**Risk level**: R1 (status-code change on one error code; new rate limit on two public endpoints)
+**Triggered by**: production-readiness review 2026-09-11 (B2 charge reconciliation, S3 enumeration limiter).
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `POST /api/private/payments`, `POST /api/payments` (guest) | Status code | `errorCode: "PAYMENT_CHARGE_RECONCILIATION_REQUIRED"` is now answered **`409 Conflict`** (was `400`). Body shape unchanged. The message text (`payment.charge.reconciliation-required`, th/en/zh) now says the gateway is being checked and to wait a few minutes before retrying — a background job resolves the stuck attempt within ~5 minutes, so "contact support, do not retry" is no longer the advice. |
+| `GET /api/users/check-duplicate/email/{email}`, `GET /api/users/check-duplicate/phoneNumber/{phoneNumber}` | Rate limit | Per client IP, 60 calls per 15 minutes across both. Over the cap: **`429`** with message key `user.check-duplicate.rate-limited` (th/en/zh). |
+
+### Response shapes before / after
+- **Before**: `400 { "code": 400, "errorCode": "PAYMENT_CHARGE_RECONCILIATION_REQUIRED", "message": "...do not retry - contact support..." }`
+- **After**: `409 { "code": 409, "errorCode": "PAYMENT_CHARGE_RECONCILIATION_REQUIRED", "message": "...wait a few minutes and try again..." }`
+
+### Action required in frontend
+- [x] **Confirmed 2026-09-12 (OBRS-1853) — nothing to change.** `PAYMENT_CHARGE_RECONCILIATION_REQUIRED`
+  has 0 hits in `src/` and `e2e/`, and `src/app/modules/payment/**` + `payment.service.ts` branch on neither
+  HTTP status nor `errorCode`. The one `status === 400` in the app is `boarding-list.component.ts:620`
+  (boarding scan, unrelated). `api-error.ts` special-cases only 0/429/502/503/504, so a `409` falls through
+  to `extractApiErrorMessage` and the backend's own message reaches the customer verbatim.
+- [x] Register form: a `429` from the on-blur duplicate check does NOT block the form — `UserService` sends
+  both checks with `SKIP_GLOBAL_ERROR_ALERT` + `SKIP_GLOBAL_LOADING_ALERT` so the refusal is silent
+  (2026-09-11), and `RegisterComponent.checkDuplicateData` CLEARS `emailIsExist`/`phoneNumberIsExist` on
+  failure (2026-09-12, OBRS-1853). ⚠️ The second half is what makes the first half safe: it used to leave
+  the previous value, so a 429 arriving after a genuine duplicate froze the inline warning on and
+  `register()` — which refuses to submit while that flag is set, with no else branch — dead-ended the form
+  silently. `/api/auth/signup` is the authority on duplicates and now gets the decision.
+
+### Still unfinished on backend
+- None. See `../OBRS-backend/docs/api/payment.md` and `docs/api/admin.md`.
+
+---
+
+## [Backend] 2026-09-11 — security chain is deny-by-default; an undeclared `/api/...` path answers `401`, not `404` (ADR-0153)
+**Risk level**: R1 (behavioural, no field or endpoint changed)
+**Triggered by**: security review 2026-09-11, backend finding B-M1.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| every documented public endpoint | none | still anonymous; each is now listed explicitly in `PublicEndpointConstant.PUBLIC_PATTERNS` |
+| any path NOT documented in `docs/api/` | status changed | anonymous call now gets `401 UNAUTHORIZED` (was `404`); an authenticated call still gets `404` |
+| `POST /api/external/sms/send/test` | availability | `dev` profile only (was on SIT/prod behind `hasRole('OWNER')`); the frontend never called it |
+
+### Response shapes before / after
+- Unchanged for every endpoint the frontend calls.
+
+### Action required in frontend
+- [ ] None today — every `/api/...` URL the app calls was cross-checked against the declaration.
+- [ ] Be aware when adding a call to a NEW backend endpoint: if the backend forgot to declare it
+      public, an anonymous call answers `401`, and `auth.interceptor.ts` treats a `401` on a
+      credentialed request as a session loss. A surprise logout on a new public page is the symptom;
+      the fix is on the backend (add the path to `PublicEndpointConstant`), not here.
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/adr/0153-deny-by-default-security-chain-with-declared-public-surface.md`.
+
+---
+
 ## [Backend] 2026-08-20 — `userName` added to `GET/PUT /api/private/admin/usability-reports` (list + detail)
 **Risk level**: R1 (additive)
 **Triggered by**: bug report — the `/admin/usability-reports` page showed the raw numeric `userId` (e.g. `1`, `2`) in the reporter column/detail instead of a name.
@@ -118,6 +206,45 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 ---
 
 ## Contract Requests (Frontend → Backend)
+
+### [Frontend] 2026-09-11 — `Idempotency-Key` on both booking-create endpoints
+
+<!-- contract-request
+card: OBRS-25
+status: open
+absent: Idempotency-Key :: src/main/java/com/example/demo/controller/business/*BookingController.java
+-->
+
+**Raised by**: the production-readiness review of 2026-09-11 (review follow-up: [OBRS-1853](https://nj-phuyaipu.atlassian.net/browse/OBRS-1853), Done).
+The card that owns the backend work is [OBRS-25](https://nj-phuyaipu.atlassian.net/browse/OBRS-25)
+*Idempotency for booking endpoints* — Needs Decision, so this entry stays open until that card is decided
+and shipped (OBRS-1871).
+
+**Affected endpoints**: `POST /api/bookings` (guest) **and `POST /api/private/bookings` (signed-in)** —
+`BookingService.createBooking` picks between them on `authService.isAuthenticated()`
+(`booking.service.ts:147-149`, ADR-0123 Decision 1). `/payment` sits behind `AuthGuard`, so the
+**signed-in** endpoint is the mainstream path; an idempotency guard on the guest one alone would
+leave the defect open for most customers.
+
+**Request type**: additive (R1) — accept an optional `Idempotency-Key` request header; no change to the
+request body or the response shape.
+
+**Why**: booking creation is the one money-adjacent POST in the customer flow that is not idempotent.
+`POST /api/private/payments` already honours `Idempotency-Key` (and `PaymentDoubleSubmitConcurrencyIT`
+proves it), but a retried or duplicated `POST /api/bookings` — a double tap, a mobile network that
+resends after a timeout — creates **two seat holds** for the same passenger, each with its own 15-minute
+expiry. The frontend now single-flights the submit (`PassengerInfoComponent.isSubmitting`, this same
+date), which closes the double-tap but not the network-retry case; only the server can close that.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| Accept `Idempotency-Key: <uuid>` on `POST /api/bookings` **and `POST /api/private/bookings`**; same key within its TTL returns the **same** `201` body (`bookingId`, `bookingNumber`) without creating a second hold | `BookingController` / `BookingService#createBooking` | Retry-safe booking creation; mirrors the payment path's existing `idempotency_keys` mechanism |
+| Document the header in `docs/api/booking.md` (scope: per user or per guest token + path, TTL ≥ the 15-minute hold) | `docs/api/booking.md` | The frontend may only send what the contract documents |
+
+Once documented, the frontend will generate the key with `generateIdempotencyKey()` when the passenger
+form validates and send it on `BookingService.createBooking`, exactly as `payment.service.ts` does today.
+
 
 ### [Frontend] 2026-08-02 — Driver-cash daily-return close endpoints (OBRS-960): RESOLVED
 

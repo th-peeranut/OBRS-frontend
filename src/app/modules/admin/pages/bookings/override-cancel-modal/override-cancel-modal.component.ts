@@ -84,6 +84,7 @@ type RefundMethodState = 'loading' | 'resolved' | 'error';
     standalone: false
 })
 export class OverrideCancelModalComponent implements OnChanges, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   @Input() isOpen = false;
   @Input() booking: AdminBookingDetailDto | null = null;
   /** Emitted after a successful override-cancel — parent revalidates the list. */
@@ -113,8 +114,6 @@ export class OverrideCancelModalComponent implements OnChanges, OnDestroy {
    * `errorMessage` banner. */
   protected destinationErrorMessage = '';
 
-  private readonly destroy$ = new Subject<void>();
-
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
@@ -125,6 +124,11 @@ export class OverrideCancelModalComponent implements OnChanges, OnDestroy {
       reason: ['', [Validators.maxLength(500)]],
       destination: buildRefundDestinationForm(this.formBuilder),
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -166,30 +170,30 @@ export class OverrideCancelModalComponent implements OnChanges, OnDestroy {
       .getBookingRefundMethod(booking.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          this.destinationRequired = response.data?.destinationRequired ?? true;
-          this.cancellationDeadline = response.data?.cancellationDeadline ?? null;
-          this.policyRefundRateEarly = response.data?.policyRefundRateEarly ?? null;
-          this.policyRefundRateLate = response.data?.policyRefundRateLate ?? null;
-          this.refundMethodState = 'resolved';
-          this.applyDestinationValidators();
-          // OBRS-699: the window verdict arrives WITH this response now, so the
-          // reason requirement can flip here — it no longer settles at open. A
-          // deadline already past makes the reason mandatory (AC2), and without
-          // this re-run the field would stay optional until the next rate click.
-          this.applyReasonValidators();
-        },
-        error: () => {
-          // Deliberately NOT fail-safe-to-required (see the UI spec's Flow A3
-          // step 5 for the full argued reasoning) — renders as optional.
-          this.refundMethodState = 'error';
-          this.cancellationDeadline = null;
-          this.policyRefundRateEarly = null;
-          this.policyRefundRateLate = null;
-          this.applyDestinationValidators();
-          this.applyReasonValidators();
-        },
-      });
+      next: (response) => {
+        this.destinationRequired = response.data?.destinationRequired ?? true;
+        this.cancellationDeadline = response.data?.cancellationDeadline ?? null;
+        this.policyRefundRateEarly = response.data?.policyRefundRateEarly ?? null;
+        this.policyRefundRateLate = response.data?.policyRefundRateLate ?? null;
+        this.refundMethodState = 'resolved';
+        this.applyDestinationValidators();
+        // OBRS-699: the window verdict arrives WITH this response now, so the
+        // reason requirement can flip here — it no longer settles at open. A
+        // deadline already past makes the reason mandatory (AC2), and without
+        // this re-run the field would stay optional until the next rate click.
+        this.applyReasonValidators();
+      },
+      error: () => {
+        // Deliberately NOT fail-safe-to-required (see the UI spec's Flow A3
+        // step 5 for the full argued reasoning) — renders as optional.
+        this.refundMethodState = 'error';
+        this.cancellationDeadline = null;
+        this.policyRefundRateEarly = null;
+        this.policyRefundRateLate = null;
+        this.applyDestinationValidators();
+        this.applyReasonValidators();
+      },
+    });
   }
 
   protected retryCheck(): void {
@@ -432,10 +436,5 @@ export class OverrideCancelModalComponent implements OnChanges, OnDestroy {
     } finally {
       this.isSubmitting = false;
     }
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 }

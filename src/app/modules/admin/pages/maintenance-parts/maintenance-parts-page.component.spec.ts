@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { MaintenancePartsPageComponent } from './maintenance-parts-page.component';
 import { AdminMaintenancePartDto } from '../../../../services/admin/admin-api.service';
@@ -18,6 +19,7 @@ describe('MaintenancePartsPageComponent', () => {
     name: 'น้ำมันเครื่อง',
     kind: 'PART',
     active: true,
+    mergedIntoId: null,
   };
   const TYPED: AdminMaintenancePartDto = {
     id: 2,
@@ -25,6 +27,7 @@ describe('MaintenancePartsPageComponent', () => {
     name: 'จาระบี',
     kind: 'PART',
     active: true,
+    mergedIntoId: null,
   };
   const LABOUR: AdminMaintenancePartDto = {
     id: 3,
@@ -32,6 +35,7 @@ describe('MaintenancePartsPageComponent', () => {
     name: 'ค่าแรงเปลี่ยนสายพาน',
     kind: 'LABOUR',
     active: true,
+    mergedIntoId: null,
   };
   const RETIRED: AdminMaintenancePartDto = {
     id: 4,
@@ -39,6 +43,7 @@ describe('MaintenancePartsPageComponent', () => {
     name: 'โช้คอัพหน้า',
     kind: 'PART',
     active: false,
+    mergedIntoId: null,
   };
 
   function makeStoreStub(parts: AdminMaintenancePartDto[] | null) {
@@ -323,5 +328,96 @@ describe('MaintenancePartsPageComponent', () => {
     // Nothing is cached any more, so a failure is a full-page error again - not a refresh hint.
     store.error$.next(true);
     expect(component.errorMessage).toBeTruthy();
+  });
+
+  // OBRS-1634 AC1/AC4/AC8/AC9 ---------------------------------------------------------------
+
+  const MERGED: AdminMaintenancePartDto = {
+    id: 5,
+    code: null,
+    name: 'จาระบี PBR',
+    kind: 'PART',
+    active: true,
+    mergedIntoId: 2, // TYPED
+  };
+
+  it('opens the merge dialog with candidates of the SAME kind, excluding self and merged rows', () => {
+    const { component } = makeComponent();
+
+    component.openMergeModal(TYPED); // kind PART
+
+    expect(component.mergeSourcePart).toBe(TYPED);
+    // SEEDED and RETIRED (both PART) are offered - retired is still a valid merge target; LABOUR
+    // (different kind) is not, and TYPED itself is excluded.
+    expect(
+      component.mergeCandidates.map((p: AdminMaintenancePartDto) => p.id).sort()
+    ).toEqual([1, 4]);
+    expect(component.isMergeModalOpen).toBeTrue();
+  });
+
+  it('closing the merge dialog clears its state', () => {
+    const { component } = makeComponent();
+    component.openMergeModal(TYPED);
+
+    component.onMergeModalClosed();
+
+    expect(component.isMergeModalOpen).toBeFalse();
+    expect(component.mergeSourcePart).toBeNull();
+    expect(component.mergeCandidates).toEqual([]);
+  });
+
+  it('AC8: a merged-away row is hidden by default and shown with what it was merged into once requested', () => {
+    const { component } = makeComponent();
+    (component as any).mergedParts = [MERGED];
+
+    expect(component.parts.some((p: AdminMaintenancePartDto) => p.id === 5)).toBeFalse();
+
+    component.onShowMergedChange(true);
+
+    const row = component.parts.find((p: AdminMaintenancePartDto) => p.id === 5);
+    expect(row).toBeTruthy();
+    expect(component.isMerged(row)).toBeTrue();
+    expect(component.mergedIntoLabel(row)).toBe('จาระบี'); // TYPED's name
+  });
+
+  it('AC9: renders the server 409 message when a reopen name-clashes, without closing the dialog', async () => {
+    const alert = {
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+    };
+    const unmerge = jasmine
+      .createSpy('unmergeMaintenancePart')
+      .and.returnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 409,
+              error: { message: 'ชื่อนี้ถูกใช้โดย "จาระบี PBR" อยู่แล้ว' },
+            })
+        )
+      );
+    const { component } = makeComponent(undefined, { unmergeMaintenancePart: unmerge }, alert);
+    component.openReopenModal(MERGED);
+
+    await component.confirmReopen();
+
+    expect(unmerge).toHaveBeenCalledWith(5);
+    expect(alert.error).toHaveBeenCalledWith('ชื่อนี้ถูกใช้โดย "จาระบี PBR" อยู่แล้ว');
+    // A failed reopen must not look like it went through.
+    expect(component.isReopenModalOpen).toBeTrue();
+  });
+
+  it('reopens successfully and refreshes both the shared store and the merged list', async () => {
+    const unmerge = jasmine
+      .createSpy('unmergeMaintenancePart')
+      .and.returnValue(of({ code: 200, message: 'OK', data: { ...MERGED, mergedIntoId: null } }));
+    const { component, store } = makeComponent(undefined, { unmergeMaintenancePart: unmerge });
+    component.openReopenModal(MERGED);
+    store.refresh.calls.reset();
+
+    await component.confirmReopen();
+
+    expect(component.isReopenModalOpen).toBeFalse();
+    expect(store.refresh).toHaveBeenCalled();
   });
 });

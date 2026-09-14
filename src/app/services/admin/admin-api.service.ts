@@ -1238,6 +1238,21 @@ export interface AdminExpenseDto {
    */
   items?: AdminExpenseItemDto[];
   rejectionReason?: string | null;
+  /**
+   * OBRS-845: the storage path of the attached receipt file (photo/PDF of the paper bill), or
+   * `null` when none is attached. A storage path, NOT a URL — the bucket is private, so this can
+   * never be rendered as a link or an `<img src>`. The only way to view the file is
+   * `getExpenseReceiptUrl()` below, which exchanges it for a short-lived signed URL on demand.
+   */
+  receiptFileRef?: string | null;
+}
+
+/** OBRS-845: `GET /private/expenses/{id}/receipt/url` 200 body. `url` is a short-lived SIGNED
+ * URL into the private receipt bucket — fetch it ON DEMAND at the moment of viewing and never
+ * cache/store it (it expires; default `expiresInSeconds` is 300). */
+export interface ExpenseReceiptUrlDto {
+  url: string;
+  expiresInSeconds: number;
 }
 
 /** OBRS-685: `ExpenseReqDto` — sent verbatim by the create/edit form
@@ -1347,6 +1362,11 @@ export interface CreateExpensePayeePayload {
  * <p>⚠️ Renaming a seeded row CLEARS its code server-side, permanently: the translations describe
  * the old spelling and would be a lie against the new one. A screen offering rename on a seeded row
  * is offering to discard its en/zh names, and has to say so.
+ *
+ * <p>OBRS-1634: `mergedIntoId` — the row this entry has been merged into (redirect, never a
+ * delete), or `null` when it stands on its own. Non-null means this row dropped out of every
+ * picker; the id it carries always resolves in ONE hop (no chains). Owner-decided 2026-08-29 that
+ * a merge is reversible, so this can go back to `null` via the unmerge endpoint.
  */
 export interface AdminMaintenancePartDto {
   id: number;
@@ -1354,6 +1374,14 @@ export interface AdminMaintenancePartDto {
   name: string;
   kind: 'PART' | 'LABOUR';
   active: boolean;
+  mergedIntoId: number | null;
+}
+
+/** OBRS-1634: `GET /{id}/merge-impact?targetId={targetId}` response — what the merge confirm
+ * dialog must show BEFORE the owner confirms (AC4). */
+export interface MaintenancePartMergeImpact {
+  billLineCount: number;
+  planCount: number;
 }
 
 /**
@@ -2713,6 +2741,34 @@ export class AdminApiService {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`);
   }
 
+  /**
+   * OBRS-845: uploads (or replaces) an expense's receipt file. Same multipart convention as
+   * `uploadStopPhoto` above: a bare `FormData`, no explicit Content-Type — the browser sets
+   * `multipart/form-data` with its own boundary. Uploading when one already exists REPLACES it
+   * (backend contract, not a client-side guard).
+   */
+  uploadExpenseReceipt(id: number, file: File): Observable<ResponseAPI<AdminExpenseDto>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ResponseAPI<AdminExpenseDto>>(
+      `${this.baseUrl}/private/expenses/${id}/receipt`,
+      formData,
+      this.toRequestOptions()
+    );
+  }
+
+  deleteExpenseReceipt(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/expenses/${id}/receipt`);
+  }
+
+  /**
+   * OBRS-845: exchanges the expense id for a short-lived signed URL onto its receipt file — the
+   * only reachable way to view it (the bucket is private). 404 when the expense has no receipt.
+   */
+  getExpenseReceiptUrl(id: number): Observable<ResponseAPI<ExpenseReceiptUrlDto>> {
+    return this.getRequest<ExpenseReceiptUrlDto>(`${this.baseUrl}/private/expenses/${id}/receipt/url`);
+  }
+
   // ── OBRS-1356: the owner's review of what a salesperson recorded in the field ──
 
   /**
@@ -2768,12 +2824,17 @@ export class AdminApiService {
    * leaves it false and never offers an entry the owner retired, the registry screen sets it true
    * because a screen that cannot see a retired row cannot un-retire it.
    *
-   * <p>Merged rows are never returned on any of these calls — the server filters
-   * `merged_into_id IS NULL` everywhere — so no caller has to know the column exists.
+   * <p>Merged rows are excluded by default — the server filters `merged_into_id IS NULL` — so no
+   * picker has to know the column exists. OBRS-1634: `includeMerged` opts back in, for the ONE
+   * caller that has to see a merged-away row to offer "เปิดใช้ชื่อนี้อีกครั้ง" (AC8): the
+   * registry screen's own merged-away list, fetched separately from `MaintenancePartsStore`'s
+   * cached superset (see that store's javadoc) precisely so the 4 picker call sites sharing that
+   * store never see a merged row leak into a selectable list.
    */
   getMaintenanceParts(
     kind: AdminMaintenancePartDto['kind'] | null,
-    includeInactive = false
+    includeInactive = false,
+    includeMerged = false
   ): Observable<ResponseAPI<AdminMaintenancePartDto[]>> {
     let params = new HttpParams();
     if (kind) {
@@ -2782,9 +2843,57 @@ export class AdminApiService {
     if (includeInactive) {
       params = params.set('includeInactive', 'true');
     }
+    if (includeMerged) {
+      params = params.set('includeMerged', 'true');
+    }
     return this.getRequest<AdminMaintenancePartDto[]>(
       `${this.baseUrl}/private/maintenance-parts`,
       params
+    );
+  }
+
+  /**
+   * OBRS-1634 AC4: what the merge confirm dialog must show BEFORE the owner confirms — how many
+   * bill lines and how many maintenance plans will move under `targetId`'s name. `id` is the entry
+   * about to be folded away.
+   */
+  getMaintenancePartMergeImpact(
+    id: number,
+    targetId: number
+  ): Observable<ResponseAPI<MaintenancePartMergeImpact>> {
+    const params = new HttpParams().set('targetId', String(targetId));
+    return this.getRequest<MaintenancePartMergeImpact>(
+      `${this.baseUrl}/private/maintenance-parts/${id}/merge-impact`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1634 AC1/AC2: fold `id` away into `targetId` — a redirect (`merged_into_id = targetId`),
+   * never a delete, so `id`'s row keeps every bill line and plan it ever owned. The server enforces
+   * same owner, same kind, no chains (target must not itself be merged) and no self-merge; a
+   * violation is a readable 4xx, surfaced via `extractApiErrorMessage`.
+   */
+  mergeMaintenancePart(
+    id: number,
+    targetId: number
+  ): Observable<ResponseAPI<AdminMaintenancePartDto>> {
+    return this.postRequest<AdminMaintenancePartDto>(
+      `${this.baseUrl}/private/maintenance-parts/${id}/merge`,
+      { targetId }
+    );
+  }
+
+  /**
+   * OBRS-1634 AC8/AC9: reopen a merged-away entry (`merged_into_id` back to `null`) — "เปิดใช้ชื่อ
+   * นี้อีกครั้ง", never "ยกเลิกการรวม", because bills keyed while the merge was in force stay
+   * pointed at the winner (see the DTO javadoc). A 409 means the name now clashes with an existing
+   * entry — the body names which one, via `extractApiErrorMessage`.
+   */
+  unmergeMaintenancePart(id: number): Observable<ResponseAPI<AdminMaintenancePartDto>> {
+    return this.postRequest<AdminMaintenancePartDto>(
+      `${this.baseUrl}/private/maintenance-parts/${id}/unmerge`,
+      {}
     );
   }
 

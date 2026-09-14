@@ -28,6 +28,15 @@
     <span>{{ 'ADMIN.MAINTENANCE_PARTS.SHOW_RETIRED' | translate }}</span>
   </label>
 
+  <label class="part-retired-toggle" data-testid="part-show-merged">
+    <input
+      type="checkbox"
+      [checked]="showMerged"
+      (change)="onShowMergedChange($any($event.target).checked)"
+      />
+    <span>{{ 'ADMIN.MAINTENANCE_PARTS.SHOW_MERGED' | translate }}</span>
+  </label>
+
   <!-- Hidden for an admin: they can read, rename and retire here, but CREATE is the one operation
   the backend refuses them (see `canCreate`). A button whose only outcome is a server error is worse
   than no button — the user cannot tell it apart from a bug. -->
@@ -98,7 +107,7 @@
             }
           } @else {
             @for (part of parts; track trackById($index, part)) {
-              <tr [class.is-retired]="!part.active" data-testid="part-row">
+              <tr [class.is-retired]="!part.active" [class.is-merged]="isMerged(part)" data-testid="part-row">
                 <td class="part-name">
                   {{ partLabel(part) }}
                   <!-- Which rows are translated is invisible from a Thai screen, and it decides what
@@ -108,44 +117,76 @@
                       {{ 'ADMIN.MAINTENANCE_PARTS.SEEDED_BADGE' | translate }}
                     </span>
                   }
+                  <!-- OBRS-1634 AC8: what a merged-away row was folded into, so the owner does not
+                  have to guess from a bare "Merged" pill. -->
+                  @if (isMerged(part)) {
+                    <span class="part-merged-into" data-testid="part-merged-into">
+                      {{ 'ADMIN.MAINTENANCE_PARTS.MERGED_INTO' | translate:{ name: mergedIntoLabel(part) } }}
+                    </span>
+                  }
                 </td>
                 <td>{{ kindLabel(part.kind) }}</td>
                 <td>
-                  <span class="part-status" [class.is-retired]="!part.active">
-                    {{
-                    (part.active
-                    ? 'ADMIN.MAINTENANCE_PARTS.STATUS_ACTIVE'
-                    : 'ADMIN.MAINTENANCE_PARTS.STATUS_RETIRED'
-                    ) | translate
-                    }}
-                  </span>
+                  @if (isMerged(part)) {
+                    <span class="part-status is-merged" data-testid="part-status-merged">
+                      {{ 'ADMIN.MAINTENANCE_PARTS.STATUS_MERGED' | translate }}
+                    </span>
+                  } @else {
+                    <span class="part-status" [class.is-retired]="!part.active">
+                      {{
+                      (part.active
+                      ? 'ADMIN.MAINTENANCE_PARTS.STATUS_ACTIVE'
+                      : 'ADMIN.MAINTENANCE_PARTS.STATUS_RETIRED'
+                      ) | translate
+                      }}
+                    </span>
+                  }
                 </td>
                 <td class="text-right">
                   <!-- ⛔ No delete button, deliberately: this row is the only thing tying every plan
                   and every bill line that named it together. Retire hides it from the pickers. -->
-                  <button
-                    type="button"
-                    class="admin-btn admin-btn-small"
-                    data-testid="part-rename"
-                    (click)="openRenameModal(part)"
-                    >
-                    {{ 'ADMIN.MAINTENANCE_PARTS.RENAME' | translate }}
-                  </button>
-                  <button
-                    type="button"
-                    class="admin-btn admin-btn-small"
-                    data-testid="part-toggle-active"
-                    [disabled]="busyId === part.id"
-                    [appPending]="busyId === part.id"
-                    (click)="toggleActive(part)"
-                    >
-                    {{
-                    (part.active
-                    ? 'ADMIN.MAINTENANCE_PARTS.RETIRE'
-                    : 'ADMIN.MAINTENANCE_PARTS.RESTORE'
-                    ) | translate
-                    }}
-                  </button>
+                  @if (isMerged(part)) {
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-small"
+                      data-testid="part-reopen"
+                      (click)="openReopenModal(part)"
+                      >
+                      {{ 'ADMIN.MAINTENANCE_PARTS.REOPEN' | translate }}
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-small"
+                      data-testid="part-rename"
+                      (click)="openRenameModal(part)"
+                      >
+                      {{ 'ADMIN.MAINTENANCE_PARTS.RENAME' | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-small"
+                      data-testid="part-merge"
+                      (click)="openMergeModal(part)"
+                      >
+                      {{ 'ADMIN.MAINTENANCE_PARTS.MERGE' | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="admin-btn admin-btn-small"
+                      data-testid="part-toggle-active"
+                      [disabled]="busyId === part.id"
+                      [appPending]="busyId === part.id"
+                      (click)="toggleActive(part)"
+                      >
+                      {{
+                      (part.active
+                      ? 'ADMIN.MAINTENANCE_PARTS.RETIRE'
+                      : 'ADMIN.MAINTENANCE_PARTS.RESTORE'
+                      ) | translate
+                      }}
+                    </button>
+                  }
                 </td>
               </tr>
             }
@@ -247,3 +288,22 @@ payee registry it mirrors: two controls and one submit, with no state of its own
     </div>
   </div>
 }
+
+<!-- OBRS-1634 AC1/AC4: the merge dialog IS the confirmation — see the component javadoc. -->
+<app-maintenance-part-merge-modal
+  [isOpen]="isMergeModalOpen"
+  [sourcePart]="mergeSourcePart"
+  [candidates]="mergeCandidates"
+  [reloadStructure]="reloadMaintenancePartsBound"
+  (closed)="onMergeModalClosed()"
+></app-maintenance-part-merge-modal>
+
+<!-- OBRS-1634 AC8: "เปิดใช้ชื่อนี้อีกครั้ง" confirm. -->
+<app-maintenance-part-reopen-modal
+  [isOpen]="isReopenModalOpen"
+  [part]="reopenTargetPart"
+  [mergedIntoLabel]="reopenTargetPart ? mergedIntoLabel(reopenTargetPart) : ''"
+  [isReopening]="isReopening"
+  (confirm)="confirmReopen()"
+  (cancel)="closeReopenModal()"
+></app-maintenance-part-reopen-modal>

@@ -66,3 +66,139 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   }
 }
+
+// OBRS-863 AC#5. The card's own box is sized for a form: 32px of margin above
+// and below plus 16px of padding, i.e. 96px of frame around what is now a 65px
+// bar. Collapsing the form and keeping that frame measured the first trip card
+// at y=690 on a 390x664 viewport — 293px better than the 983px BEFORE, and
+// still 26px below the fold, so the AC would have failed by a margin nobody
+// could see in a screenshot. Giving up the frame in the collapsed state alone
+// (the bar carries its own border, background and radius) is the rest of it:
+// the same measurement then reads y=610. Nothing here applies while the form is
+// open, so the expanded bar is pixel-for-pixel what it was.
+//
+// Nested under `.booking-section` and not written flat: emulated encapsulation
+// appends `[_ngcontent-*]` to EVERY compound, so the descendant pair this is
+// overriding scores (0,4,0) while a flat `.booking-card.is-collapsed` scores
+// (0,3,0) and loses — measured, the card still reported `mt=32px`.
+.booking-section .booking-card.is-collapsed {
+  margin-block: $space-2xs;
+  padding-block: 0;
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+// OBRS-863. The bar looks the SAME open and closed, deliberately. A first cut
+// gave up the border and the fill while the form was open, and
+// `dark-override-effective` (OBRS-767) failed it by name: `.search-summary
+// .is-expanded` outranks this component's own `:host-context(body.is-dark)
+// .search-summary`, so the dark border and fill below became DEAD declarations
+// on every expanded instance. A state already carried by `aria-expanded` and by
+// the Edit/Collapse label does not also need a second visual language.
+//
+// The collapsed bar and its toggle. A full-width `<button>` rather
+// than a div with a small "แก้ไข" link: on a phone the whole bar is the target,
+// which clears the 44px floor without a second element to place.
+//
+// `-webkit-appearance: none` and the explicit font-family are the button reset
+// this file has no shared mixin for — a UA-styled button here would render the
+// summary in the platform font at 13.33px, out of step with every other line on
+// the page.
+.search-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-xs;
+  width: 100%;
+  min-height: 44px;
+  padding: $space-2xs $space-xs;
+
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid $text-lightblack;
+  border-radius: $radius-md;
+  background-color: $primary-white;
+  color: $text-black;
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color $duration-fast $easing-standard;
+
+  &:hover {
+    border-color: $primary-blue;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: $shadow-focus;
+  }
+}
+
+// Wraps to a second line before it truncates: the route is the one thing on
+// this bar a customer is checking, and "กรุงเทพฯ → นครพ…" answers nothing.
+.search-summary__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: $space-2xs;
+  min-width: 0;
+}
+
+.search-summary__route {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+// $text-lightblack, not $primary-grey: 4.60:1 on white (variables.scss:75),
+// and this is text, so it carries the 4.5:1 floor, not the 3:1 one.
+.search-summary__meta {
+  font-size: $font-size-xs;
+  color: $text-lightblack;
+}
+
+// Not a `.btn`: the whole bar is the button and this is its affordance label.
+// $primary-blue is 5.33:1 on $primary-white (variables.scss:25 records white on
+// it at 5.33:1 — the pair is symmetric, contrast ratio is the same either
+// direction).
+.search-summary__action {
+  flex: 0 0 auto;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $primary-blue;
+  text-decoration: underline;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Dark mode — component-owned :host-context, same mechanism and the same
+// reason as the sibling schedule-booking-day-strip.component.scss (OBRS-767).
+// ─────────────────────────────────────────────────────────────────────────
+:host-context(body.is-dark) {
+  .search-summary {
+    // $dk-text-muted and not $dk-border, for the reason the day strip's own
+    // border records: $dk-border is a hairline that composites to 1.29:1 over
+    // $dk-bg and cannot carry the 3:1 non-text floor alone.
+    border-color: $dk-text-muted;
+    background-color: $dk-bg-card;
+    color: $dk-text;
+
+    &:hover {
+      border-color: $dk-accent;
+    }
+
+    &:focus-visible {
+      // $shadow-focus is rgba($primary-blue, .2) and is invisible on $dk-bg.
+      box-shadow: none;
+      outline: 2px solid $dk-accent;
+      outline-offset: 2px;
+    }
+  }
+
+  .search-summary__meta {
+    color: $dk-text-muted;
+  }
+
+  .search-summary__action {
+    color: $dk-accent;
+  }
+}

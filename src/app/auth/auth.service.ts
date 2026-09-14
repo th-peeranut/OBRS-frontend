@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { ActivatedRouteSnapshot, Router } from '@angular/router';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, firstValueFrom, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import {
@@ -10,7 +10,10 @@ import {
 } from '../shared/interceptors/http-context-tokens';
 import { hasOwnKey } from '../shared/lib/own-key';
 import { clearTtl, readWithTtl, writeWithTtl } from '../shared/lib/ttl-storage';
-import { clearBookingContext } from '../shared/lib/booking-context-storage';
+import {
+  clearActiveBookingStorage,
+  clearBookingContext,
+} from '../shared/lib/booking-context-storage';
 import {
   EmailChangeConfirmResponse,
   EmailChangeRequestResponse,
@@ -144,12 +147,13 @@ export class AuthService {
     email: string;
     password: string;
   }): Promise<ResponseAPI<LoginResponseData>> {
-    return this.http
-      .post<ResponseAPI<LoginResponseData>>(
-        `${environment.apiUrl}/api/auth/login`,
-        payload
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<LoginResponseData>>(
+          `${environment.apiUrl}/api/auth/login`,
+          payload
+        )
+    )
       .then((response) => {
         if (response?.code === 200) {
           const token = response?.data?.accessToken;
@@ -535,20 +539,45 @@ export class AuthService {
    * refresh token the untouched half would have kept working for a week after the user pressed
    * "sign out" — on a shared machine that is the whole point of the button, undone.
    *
-   * Order matters: local state is cleared and the navigation queued BEFORE the request, and the
-   * request is fire-and-forget. A slow or failed network must not leave the user sitting on a
-   * page that still believes they are signed in, and there is nothing useful to tell them about
-   * a logout call that failed — the backend answers 200 for every token it is handed anyway.
+   * OBRS-1855 moved the revoke itself into `endSession()`; the ordering rationale went with
+   * it. What is left here is the redirect, plus the booking context OBRS-903 attached to it.
    */
   logout(): void {
-    const refreshToken = this.getRefreshToken();
-    this.clearAuthData();
+    this.endSession();
     // OBRS-903: the cross-tab booking context outlives a tab by design, so
     // pressing "sign out" on a shared machine has to end it too. Deliberately
     // here and NOT in `clearAuthData()` — that also runs on the JWT-expired
     // login retry (`callLogin`) and inside the interceptor's 401 handling, where
     // wiping the customer's trip selection would recreate this very bug.
     clearBookingContext();
+    // Security review 2026-09 (FE-4): the booking-in-payment and its guest payment grant are a
+    // capability to pay for (and fetch the QR of) that booking; on a shared machine they must
+    // not outlive the sign-out either. Same placement reasoning as clearBookingContext() above.
+    clearActiveBookingStorage();
+
+    this.router.navigate(['/login']);
+  }
+
+  /**
+   * OBRS-1855: the revoking half of signing out, WITHOUT the redirect.
+   *
+   * OBRS-855 put the revoke inside `logout()`, and `logout()` ends on `/login`. The
+   * customer's own sign-out button lands on `/` instead, so it could not call `logout()`
+   * and called `clearAuthData()` directly — which never reaches the server. The customer
+   * was therefore the one role whose refresh token survived their own sign-out for the
+   * rest of its week (`application.yml` `refresh-expiration-time: 604800000`).
+   *
+   * Order matters: local state is cleared BEFORE the request, and the request is
+   * fire-and-forget. A slow or failed network must not leave the user sitting on a page
+   * that still believes they are signed in, and there is nothing useful to tell them about
+   * a logout call that failed — the backend answers 200 for every token it is handed anyway.
+   *
+   * ⛔ A new sign-out path calls THIS and then navigates wherever it likes. Calling
+   * `clearAuthData()` on its own is what this card exists to undo.
+   */
+  endSession(): void {
+    const refreshToken = this.getRefreshToken();
+    this.clearAuthData();
 
     if (refreshToken) {
       this.http
@@ -563,8 +592,6 @@ export class AuthService {
         )
         .subscribe({ error: () => undefined });
     }
-
-    this.router.navigate(['/login']);
   }
 
   isAuthenticated(): boolean {
@@ -593,12 +620,13 @@ export class AuthService {
       pdpaConsentVersion: PRIVACY_POLICY_VERSION,
     };
 
-    return this.http
-      .post<ResponseAPI<unknown>>(
-        `${environment.apiUrl}/api/auth/signup`,
-        signUpPayload
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<unknown>>(
+          `${environment.apiUrl}/api/auth/signup`,
+          signUpPayload
+        )
+    )
       .then((response) => response)
       .catch((err) => err);
   }
@@ -609,12 +637,12 @@ export class AuthService {
       : '/api/auth/login/otp';
 
     return (
-      this.http
-        .post<ResponseAPI<LoginResponseData>>(
+      firstValueFrom(
+        this.http.post<ResponseAPI<LoginResponseData>>(
           `${environment.apiUrl}${endpoint}`,
           payload
         )
-        .toPromise()
+      )
         .then((response) => {
           if (response?.code === 200) {
             const token = response?.data?.accessToken;
@@ -637,15 +665,16 @@ export class AuthService {
     idToken: string;
     pdpaConsent: boolean;
   }): Promise<ResponseAPI<LoginResponseData> | undefined> {
-    return this.http
-      .post<ResponseAPI<LoginResponseData>>(
-        `${environment.apiUrl}/api/auth/social/google`,
-        // OBRS-632: same stamp as the email signup above — the Google button sits beside the same
-        // consent box, so it must record the same fact.
-        { ...payload, pdpaConsentVersion: PRIVACY_POLICY_VERSION },
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<LoginResponseData>>(
+          `${environment.apiUrl}/api/auth/social/google`,
+          // OBRS-632: same stamp as the email signup above — the Google button sits beside the same
+          // consent box, so it must record the same fact.
+          { ...payload, pdpaConsentVersion: PRIVACY_POLICY_VERSION },
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    )
       .then((response) => {
         if (response?.code === 200) {
           const token = response?.data?.accessToken;
@@ -660,36 +689,39 @@ export class AuthService {
   verifyEmail(payload: {
     token: string;
   }): Promise<ResponseAPI<unknown> | undefined> {
-    return this.http
-      .post<ResponseAPI<unknown>>(
-        `${environment.apiUrl}/api/auth/verify-email`,
-        payload,
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<unknown>>(
+          `${environment.apiUrl}/api/auth/verify-email`,
+          payload,
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    );
   }
 
   resendVerification(payload: {
     email: string;
   }): Promise<ResponseAPI<unknown> | undefined> {
-    return this.http
-      .post<ResponseAPI<unknown>>(
-        `${environment.apiUrl}/api/auth/verify-email/resend`,
-        payload,
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<unknown>>(
+          `${environment.apiUrl}/api/auth/verify-email/resend`,
+          payload,
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    );
   }
 
   forgetPassword(payload: {
     email: string;
   }): Promise<ResponseAPI<PasswordResetRequestResponse> | undefined> {
-    return this.http
-      .post<ResponseAPI<PasswordResetRequestResponse>>(
-        `${environment.apiUrl}/api/auth/password-reset/request`,
-        payload
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<PasswordResetRequestResponse>>(
+          `${environment.apiUrl}/api/auth/password-reset/request`,
+          payload
+        )
+    )
       .then((response) => response);
   }
 
@@ -701,13 +733,14 @@ export class AuthService {
     token: string;
     newPassword: string;
   }): Promise<ResponseAPI<PasswordResetConfirmResponse> | undefined> {
-    return this.http
-      .post<ResponseAPI<PasswordResetConfirmResponse>>(
-        `${environment.apiUrl}/api/auth/password-reset/confirm`,
-        payload,
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise()
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<PasswordResetConfirmResponse>>(
+          `${environment.apiUrl}/api/auth/password-reset/confirm`,
+          payload,
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    )
       .then((response) => response);
   }
 
@@ -718,22 +751,23 @@ export class AuthService {
     currentPassword: string;
     newEmail: string;
   }): Promise<ResponseAPI<EmailChangeRequestResponse> | undefined> {
-    return this.http
-      .post<ResponseAPI<EmailChangeRequestResponse>>(
-        `${environment.apiUrl}/api/private/users/me/email/change-request`,
-        payload,
-        {
-          // SKIP_AUTH_LOGOUT: a wrong-current-password response must NOT
-          // force-logout the user out of their own account settings
-          // (OBRS-187 lesson). SKIP_GLOBAL_ERROR_ALERT: the dialog renders
-          // the error inline under the relevant field instead of a global
-          // toast.
-          context: new HttpContext()
-            .set(SKIP_AUTH_LOGOUT, true)
-            .set(SKIP_GLOBAL_ERROR_ALERT, true),
-        }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<EmailChangeRequestResponse>>(
+          `${environment.apiUrl}/api/private/users/me/email/change-request`,
+          payload,
+          {
+            // SKIP_AUTH_LOGOUT: a wrong-current-password response must NOT
+            // force-logout the user out of their own account settings
+            // (OBRS-187 lesson). SKIP_GLOBAL_ERROR_ALERT: the dialog renders
+            // the error inline under the relevant field instead of a global
+            // toast.
+            context: new HttpContext()
+              .set(SKIP_AUTH_LOGOUT, true)
+              .set(SKIP_GLOBAL_ERROR_ALERT, true),
+          }
+        )
+    );
   }
 
   // Public endpoint (the confirmation link is opened logged-out or with a
@@ -744,25 +778,27 @@ export class AuthService {
   confirmEmailChange(payload: {
     token: string;
   }): Promise<ResponseAPI<EmailChangeConfirmResponse> | undefined> {
-    return this.http
-      .post<ResponseAPI<EmailChangeConfirmResponse>>(
-        `${environment.apiUrl}/api/auth/change-email/confirm`,
-        payload,
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<EmailChangeConfirmResponse>>(
+          `${environment.apiUrl}/api/auth/change-email/confirm`,
+          payload,
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    );
   }
 
   // No SKIP_AUTH_LOGOUT: unlike requestEmailChange, a real 401 here means the
   // session is genuinely dead — force-logout is the correct behavior.
   resendEmailChangeVerification(): Promise<ResponseAPI<unknown> | undefined> {
-    return this.http
-      .post<ResponseAPI<unknown>>(
-        `${environment.apiUrl}/api/auth/change-email/resend`,
-        {},
-        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
-      )
-      .toPromise();
+    return firstValueFrom(
+      this.http
+        .post<ResponseAPI<unknown>>(
+          `${environment.apiUrl}/api/auth/change-email/resend`,
+          {},
+          { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+        )
+    );
   }
 
   private isAuthPage(url: string): boolean {

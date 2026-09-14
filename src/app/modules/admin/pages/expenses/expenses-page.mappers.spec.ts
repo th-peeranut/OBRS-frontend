@@ -90,6 +90,7 @@ function makeRow(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     note: '',
     source: 'MANUAL',
     items: [],
+    hasReceipt: false,
     ...overrides,
   };
 }
@@ -252,6 +253,17 @@ describe('expenses-page.mappers', () => {
       >;
       expect(row['createdByName']).toBeUndefined();
       expect(row['updatedByName']).toBeUndefined();
+    });
+
+    // OBRS-845
+    it('maps a non-null receiptFileRef to hasReceipt: true', () => {
+      const row = toExpenseRow({ ...dto, receiptFileRef: 'receipts/10/bill.pdf' }, [VAN], categoryOptions(), 'Central', 'th');
+      expect(row.hasReceipt).toBeTrue();
+    });
+
+    it('maps a null/absent receiptFileRef to hasReceipt: false', () => {
+      expect(toExpenseRow({ ...dto, receiptFileRef: null }, [VAN], categoryOptions(), 'Central', 'th').hasReceipt).toBeFalse();
+      expect(toExpenseRow(dto, [VAN], categoryOptions(), 'Central', 'th').hasReceipt).toBeFalse();
     });
   });
 

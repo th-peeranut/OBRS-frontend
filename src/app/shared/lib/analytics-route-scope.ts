@@ -39,6 +39,22 @@ function declaresRequiredRoles(node: ActivatedRouteSnapshot): boolean {
 }
 
 /**
+ * Security review 2026-09 (FE-2). The second marker, for the three public pages whose URL
+ * carries a one-time credential: `/reset-password?token=`, `/verify-email?token=` and
+ * `/change-email/confirm?token=`. gtag attaches `document.location` — query string included —
+ * to every hit, and Clarity records the page URL per session, so measuring these routes at all
+ * hands a live reset/verify token to anyone with property access. The component also strips
+ * the token from the address bar after reading it, but the first `page_view` fires on
+ * `NavigationEnd`, before any component code runs, which is why the route itself must opt out.
+ */
+function declaresAnalyticsRestricted(node: ActivatedRouteSnapshot): boolean {
+  const data = node.data as Record<string, unknown> | undefined;
+  return !!data
+    && Object.prototype.hasOwnProperty.call(data, 'analyticsRestricted')
+    && data['analyticsRestricted'] === true;
+}
+
+/**
  * The children of one snapshot node.
  *
  * Prefers `children` over `firstChild` deliberately: a named outlet branches
@@ -55,8 +71,13 @@ function childrenOf(node: ActivatedRouteSnapshot): ActivatedRouteSnapshot[] {
 }
 
 /**
- * `true` when the activated route belongs to the staff or admin portal, i.e.
- * when nothing about this page may be sent to a third party.
+ * `true` when nothing about this page may be sent to a third party: the
+ * activated route belongs to the staff or admin portal (`requiredRoles`), or it
+ * is one of the public pages that opts out with `analyticsRestricted` because
+ * its URL carries a one-time credential (security review 2026-09, FE-2). The
+ * second case also hides the consent bar and the booking-closed notice on those
+ * three pages; a visitor arriving from a reset/verify e-mail is mid-task and
+ * neither strip is for them.
  *
  * An empty/unresolved snapshot answers `false` — "this is not a staff page" is
  * all this function claims. Whether a route has resolved *at all* is a separate
@@ -70,7 +91,7 @@ export function isRestrictedRoute(
 
   while (queue.length > 0) {
     const node = queue.shift() as ActivatedRouteSnapshot;
-    if (declaresRequiredRoles(node)) {
+    if (declaresRequiredRoles(node) || declaresAnalyticsRestricted(node)) {
       return true;
     }
     queue.push(...childrenOf(node));

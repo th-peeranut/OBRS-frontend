@@ -100,6 +100,24 @@ export function getStationSlugById(
   return match?.slug ?? '';
 }
 
+/** Resolves a station's localized label by id — the same lookup
+ *  `getStationSlugById` does, through `getStationFallbackLabel` instead of the
+ *  slug. Shared by `ScheduleBookingListComponent` and
+ *  `ScheduleBookingFilterComponent` so the list and the OBRS-863 summary bar
+ *  above it cannot name the same station differently. */
+export function getStationLabelById(
+  stationId: string | number | null | undefined,
+  stationList: StationApi[] | null | undefined,
+  locale: string
+): string {
+  if (stationId === null || stationId === undefined || stationId === '') {
+    return '';
+  }
+  const parsed = Number(stationId);
+  const match = (stationList ?? []).find((station) => station.id === parsed);
+  return match ? getStationFallbackLabel(match, locale) : '';
+}
+
 export function getStopTypeLabel(
   stopType: StationLookupValue | null | undefined,
   locale: string

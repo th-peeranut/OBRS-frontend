@@ -28,6 +28,12 @@ export function isSeededPart(part: Pick<AdminMaintenancePartDto, 'code'>): boole
   return part.code !== null;
 }
 
+/** OBRS-1634: has this row been folded away into another one? `mergedIntoId` is the redirect —
+ * see `AdminMaintenancePartDto`'s javadoc for why it is never a delete. */
+export function isMergedPart(part: Pick<AdminMaintenancePartDto, 'mergedIntoId'>): boolean {
+  return part.mergedIntoId !== null;
+}
+
 /**
  * OBRS-1613: the name to put on screen, under the owner's 2026-08-25 ruling — the 13 seeded entries
  * keep their translations, anything the owner typed is Thai verbatim on every locale.
@@ -78,6 +84,24 @@ export function sortMaintenancePartsByName(
   parts: AdminMaintenancePartDto[]
 ): AdminMaintenancePartDto[] {
   return [...parts].sort((left, right) => left.name.localeCompare(right.name, 'th'));
+}
+
+/**
+ * OBRS-1634 AC1: the rows the merge dialog may offer as a DESTINATION for `source` — same kind
+ * (a part can never merge into labour, `assertSameKind`'s reason), not `source` itself, and not
+ * already merged away (the server rejects a chain — resolving is a single hop). `parts` is the
+ * plain unmerged/inactive-inclusive superset (`MaintenancePartsStore`'s cache), so a retired entry
+ * is still offered: nothing about being retired stops it from being a valid merge target.
+ */
+export function mergeableTargets(
+  parts: AdminMaintenancePartDto[],
+  source: AdminMaintenancePartDto
+): AdminMaintenancePartDto[] {
+  return sortMaintenancePartsByName(
+    parts.filter(
+      (part) => part.id !== source.id && part.kind === source.kind && !isMergedPart(part)
+    )
+  );
 }
 
 /**

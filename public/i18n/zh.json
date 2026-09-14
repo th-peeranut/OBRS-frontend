@@ -2240,6 +2240,25 @@
       },
       "NOTE": "备注",
       "NOTE_PLACEHOLDER": "补充说明(可选)",
+      "RECEIPT": {
+        "LABEL": "收据",
+        "HINT": "纸质账单的照片或PDF文件——作为报税凭证保留(ภ.ง.ด.50)。可选;支持JPG、PNG、WEBP或PDF,最大10 MB。",
+        "ATTACHED": "已附加",
+        "MISSING": "尚无收据",
+        "ATTACH": "附加收据",
+        "REPLACE": "更换收据文件",
+        "VIEW": "查看",
+        "REMOVE": "删除",
+        "REMOVE_TITLE": "确定要删除此收据吗?",
+        "REMOVE_CONFIRM": "此操作无法撤销。费用记录本身不受影响。",
+        "UPLOADED": "收据上传成功",
+        "UPLOAD_FAILED": "收据上传失败,请重试。",
+        "REMOVE_FAILED": "收据删除失败,请重试。",
+        "VIEW_FAILED": "无法打开收据文件,请重试。",
+        "NOT_FOUND": "未找到收据文件",
+        "INVALID_TYPE": "不支持此文件类型——仅支持JPG、PNG、WEBP图片或PDF文件。",
+        "TOO_LARGE": "文件过大——最大允许10 MB。"
+      },
       "ITEMS": {
         "TITLE": "单据明细",
         "HINT": "可不填。将维修或燃气单据拆分为明细，即可看出各配件各花多少。留空则按单一金额记录该单据。",
@@ -2335,12 +2354,31 @@
       "EMPTY_TITLE": "登记表中还没有项目",
       "EMPTY_BODY": "可以用「新增项目」按钮添加，或者在录入账单时直接输入新名称，系统会从那里帮您加入。",
       "NO_MATCH": "没有符合筛选条件的项目",
-      "NAME_TAKEN": "该名称已在登记表中。系统不会自动合并两个项目，因为合并无法撤销。",
+      "NAME_TAKEN": "该名称已在登记表中——改名不会自动合并两个项目；如果想合并，请使用该行的「合并」操作。",
       "NAME_WILL_REUSE": "该名称已在登记表中。仍可保存：系统会沿用已有的项目，不会重复创建。",
       "NAME_KIND_CONFLICT": "「{{name}}」已存在，类型为{{kind}}。同一个名称不能同时属于两种类型，否则会把两种不同的东西拿来比价。请换一个名称，例如「工时：更换……」。",
       "SEEDED_BADGE": "内置 · 有翻译",
       "SEEDED_RENAME_WARNING": "⚠️ 这是 13 个内置项目之一，带有英文和中文名称。改名后它会变成您自己输入的项目，翻译将永久丢失——英文界面会显示泰文名称，且无法从此页面恢复。",
       "FILTER_KIND_ALL": "类型：全部",
+      "SHOW_MERGED": "显示已合并的项目",
+      "STATUS_MERGED": "已合并",
+      "MERGED_INTO": "已合并到 {{name}}",
+      "MERGE": "合并",
+      "MERGING": "合并中…",
+      "MERGE_TITLE": "合并到其他项目",
+      "MERGE_SOURCE_PREFIX": "即将合并的项目：",
+      "MERGE_TARGET_LABEL": "目标项目",
+      "MERGE_NO_TARGETS": "暂无同类型的其他项目可以合并。",
+      "MERGE_IMPACT_LOADING": "正在检查将移动的内容…",
+      "MERGE_IMPACT_FAILED": "无法检查将移动的内容，请重试。",
+      "MERGE_IMPACT_SUMMARY": "{{billLineCount}} 条账单记录和 {{planCount}} 个保养计划将移动到新名称下。",
+      "MERGE_REVERSIBLE_NOTE": "之后可以撤销——重新启用即将合并的项目，即可让它重新可选。",
+      "MERGE_SUCCESS": "合并成功。",
+      "REOPEN": "重新启用此名称",
+      "REOPENING": "正在重新启用…",
+      "REOPEN_CONFIRM_TITLE": "重新启用此名称？",
+      "REOPEN_CONFIRM_MESSAGE": "此项目将重新出现在选择列表中。合并期间录入的账单仍然关联到 {{mergedInto}}，不会移回此项目。",
+      "REOPEN_SUCCESS": "重新启用成功。",
       "KINDS": {
         "PART": "配件",
         "LABOUR": "工时"
@@ -3126,6 +3164,10 @@
     "DAY_STRIP_LABEL": "选择出行日期",
     "DAY_STRIP_TODAY": "今天",
     "DAY_STRIP_NO_TRIPS": "无班次",
+    "SEARCH_SUMMARY_SEATS": "{{count}}个座位",
+    "SEARCH_SUMMARY_EMPTY": "尚未选择路线",
+    "SEARCH_SUMMARY_EDIT": "修改",
+    "SEARCH_SUMMARY_COLLAPSE": "收起",
     "NEAREST_DAY_HINT": "最近有班次的日期是{{date}}",
     "ESTIMATE_KM_UNIT": "公里",
     "PICKUP_STOP": "上车点",
@@ -3316,7 +3358,9 @@
       "SUCCESS": "付款成功，您的车票已可使用。",
       "PENDING": "正在等待付款确认。收到款项后本页面将自动更新。",
       "FAILED": "付款未成功。请检查您的银行卡信息或余额后重试。",
-      "QR_UNAVAILABLE": "二维码生成失败，请点击「刷新二维码」重试。"
+      "QR_UNAVAILABLE": "二维码生成失败，请点击「刷新二维码」重试。",
+      "REDIRECT_BLOCKED": "无法打开银行卡验证页面：目标地址不是可识别的支付网关。尚未扣款，请重试或选择其他付款方式。",
+      "REDIRECT_BLOCKED_QR": "无法打开付款确认页面：目标地址不是可识别的支付网关。如果您已扫码付款，银行确认后款项仍会入账，请稍后查看订单或联系我们的工作人员。"
     },
     "RESULT": {
       "FAILED_REDIRECT": "付款失败。请重新选择班次并再次预订。"
@@ -3566,6 +3610,12 @@
         "CLEAR": "清除",
         "NO_MATCH_TITLE": "未找到匹配的旅客",
         "NO_MATCH_BODY": "本班车上没有与“{{term}}”匹配的记录。请与旅客核对订票号，可能属于其他班次。"
+      },
+      "STOP_FILTER": {
+        "PLACEHOLDER": "接载站点：全部"
+      },
+      "STOP_GROUP": {
+        "COUNT": "已上车 {{boarded}}/{{total}}"
       },
       "EMPTY_TITLE": "暂无旅客",
       "EMPTY_BODY": "本班次暂无登车记录。",

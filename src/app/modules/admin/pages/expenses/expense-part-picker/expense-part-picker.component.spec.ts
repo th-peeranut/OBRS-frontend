@@ -17,6 +17,7 @@ describe('ExpensePartPickerComponent', () => {
     name: 'น้ำมันเครื่อง',
     kind: 'PART',
     active: true,
+    mergedIntoId: null,
   };
   /** Typed by the owner: no code, Thai verbatim on every locale. */
   const OWNER_TYPED: AdminMaintenancePartDto = {
@@ -25,6 +26,7 @@ describe('ExpensePartPickerComponent', () => {
     name: 'สายพานหน้าเครื่อง',
     kind: 'PART',
     active: true,
+    mergedIntoId: null,
   };
   const LABOUR: AdminMaintenancePartDto = {
     id: 3,
@@ -32,6 +34,7 @@ describe('ExpensePartPickerComponent', () => {
     name: 'ค่าแรงเปลี่ยนสายพาน',
     kind: 'LABOUR',
     active: true,
+    mergedIntoId: null,
   };
 
   function makeComponent(
@@ -143,6 +146,7 @@ describe('ExpensePartPickerComponent', () => {
       name: 'ค่าแรงถ่ายน้ำมันเครื่อง',
       kind: 'LABOUR',
       active: true,
+      mergedIntoId: null,
     };
     const createMaintenancePart = jasmine
       .createSpy('createMaintenancePart')
@@ -168,6 +172,7 @@ describe('ExpensePartPickerComponent', () => {
       name: 'ยางแท่นเครื่อง',
       kind: 'PART',
       active: true,
+      mergedIntoId: null,
     };
     const component = makeComponent({
       createMaintenancePart: () => of({ data: created }),
@@ -187,6 +192,7 @@ describe('ExpensePartPickerComponent', () => {
       name: 'ยางแท่นเครื่อง',
       kind: 'PART',
       active: true,
+      mergedIntoId: null,
     };
     const component = makeComponent({ createMaintenancePart: () => of({ data: created }) });
     const emitted: AdminMaintenancePartDto[] = [];

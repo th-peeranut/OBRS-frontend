@@ -60,6 +60,7 @@ export function thaiMobileValidator(control: AbstractControl): ValidationErrors 
     standalone: false
 })
 export class AccountPageComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   /**
    * OBRS-1232 AC-6: the nine codes the dropdown offers.
    */
@@ -93,8 +94,6 @@ export class AccountPageComponent implements OnInit, OnDestroy {
 
   profileForm: FormGroup;
 
-  private readonly destroy$ = new Subject<void>();
-
   constructor(
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
@@ -119,6 +118,11 @@ export class AccountPageComponent implements OnInit, OnDestroy {
       nickname: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       phoneNumber: ['', [Validators.required, thaiMobileValidator]],
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   ngOnInit(): void {
@@ -185,16 +189,16 @@ export class AccountPageComponent implements OnInit, OnDestroy {
       .getProfile()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (res) => {
-          this.isProfileLoading = false;
-          this.profile = res?.data ?? null;
-          this.patchFormFromProfile();
-        },
-        error: () => {
-          this.isProfileLoading = false;
-          this.isProfileLoadFailed = true;
-        },
-      });
+      next: (res) => {
+        this.isProfileLoading = false;
+        this.profile = res?.data ?? null;
+        this.patchFormFromProfile();
+      },
+      error: () => {
+        this.isProfileLoading = false;
+        this.isProfileLoadFailed = true;
+      },
+    });
   }
 
   saveProfile(): void {
@@ -226,7 +230,10 @@ export class AccountPageComponent implements OnInit, OnDestroy {
         // anything else here would silently override the choice made there.
         preferredLocale: this.profile.preferredLocale,
       })
-      .pipe(takeUntil(this.destroy$))
+      // OBRS-1853: NO takeUntil here. This is a PUT. Unsubscribing aborts the XHR, so
+      // leaving the page mid-save would cancel a request the server may already have
+      // committed, and the user would never see success or failure. Same asymmetry the
+      // 30s timeout in error.interceptor.ts applies to GET/HEAD only, for the same reason.
       .subscribe({
         next: () => {
           this.isProfileSaving = false;
@@ -257,18 +264,19 @@ export class AccountPageComponent implements OnInit, OnDestroy {
 
     this.myAccountService
       .acceptCurrentPrivacyPolicy()
-      .pipe(takeUntil(this.destroy$))
+      // OBRS-1853: NO takeUntil — a POST recording PDPA consent. Aborting it client-side
+      // would leave the consent stored server-side with the user told nothing. See the PUT above.
       .subscribe({
-        next: () => {
-          this.isConsentSubmitting = false;
-          this.alertService.success(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_SUCCESS'));
-          this.loadProfile();
-        },
-        error: () => {
-          this.isConsentSubmitting = false;
-          this.alertService.error(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_ERROR'));
-        },
-      });
+      next: () => {
+        this.isConsentSubmitting = false;
+        this.alertService.success(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_SUCCESS'));
+        this.loadProfile();
+      },
+      error: () => {
+        this.isConsentSubmitting = false;
+        this.alertService.error(this.translate.instant('ACCOUNT.CONSENT_ACCEPT_ERROR'));
+      },
+    });
   }
 
   private patchFormFromProfile(): void {
@@ -285,10 +293,5 @@ export class AccountPageComponent implements OnInit, OnDestroy {
       // Enter edit mode showing the grouped form; onPhoneFocus() peels the dashes off for typing.
       phoneNumber: formatThaiMobile(this.profile.phoneNumber),
     });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 }

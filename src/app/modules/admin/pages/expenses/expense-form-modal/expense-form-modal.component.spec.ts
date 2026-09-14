@@ -28,6 +28,7 @@ const VEHICLE_ROW: ExpenseRow = {
   note: 'note',
   source: 'MANUAL',
   items: [],
+  hasReceipt: false,
 };
 
 const CENTRAL_ROW: ExpenseRow = {
@@ -45,11 +46,21 @@ function makeComponent() {
       .createSpy('createExpense')
       .and.returnValue(of({ code: 201, message: 'Created', data: { expenseId: 99 } })),
     updateExpense: jasmine.createSpy('updateExpense').and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    uploadExpenseReceipt: jasmine
+      .createSpy('uploadExpenseReceipt')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    deleteExpenseReceipt: jasmine
+      .createSpy('deleteExpenseReceipt')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    getExpenseReceiptUrl: jasmine
+      .createSpy('getExpenseReceiptUrl')
+      .and.returnValue(of({ code: 200, message: 'OK', data: { url: 'https://signed.example/receipt', expiresInSeconds: 300 } })),
   };
   const alertServiceSpy = {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
     warning: jasmine.createSpy('warning').and.resolveTo(undefined),
     error: jasmine.createSpy('error').and.resolveTo(undefined),
+    confirm: jasmine.createSpy('confirm').and.resolveTo(true),
   };
   const component = new ExpenseFormModalComponent(
     adminApiServiceSpy as any,
@@ -602,6 +613,116 @@ describe('ExpenseFormModalComponent', () => {
       expect((component as any).itemsArray.at(1).get('partId').value).toBeNull();
       expect((component as any).itemsTotal).toBe(1800);
       expect((component as any).itemsTotalMismatch).toBeFalse();
+    });
+  });
+
+  // OBRS-845
+  describe('receipt', () => {
+    function fileEvent(file: File): Event {
+      const input = document.createElement('input');
+      input.type = 'file';
+      Object.defineProperty(input, 'files', { value: [file] });
+      return { target: input } as unknown as Event;
+    }
+
+    function makeFile(name: string, type: string, sizeBytes: number): File {
+      const file = new File([new Uint8Array(1)], name, { type });
+      Object.defineProperty(file, 'size', { value: sizeBytes });
+      return file;
+    }
+
+    it('shows the section only in edit mode, never on create (the endpoints need an existing id)', () => {
+      const { component } = makeComponent();
+      openCreate(component);
+      expect(component['showReceiptSection']).toBeFalse();
+
+      openEdit(component, VEHICLE_ROW);
+      expect(component['showReceiptSection']).toBeTrue();
+    });
+
+    it('seeds hasReceipt from the row being edited', () => {
+      const { component } = makeComponent();
+      openEdit(component, { ...VEHICLE_ROW, hasReceipt: true });
+      expect((component as any).hasReceipt).toBeTrue();
+    });
+
+    // AC: editing an expense must not send or clear receiptFileRef — the full-DTO payload
+    // locking specs above (`toEqual`, not `objectContaining`) already prove this for every
+    // PUT this file sends, but this spec names the exact regression the card is about.
+    it('editing an expense does not send receiptFileRef on the PUT payload', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      openEdit(component, VEHICLE_ROW);
+
+      await (component as any).submitExpense();
+
+      const payload = adminApiServiceSpy.updateExpense.calls.mostRecent().args[1];
+      expect('receiptFileRef' in payload).toBeFalse();
+    });
+
+    it('rejects an oversize file with the right message, without calling the upload API', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      openEdit(component, VEHICLE_ROW);
+
+      const oversize = makeFile('bill.jpg', 'image/jpeg', 11 * 1024 * 1024);
+      await (component as any).onReceiptFileSelected(fileEvent(oversize));
+
+      expect(adminApiServiceSpy.uploadExpenseReceipt).not.toHaveBeenCalled();
+      expect((component as any).receiptError).toBe('ADMIN.EXPENSES.RECEIPT.TOO_LARGE');
+    });
+
+    it('rejects an unsupported file type with the right message, without calling the upload API', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      openEdit(component, VEHICLE_ROW);
+
+      const wrongType = makeFile('bill.txt', 'text/plain', 1024);
+      await (component as any).onReceiptFileSelected(fileEvent(wrongType));
+
+      expect(adminApiServiceSpy.uploadExpenseReceipt).not.toHaveBeenCalled();
+      expect((component as any).receiptError).toBe('ADMIN.EXPENSES.RECEIPT.INVALID_TYPE');
+    });
+
+    it('uploads a valid file and flips hasReceipt on success', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      openEdit(component, VEHICLE_ROW);
+
+      const valid = makeFile('bill.pdf', 'application/pdf', 1024);
+      await (component as any).onReceiptFileSelected(fileEvent(valid));
+
+      expect(adminApiServiceSpy.uploadExpenseReceipt).toHaveBeenCalledWith(VEHICLE_ROW.id, valid);
+      expect((component as any).hasReceipt).toBeTrue();
+    });
+
+    it('view fetches the signed URL and only THEN opens it', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      openEdit(component, { ...VEHICLE_ROW, hasReceipt: true });
+      const openSpy = spyOn(window, 'open');
+
+      await (component as any).viewReceipt();
+
+      expect(adminApiServiceSpy.getExpenseReceiptUrl).toHaveBeenCalledWith(VEHICLE_ROW.id);
+      expect(openSpy).toHaveBeenCalledWith('https://signed.example/receipt', '_blank', 'noopener');
+    });
+
+    it('a 404 from the URL endpoint surfaces the not-found message and does not open anything', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      adminApiServiceSpy.getExpenseReceiptUrl.and.returnValue(throwError(() => ({ status: 404 })));
+      openEdit(component, { ...VEHICLE_ROW, hasReceipt: true });
+      const openSpy = spyOn(window, 'open');
+
+      await (component as any).viewReceipt();
+
+      expect(openSpy).not.toHaveBeenCalled();
+      expect((component as any).receiptError).toBe('ADMIN.EXPENSES.RECEIPT.NOT_FOUND');
+    });
+
+    it('removes the receipt after confirmation and flips hasReceipt off', async () => {
+      const { component, adminApiServiceSpy } = makeComponent();
+      openEdit(component, { ...VEHICLE_ROW, hasReceipt: true });
+
+      await (component as any).removeReceipt();
+
+      expect(adminApiServiceSpy.deleteExpenseReceipt).toHaveBeenCalledWith(VEHICLE_ROW.id);
+      expect((component as any).hasReceipt).toBeFalse();
     });
   });
 });

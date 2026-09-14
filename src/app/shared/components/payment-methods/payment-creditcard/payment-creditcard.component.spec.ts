@@ -442,3 +442,104 @@ describe('PaymentCreditcardComponent - OmiseCard hosted card entry (OBRS-391)', 
     expect(component.isSubmittingPayment).toBeFalse();
   });
 });
+
+/**
+ * Security review 2026-09 (M4): the gateway `authorizeUri` is followed only when its host is on
+ * the allow-list. The navigation itself is behind `navigateToGateway`, spied here, so both the
+ * accepted and the refused case are asserted without ever moving the Karma page.
+ */
+describe('PaymentCreditcardComponent - authorizeUri host allow-list (security review 2026-09, M4)', () => {
+  let component: PaymentCreditcardComponent;
+  let alertService: jasmine.SpyObj<AlertService>;
+  let navigateToGateway: jasmine.Spy;
+
+  beforeEach(() => {
+    alertService = jasmine.createSpyObj<AlertService>('AlertService', ['success', 'error', 'info']);
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    translate.instant.and.callFake((key: string) => key);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+    ]);
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    const omiseTokenService = jasmine.createSpyObj<OmiseTokenService>('OmiseTokenService', [
+      'requestCardToken',
+    ]);
+    component = new PaymentCreditcardComponent(
+      translate,
+      router,
+      bookingService,
+      paymentService,
+      omiseTokenService,
+      alertService
+    );
+    navigateToGateway = spyOn(
+      component as unknown as { navigateToGateway(url: string): void },
+      'navigateToGateway'
+    );
+    spyOn(console, 'error');
+  });
+
+  afterEach(() => {
+    component.ngOnDestroy();
+  });
+
+  const invokeHandlePaymentResponse = (payment: PaymentResponse): void => {
+    (
+      component as unknown as {
+        handlePaymentResponse: (p: PaymentResponse | null | undefined) => void;
+      }
+    ).handlePaymentResponse(payment);
+  };
+
+  const pendingCard = (authorizeUri: string): PaymentResponse => ({
+    id: 1,
+    bookingId: 1,
+    status: 'pending',
+    paymentMethod: 'card',
+    amount: '100.00',
+    currency: 'THB',
+    transactionId: 'chrg_test',
+    authorizeUri,
+  });
+
+  it('follows a 3-D Secure authorizeUri on pay.omise.co', () => {
+    invokeHandlePaymentResponse(pendingCard('https://pay.omise.co/payments/pay2_test/authorize'));
+
+    expect(navigateToGateway).toHaveBeenCalledOnceWith(
+      'https://pay.omise.co/payments/pay2_test/authorize'
+    );
+    expect(alertService.error).not.toHaveBeenCalled();
+  });
+
+  it('refuses an authorizeUri on an unrecognised host: alert, no polling, no navigation', () => {
+    invokeHandlePaymentResponse(pendingCard('https://should-not-be-visited.example/authorize'));
+
+    expect(navigateToGateway).not.toHaveBeenCalled();
+    expect(alertService.error).toHaveBeenCalledWith('PAYMENT.ALERT.REDIRECT_BLOCKED');
+    expect(alertService.success).not.toHaveBeenCalled();
+    expect(component.isWaitingForConfirmation).toBeFalse();
+  });
+
+  it('logs only the refused origin, never the authorize URL with its token', () => {
+    invokeHandlePaymentResponse(
+      pendingCard('https://should-not-be-visited.example/payments/pay2_secret/authorize')
+    );
+
+    expect(console.error).toHaveBeenCalledWith(
+      jasmine.any(String),
+      'https://should-not-be-visited.example'
+    );
+  });
+
+  it('refuses a non-https authorizeUri even on an Omise host', () => {
+    invokeHandlePaymentResponse(pendingCard('http://pay.omise.co/payments/pay2_test/authorize'));
+
+    expect(navigateToGateway).not.toHaveBeenCalled();
+    expect(alertService.error).toHaveBeenCalledWith('PAYMENT.ALERT.REDIRECT_BLOCKED');
+  });
+});

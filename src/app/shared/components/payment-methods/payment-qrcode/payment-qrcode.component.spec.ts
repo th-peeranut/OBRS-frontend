@@ -945,3 +945,87 @@ describe('PaymentQrcodeComponent - the QR footer (OBRS-1204)', () => {
     expect(footerText()).toBe('');
   });
 });
+
+/**
+ * Security review 2026-09 (M4): "I have paid" hands the browser to `qrPaymentUrl` only when its
+ * host is on the allow-list. The navigation sits behind `navigateToGateway`, spied here, so the
+ * accepted case is asserted too without moving the Karma page.
+ */
+describe('PaymentQrcodeComponent - qrPaymentUrl host allow-list (security review 2026-09, M4)', () => {
+  let component: PaymentQrcodeComponent;
+  let alertService: jasmine.SpyObj<AlertService>;
+  let navigateToGateway: jasmine.Spy;
+
+  beforeEach(() => {
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+    ]);
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+      'getQrImage',
+    ]);
+    alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+    alertService.confirm.and.resolveTo(true);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    translate.instant.and.callFake((key: string) => key);
+    component = new PaymentQrcodeComponent(
+      router,
+      bookingService,
+      paymentService,
+      alertService,
+      translate
+    );
+    navigateToGateway = spyOn(
+      component as unknown as { navigateToGateway(url: string): void },
+      'navigateToGateway'
+    );
+    spyOn(console, 'error');
+  });
+
+  afterEach(() => {
+    component.ngOnDestroy();
+  });
+
+  it('follows the Omise authorize page after the passenger confirms', async () => {
+    component.qrPaymentUrl = 'https://pay.omise.co/payments/pay2_test/authorize';
+
+    await component.confirmPayment();
+
+    expect(navigateToGateway).toHaveBeenCalledOnceWith(
+      'https://pay.omise.co/payments/pay2_test/authorize'
+    );
+    expect(alertService.error).not.toHaveBeenCalled();
+  });
+
+  it('refuses a qrPaymentUrl on an unrecognised host, with the QR-specific wording', async () => {
+    component.qrPaymentUrl = 'https://should-not-be-visited.example/pay';
+
+    await component.confirmPayment();
+
+    expect(alertService.confirm).toHaveBeenCalled();
+    expect(navigateToGateway).not.toHaveBeenCalled();
+    expect(alertService.error).toHaveBeenCalledWith('PAYMENT.ALERT.REDIRECT_BLOCKED_QR');
+    expect(console.error).toHaveBeenCalledWith(
+      jasmine.any(String),
+      'https://should-not-be-visited.example'
+    );
+  });
+
+  it('does not reach the allow-list when the passenger cancels the confirm dialog', async () => {
+    alertService.confirm.and.resolveTo(false);
+    component.qrPaymentUrl = 'https://should-not-be-visited.example/pay';
+
+    await component.confirmPayment();
+
+    expect(navigateToGateway).not.toHaveBeenCalled();
+    expect(alertService.error).not.toHaveBeenCalled();
+  });
+});

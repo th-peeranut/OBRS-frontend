@@ -12,10 +12,12 @@ import dayjs from 'dayjs';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import {
   catchError,
+  combineLatest,
   forkJoin,
   map,
   Observable,
   of,
+  startWith,
   Subject,
   Subscription,
   switchMap,
@@ -26,7 +28,7 @@ import {
   ScheduleFilter,
   ScheduleFilterPayload,
 } from '../../../../shared/interfaces/schedule.interface';
-import { TranslateService } from '@ngx-translate/core';
+import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { canSwapStationPair } from '../../../../shared/lib/station-swap';
 
@@ -35,7 +37,10 @@ import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-list/schedule-list.action';
-import { StationApi } from '../../../../shared/interfaces/station.interface';
+import {
+  getStationLabelById,
+  StationApi,
+} from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { invokeSetScheduleBookingApi } from '../../../../shared/stores/schedule-booking/schedule-booking.action';
 import {
@@ -52,6 +57,15 @@ import {
   StationGroup,
 } from '../../../../shared/lib/station-groups';
 import { buildStationPairOptions } from '../../../../shared/lib/station-pair-options';
+import { formatDayChip } from '../../../../shared/lib/day-label';
+
+/** OBRS-863 — the one-line reading of the search that produced the list below,
+ *  shown in place of the form while it is collapsed. */
+export interface ScheduleSearchSummary {
+  route: string;
+  dateLabel: string;
+  passengers: number;
+}
 
 @Component({
     selector: 'app-schedule-booking-filter',
@@ -120,6 +134,20 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   scheduleFilter: Observable<ScheduleFilter>;
 
+  /**
+   * OBRS-863 AC#1 — whether the full form is on screen. Starts OPEN and closes
+   * exactly once, the first time a real summary resolves: with nothing searched
+   * there is no summary to stand in for the form, and a collapsed bar above an
+   * empty page would leave a customer arriving here directly with no visible
+   * way to search at all. Settled with `summarySettled` so a later
+   * `scheduleFilter` emission — the day strip writes one on every tap — can
+   * never reopen a bar the customer just closed, or close one they just opened.
+   */
+  isExpanded = true;
+  /** OBRS-863 AC#4 — `null` until the store holds a search worth summarising. */
+  summary: ScheduleSearchSummary | null = null;
+  private summarySettled = false;
+
   private destroy$ = new Subject<void>();
 
   roundTripOnChange$: Subscription;
@@ -187,6 +215,34 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     // method for why a failure is silent.
     this.loadRouteSegments();
     this.loadProvinceStops();
+
+    // OBRS-863 AC#4: the summary reads the same two store slices the result
+    // list reads (`selectScheduleFilter` + `selectProvinceWithStation`) through
+    // the same `getStationFallbackLabel` and the same 'en'|'th' narrowing —
+    // deliberately NOT `bookingForm`, which holds what the customer is part-way
+    // through editing rather than what produced the trips below it. Language is
+    // a third input because the labels are localized: a live switch has to
+    // relabel the bar without a reload.
+    combineLatest([
+      this.scheduleFilter,
+      this.rawProvinceStationList,
+      this.translate.onLangChange.pipe(
+        map((event: LangChangeEvent) => event.lang),
+        startWith(this.translate.currentLang)
+      ),
+    ])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(([scheduleFilter, stations, lang]) => {
+        // Settling here (on "a summary can be rendered") rather than where a
+        // search actually dispatches let this fire off an INCOMPLETE write —
+        // e.g. the trip-type toggle writes the raw form on every change,
+        // stations-only, 0 passengers — collapsing the form on a customer who
+        // had only picked a route and never pressed Search. Settling is done in
+        // the `isSearchable` branch below instead, which is the same condition
+        // that actually fires `invokeGetScheduleListApi` — see the UX spec's
+        // own trigger: "arrival, and after a successful search".
+        this.summary = this.buildSummary(scheduleFilter, stations, lang);
+      });
 
     this.scheduleFilter
       .pipe(
@@ -262,6 +318,23 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
                 schedule_filter: payload,
               })
             );
+
+            // OBRS-863 AC#1/AC#3: collapse in lockstep with a search that
+            // actually ran — restored on arrival, or a later write (day strip,
+            // trip-type toggle) that happens to already be a complete search —
+            // never merely because `buildSummary` can render one.
+            //
+            // BOTH conditions, not either: `isSearchable()` does not look at the
+            // date, so a restored filter carrying a null `departureDate` searches
+            // while `buildSummary()` returns null, and collapsing on that alone
+            // would hide the form behind a bar reading "no route selected yet"
+            // over a full result list. `summary` is already fresh here — the
+            // `combineLatest` above is subscribed FIRST, so it has recomputed off
+            // this same store emission by the time this line runs.
+            if (!this.summarySettled && this.summary) {
+              this.summarySettled = true;
+              this.isExpanded = false;
+            }
           }
         }
       });
@@ -370,6 +443,17 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         schedule_filter: formValue,
       })
     );
+
+    // OBRS-863 AC#3. Below the `isSearchable()` guard above on purpose: a press
+    // that only produced the SEARCH_VALIDATION warning must leave the form open
+    // at the field `scrollToFirstMissingField()` just scrolled to.
+    this.isExpanded = false;
+  }
+
+  /** OBRS-863 AC#2 — one control, both directions. The form itself is the same
+   *  markup either way; only whether it is rendered changes. */
+  toggleExpanded(): void {
+    this.isExpanded = !this.isExpanded;
   }
 
   // OBRS-637 (AC#4). Below 768px this button is fixed to the bottom of the
@@ -504,6 +588,77 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   getIsRoundTripReturn() {
     return this.isRoundTripReturn;
+  }
+
+  /**
+   * OBRS-863 AC#1/AC#4. Returns `null` — which renders the form open rather
+   * than an empty bar — unless BOTH stations and a valid departure date resolve:
+   * a half-summary ("กรุงเทพฯ → · 30 ก.ค.") is a claim about the list below that
+   * the list is not making.
+   */
+  private buildSummary(
+    scheduleFilter: ScheduleFilter | null | undefined,
+    stations: StationApi[] | null | undefined,
+    lang: string
+  ): ScheduleSearchSummary | null {
+    if (!scheduleFilter) return null;
+
+    // Same narrowing as ScheduleBookingListComponent.normalizeLocale() —
+    // station labels exist in two locales, so zh reads the English one there
+    // and must read the English one here.
+    const locale = (lang || '').toLowerCase().startsWith('th') ? 'th' : 'en';
+
+    const from = getStationLabelById(
+      scheduleFilter.startStationId,
+      stations,
+      locale
+    );
+    const to = getStationLabelById(
+      scheduleFilter.stopStationId,
+      stations,
+      locale
+    );
+    const departure = this.summaryDateLabel(scheduleFilter.departureDate, lang);
+
+    if (!from || !to || !departure) return null;
+
+    // Same defensive read as the `scheduleFilter` subscription above: the store
+    // holds either the Dropdown or its bare id, and `?? 2` is round-trip.
+    const roundTrip = scheduleFilter.roundTrip as { id?: number } | number | undefined;
+    const roundTripId = typeof roundTrip === 'object' ? roundTrip?.id : roundTrip;
+    const returnLabel =
+      (roundTripId ?? 2) === 2
+        ? this.summaryDateLabel(scheduleFilter.returnDate, lang)
+        : '';
+
+    const passengerInfo = Array.isArray(scheduleFilter.passengerInfo)
+      ? scheduleFilter.passengerInfo
+      : [];
+
+    return {
+      route: `${from} → ${to}`,
+      dateLabel: returnLabel ? `${departure} – ${returnLabel}` : departure,
+      passengers: passengerInfo.reduce(
+        (total, item) => total + (item?.count || 0),
+        0
+      ),
+    };
+  }
+
+  /** `formatDayChip` rather than a new formatter: it is what the day strip one
+   *  element below already renders, so the two cannot name the same day
+   *  differently. */
+  private summaryDateLabel(
+    value: string | Date | null | undefined,
+    lang: string
+  ): string {
+    if (!value) return '';
+
+    const date = dayjs(value);
+    if (!date.isValid()) return '';
+
+    const chip = formatDayChip(date.toDate(), lang);
+    return `${chip.weekday} ${chip.date}`;
   }
 
   /**

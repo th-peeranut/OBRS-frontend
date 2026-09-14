@@ -4,7 +4,7 @@ Angular frontend for the Online Bus Reservation System (OBRS).
 
 ## Tech Stack
 
-- Angular 18
+- Angular 21
 - TypeScript 5
 - NgRx
 - PrimeNG + Bootstrap
@@ -1130,6 +1130,68 @@ touched. `EExpenseCategory` widened to 16 codes with
 `PARCEL_COMPENSATION` (`expenses-page.mappers.ts`
 `EXPENSE_CATEGORY_CODES`) so the payout renders a real label, not a raw i18n
 key, in the owner's own driver-cash-day return modal.
+
+### Expense receipt attach/replace/remove/view (`/admin/expenses`, OBRS-845)
+
+One optional receipt file (photo or PDF of the paper bill, kept as tax evidence for ภ.ง.ด.50) per
+expense, surfaced in two places on the existing `/admin/expenses` screen — no new page, no new
+NgRx slice:
+
+- **List row** (`ExpenseListTableComponent`) — a Receipt column renders an `.admin-status`
+  chip, `is-success`/`check_circle` when `row.hasReceipt` else `is-neutral`/
+  `radio_button_unchecked`, so the owner can scan for rows still missing evidence. Icon shape +
+  text differ, not just color (design-system §11 "state is never hue alone"). No action lives
+  here — attach/replace/remove/view all happen from the edit modal below, opened via the
+  existing pencil button, so the row does not grow a second interactive control.
+- **Edit modal** (`ExpenseFormModalComponent`) — a block between the subtitle and the form grid,
+  **structurally outside `<form>`**, same reasoning as the stop-photo block above (OBRS-580): the
+  backend preserves `AdminExpenseDto.receiptFileRef` through the full-replace `PUT` only when the
+  key is absent from the body, so `ExpenseFormValue`/`toExpensePayload()` must never be able to
+  express or clear it — the block only calls `AdminApiService.uploadExpenseReceipt`/
+  `deleteExpenseReceipt`/`getExpenseReceiptUrl` directly. Edit mode only (create has no id yet
+  for those endpoints to act on). "View" fetches `GET .../receipt/url` and opens the returned
+  **signed URL** in a new tab only after that call resolves — the URL is short-lived and is never
+  cached on the component or in NgRx; a 404 there (no receipt / removed elsewhere) shows a
+  dedicated "ไม่พบไฟล์ใบเสร็จ" message rather than a generic failure. Client-side type/size
+  checks (JPG/PNG/WEBP/PDF, ≤10 MB) are a courtesy for a fast error message only — the backend
+  re-validates by magic bytes and its 400 is what actually gates a bad upload.
+
+### Parts & labour registry — retroactive merge/reopen (`/admin/maintenance-parts`, OBRS-1634)
+
+Two entries that turn out to name the same real thing can be merged into one, retroactively, so
+their price history reads as one series instead of two silent halves. A merge is a **redirect,
+never a delete**: the losing row keeps every bill line and plan it ever owned, gains
+`mergedIntoId` pointing at the winner, and drops out of every picker. The owner-decided ruling
+(2026-08-29) is that a merge is **reversible** — never described as permanent on screen — via a
+separate "เปิดใช้ชื่อนี้อีกครั้ง" (reopen) action, distinct from a "cancel the merge" framing
+because reopening restores the past exactly but not bills keyed *while* the merge was in force
+(those stay linked to the winner; nothing records which row they should have gone to instead).
+
+- **Merge** (row action, `MaintenancePartMergeModalComponent`, smart) — picks a destination from
+  the same-kind, not-yet-merged entries (`mergeableTargets()` in `maintenance-parts.mappers.ts`;
+  chains are never offered, matching the backend's single-hop resolution). The modal opens
+  optimistically (design-system §6) but the destination dropdown fetches
+  `GET .../{id}/merge-impact?targetId=` on selection, and **the confirm button stays disabled
+  until those bill-line/plan counts have loaded** — the dialog IS the AC4 confirmation, not a
+  step before one. `POST .../{id}/merge {targetId}` on confirm.
+- **Reopen** (row action on a merged-away row, `MaintenancePartReopenModalComponent`,
+  presentational — the parent page owns the `POST .../{id}/unmerge` call). A 409 means the name
+  now clashes with an existing entry; its message is rendered as-is (`extractApiErrorMessage`),
+  never a generic failure string, because it names the blocking entry.
+- **Registry screen** (`MaintenancePartsPageComponent`) gets a "Show merged-away entries" toggle
+  (`showMerged`), independent of "Show retired" — a merged row's underlying `active` flag is not
+  what that toggle means once the row is merged. Merged-away rows are fetched **separately** from
+  `MaintenancePartsStore` via `getMaintenanceParts(kind, includeInactive, includeMerged)` rather
+  than folded into the shared store: `MaintenancePartsStore` is also read by 4 picker call sites
+  (expense form, expense batch page, driver-cash repair form, driver settlement) that filter only
+  on `part.active` — teaching the store to return merged rows would have leaked a folded-away
+  entry into those pickers as a selectable option, exactly what merging exists to prevent. The
+  merged-status pill reuses the existing `.is-info` blue-grey token pair (`--admin-inreview-*`),
+  distinct from the grey `.is-retired` pill already on this page, and states differ by wording as
+  well as hue (design-system §11).
+- The rename-collision message (`ADMIN.MAINTENANCE_PARTS.NAME_TAKEN`) used to say a merge "cannot
+  be undone" — true before this card, false after, so it was corrected to point at the new
+  "Merge" action instead of asserting an undo-impossibility that no longer holds.
 
 ## Counter (staff act-on-behalf) cancel (`/staff/cancel-booking`, OBRS-766)
 
