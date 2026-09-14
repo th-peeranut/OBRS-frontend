@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
 import { BehaviorSubject, NEVER, of, throwError } from 'rxjs';
 import dayjs from 'dayjs';
 
-import { HomeBookingComponent } from './home-booking.component';
+import { HomeBookingComponent, QUICK_DATE_CHIP_COUNT } from './home-booking.component';
 import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 import { StationSwapButtonComponent } from '../../../../shared/components/station-swap-button/station-swap-button.component';
@@ -1946,5 +1946,262 @@ describe('HomeBookingComponent — the hero headline is real translated text (OB
 
     expect(img.getAttribute('alt')).toBe('');
     expect(img.getAttribute('role')).toBe('presentation');
+  });
+});
+
+/**
+ * OBRS-1020: the five-day quick-date strip above the departure calendar.
+ *
+ * Class-level half — what the strip OFFERS and what tapping a chip does.
+ * The render half is the block below, split for the reason the OBRS-564 and
+ * OBRS-1185 pairs are split the same way: a class assertion cannot see a
+ * missing template binding, and a render assertion cannot see the cap that
+ * decides how many chips there should have been.
+ */
+describe('HomeBookingComponent — quick-date chips (OBRS-1020)', () => {
+  /** A booking policy answering with a specific, owner-editable cap. */
+  function policyWithMaxAdvanceDays(days: number): BookingPolicyService {
+    return {
+      getBookingPolicy: () =>
+        of({ code: 200, message: 'OK', data: { maxAdvanceDays: days, cutoffMinutes: 20 } }),
+    } as unknown as BookingPolicyService;
+  }
+
+  it('AC#1: offers five consecutive days starting today', () => {
+    const component = makeHomeBooking();
+
+    expect(component.quickDateChips.length).toBe(QUICK_DATE_CHIP_COUNT);
+    component.quickDateChips.forEach((chip, offset) => {
+      const expected = dayjs().add(offset, 'day');
+      expect(dayjs(chip.date).isSame(expected, 'day')).toBeTrue();
+      // The two things the chip PRINTS, derived from its own date rather than
+      // from a parallel calculation the render could disagree with.
+      expect(chip.dayIndex).toBe(expected.day());
+      expect(chip.dayOfMonth).toBe(expected.date());
+    });
+  });
+
+  it('AC#3: tapping a chip moves departureDate, through the same control the calendar writes', () => {
+    const component = makeHomeBooking();
+    const third = component.quickDateChips[2];
+
+    component.onQuickDateSelected(third);
+
+    expect(dayjs(component.getFormValue('departureDate')).isSame(third.date, 'day')).toBeTrue();
+  });
+
+  it('AC#3: a chip past the current returnDate carries returnDate forward, exactly as a calendar pick does', () => {
+    // The point of writing through `bookingForm.controls[...]` rather than
+    // assigning a field: OBRS-1185's carry-forward subscription is what keeps
+    // the pair submittable, and it only runs on a control write.
+    const component = makeHomeBooking();
+    const last = component.quickDateChips[component.quickDateChips.length - 1];
+
+    component.onQuickDateSelected(last);
+
+    const returnDate = component.getFormValue('returnDate');
+    expect(dayjs(returnDate).isBefore(dayjs(last.date), 'day')).toBeFalse();
+  });
+
+  it('AC#2: exactly one chip reads as selected, and it is the day the form is on', () => {
+    const component = makeHomeBooking();
+    const target = component.quickDateChips[3];
+
+    component.onQuickDateSelected(target);
+
+    const selected = component.quickDateChips.filter((chip) =>
+      component.isQuickDateSelected(chip)
+    );
+    expect(selected.length).toBe(1);
+    expect(selected[0].key).toBe(target.key);
+  });
+
+  it('AC#2: the untouched form already reads as "today", despite the seed carrying the page-load TIME', () => {
+    // Compared by calendar day and never by timestamp: `departureDate` is
+    // seeded with `minDate` (= `new Date()`, i.e. NOW) while the chip was
+    // built from a separate dayjs call milliseconds later, so a `===` or
+    // `getTime()` comparison would report NO selection on a form nobody has
+    // touched yet.
+    const component = makeHomeBooking();
+
+    expect(component.isQuickDateSelected(component.quickDateChips[0])).toBeTrue();
+  });
+
+  it('AC#5: never offers a day past maxDate — a 2-day booking policy leaves three chips, not five', () => {
+    const component = makeHomeBooking({ policy: policyWithMaxAdvanceDays(2) });
+
+    component.ngOnInit();
+
+    expect(component.quickDateChips.length).toBe(3);
+    for (const chip of component.quickDateChips) {
+      expect(dayjs(chip.date).isAfter(dayjs(component.maxDate))).toBeFalse();
+    }
+  });
+
+  it('AC#5: the fallback cap is wide enough that a failed policy fetch still shows all five', () => {
+    // Guards the assumption the test above leans on: if the fallback ever drops
+    // below the chip count, the strip silently shortens on every cold load.
+    expect(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK).toBeGreaterThanOrEqual(
+      QUICK_DATE_CHIP_COUNT
+    );
+    expect(makeHomeBooking().quickDateChips.length).toBe(QUICK_DATE_CHIP_COUNT);
+  });
+
+  it('AC#8: the policy landing later rebuilds the strip and does NOT overwrite a date already chosen', () => {
+    const component = makeHomeBooking({ policy: policyWithMaxAdvanceDays(30) });
+    const chosen = component.quickDateChips[2];
+    component.onQuickDateSelected(chosen);
+
+    component.ngOnInit(); // the policy response resolves synchronously here
+
+    expect(dayjs(component.getFormValue('departureDate')).isSame(chosen.date, 'day')).toBeTrue();
+    expect(component.quickDateChips.length).toBe(QUICK_DATE_CHIP_COUNT);
+  });
+});
+
+/**
+ * OBRS-1020, render half. Reads what the customer can actually see and press —
+ * the day NAMES (which must come from the locale, AC#1), the pressed state
+ * (AC#2), and the calendar that has to keep agreeing with the strip (AC#3/#4).
+ */
+describe('HomeBookingComponent — the quick-date strip renders in the chosen language (OBRS-1020)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+  let languageService: LanguageService;
+
+  /** Verbatim from `public/i18n/*.json` — the same source the OBRS-1023 block
+   *  above pins, and the array PrimeNG's `D` token resolves against, so a chip
+   *  and the field beside it cannot be proven right against different words. */
+  const DAY_NAMES_SHORT: Record<string, string[]> = {
+    th: ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'],
+    en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent, StationLoadErrorComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+
+    const translate = TestBed.inject(TranslateService);
+    Object.entries(DAY_NAMES_SHORT).forEach(([lang, dayNamesShort]) =>
+      translate.setTranslation(lang, {
+        CALENDAR: { dateFormat: lang === 'en' ? 'mm/dd/yy' : 'dd/mm/yy', dayNamesShort },
+      })
+    );
+    languageService = TestBed.inject(LanguageService);
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+  });
+
+  function chipButtons() {
+    return fixture.debugElement.queryAll(By.css('.quick-date-chip'));
+  }
+
+  it('AC#1: prints the day name of the CHOSEN language, not a hardcoded one', async () => {
+    await languageService.switch('en');
+    fixture.detectChanges();
+
+    const rendered = chipButtons();
+    // Vacuous-pass guard: an empty list satisfies every per-item assertion.
+    expect(rendered.length).toBe(QUICK_DATE_CHIP_COUNT);
+    rendered.forEach((chip, offset) => {
+      const day = dayjs().add(offset, 'day');
+      const text = chip.nativeElement.textContent as string;
+
+      expect(text).toContain(DAY_NAMES_SHORT['en'][day.day()]);
+      expect(text).toContain(String(day.date()));
+    });
+  });
+
+  it('AC#1: a live language switch repaints the strip — it does not keep the names it was built with', async () => {
+    await languageService.switch('en');
+    fixture.detectChanges();
+    await languageService.switch('th');
+    fixture.detectChanges();
+
+    const today = dayjs();
+    const text = chipButtons()[0].nativeElement.textContent as string;
+
+    expect(text).toContain(DAY_NAMES_SHORT['th'][today.day()]);
+    expect(text).not.toContain(DAY_NAMES_SHORT['en'][today.day()]);
+  });
+
+  it('AC#2: exactly one chip carries aria-pressed="true", and it is the one the form is on', async () => {
+    await languageService.switch('en');
+    fixture.detectChanges();
+
+    const pressed = chipButtons().filter(
+      (chip) => chip.nativeElement.getAttribute('aria-pressed') === 'true'
+    );
+
+    expect(chipButtons().length).toBe(QUICK_DATE_CHIP_COUNT);
+    expect(pressed.length).toBe(1);
+    expect(pressed[0].nativeElement.textContent).toContain(String(dayjs().date()));
+  });
+
+  it('AC#2/AC#3: clicking a chip moves the pressed state AND repaints the calendar beside it', async () => {
+    await languageService.switch('en');
+    fixture.detectChanges();
+
+    const target = dayjs().add(2, 'day');
+    chipButtons()[2].nativeElement.click();
+    fixture.detectChanges();
+
+    // The strip's own state.
+    const pressed = chipButtons().filter(
+      (chip) => chip.nativeElement.getAttribute('aria-pressed') === 'true'
+    );
+    expect(pressed.length).toBe(1);
+    expect(pressed[0].nativeElement.textContent).toContain(String(target.date()));
+
+    // AC#3's other half: the two controls must never show different dates. The
+    // input runs the `D, ` format OBRS-1023 bound, so the weekday it prints is
+    // the one assertion that holds whatever the locale's field order.
+    const input = fixture.debugElement.query(By.css('p-datePicker input'))
+      .nativeElement.value as string;
+    expect(input).toContain(DAY_NAMES_SHORT['en'][target.day()]);
+    expect(input).toContain(String(target.date()));
+  });
+
+  it('AC#4: the full calendar is still there, and still reaches further than the strip', async () => {
+    await languageService.switch('en');
+    fixture.detectChanges();
+
+    const calendar = fixture.debugElement.query(By.css('p-datePicker'));
+    expect(calendar).not.toBeNull();
+
+    const boundMaxDate = calendar.componentInstance.maxDate as Date;
+    const lastChip = component.quickDateChips[component.quickDateChips.length - 1];
+    expect(dayjs(boundMaxDate).isAfter(dayjs(lastChip.date), 'day')).toBeTrue();
+  });
+
+  it('AC#6: round-trip mode renders ONE strip — the return date stays a calendar', async () => {
+    component.isRoundTripReturn = true;
+    await languageService.switch('en');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('.quick-dates-row')).length).toBe(1);
+    // Both dates still have a calendar; only the outbound one gained a strip.
+    expect(fixture.debugElement.queryAll(By.css('p-datePicker')).length).toBe(2);
   });
 });

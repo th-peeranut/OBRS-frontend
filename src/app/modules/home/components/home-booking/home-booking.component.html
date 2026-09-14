@@ -37,6 +37,63 @@
             formControlName="passengerInfo"
           ></app-dropdown-obrs-passenger>
         </div>
+        <!-- QUICK DATE CHIPS (OBRS-1020). The one item on the "smart
+        default" comparison the owner sent that this form did not already
+        do: trip type, passenger count, a pre-filled date and a pre-filled
+        route all shipped (OBRS-1025 / 1185 / 575 / 928), so what was left
+        was never a DEFAULT — it is the AFFORDANCE of changing the date
+        without opening a calendar, scrolling it and tapping.
+
+        WHERE IT SITS, and the two placements that do not work.
+
+        NOT a child of `.station-section` with `width: 100%` (the mechanism
+        `.map-hint-row` uses to take the line below the bar). Measured at
+        1280px with `getBoundingClientRect`: a flex line breaks on its items'
+        HYPOTHETICAL sizes, and every segment of that bar carries
+        `flex-basis: 0`, so a 100%-wide item does not push them to the next
+        line — it shares the line with all of them and squeezes each to
+        **1px at x=1208**, outside the 1200px card. That is the same fact the
+        `.station-section` comment states from the other side ("this bar
+        cannot break into two rows — it narrows instead").
+
+        NOT between `app-recent-routes-quick-pick` and `.station-section`
+        either, which is the position directly above the bar: that strip's
+        spacing rule is `…​.has-routes + .station-section`, ADJACENT-sibling,
+        so an element in the gap silently drops the proximity OBRS-928 exists
+        to create — the route pills have to stay touching the origin and
+        destination fields they fill in.
+
+        So it sits ABOVE both strips, on the card's own column axis, where it
+        costs nothing and still reads as "one tap changes the date".
+
+        AC#6: outbound only. The window a RETURN date should offer starts at
+        the outbound date, not at today, so a second strip of these same
+        five days would be wrong rather than merely redundant. -->
+        <div class="quick-dates-row">
+          <span class="quick-dates-title">
+            {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }}
+          </span>
+          <div class="quick-dates-list">
+            <!-- AC#1: the day name comes from `CALENDAR.dayNamesShort`,
+            which all three locales already ship and which PrimeNG's own `D`
+            token resolves against in the field below (OBRS-1023). So the
+            chip and the field cannot print two different words for the same
+            day, and no i18n key was created for names that already existed
+            three times over. -->
+            @for (chip of quickDateChips; track chip.key) {
+              <button
+                type="button"
+                class="quick-date-chip"
+                [class.is-active]="isQuickDateSelected(chip)"
+                [attr.aria-pressed]="isQuickDateSelected(chip)"
+                (click)="onQuickDateSelected(chip)"
+                >
+                <span class="quick-date-chip__day">{{ ("CALENDAR.dayNamesShort" | translate)[chip.dayIndex] }}</span>
+                <span class="quick-date-chip__date">{{ chip.dayOfMonth }}</span>
+              </button>
+            }
+          </div>
+        </div>
         <!-- RECENT ROUTES QUICK PICK (OBRS-575) — renders nothing when empty (AC#5).
         OBRS-928 moved it here, directly above the origin/destination fields:
         the moment a user needs it is the moment they are looking at an empty
