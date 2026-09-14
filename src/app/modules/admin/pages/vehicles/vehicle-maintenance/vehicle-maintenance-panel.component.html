@@ -139,14 +139,18 @@
           </label>
           <p-datePicker
             formControlName="startDate"
-            styleClass="schedule-calendar-filter"
-            inputStyleClass="schedule-calendar-filter-input"
-            panelStyleClass="schedule-calendar-filter-panel"
+            styleClass="app-date-field"
+            panelStyleClass="app-date-field-panel"
             dateFormat="dd/mm/yy"
             [showIcon]="true"
+            [iconDisplay]="'input'"
             [showButtonBar]="true"
             [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.START_DATE' | translate"
-          ></p-datePicker>
+          >
+            <ng-template pTemplate="inputicon">
+              <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+            </ng-template>
+          </p-datePicker>
           @if (isFieldInvalid('startDate')) {
             <small class="admin-error">
               {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
@@ -157,14 +161,18 @@
           <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate }}</label>
           <p-datePicker
             formControlName="endDate"
-            styleClass="schedule-calendar-filter"
-            inputStyleClass="schedule-calendar-filter-input"
-            panelStyleClass="schedule-calendar-filter-panel"
+            styleClass="app-date-field"
+            panelStyleClass="app-date-field-panel"
             dateFormat="dd/mm/yy"
             [showIcon]="true"
+            [iconDisplay]="'input'"
             [showButtonBar]="true"
             [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.END_DATE' | translate"
-          ></p-datePicker>
+          >
+            <ng-template pTemplate="inputicon">
+              <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+            </ng-template>
+          </p-datePicker>
           @if (hasDateRangeError()) {
             <small class="admin-error">
               {{ 'ADMIN.VEHICLES.MAINTENANCE.DATE_RANGE_VALIDATION' | translate }}
@@ -175,14 +183,18 @@
           <label class="admin-form-label">{{ 'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate }}</label>
           <p-datePicker
             formControlName="nextDueDate"
-            styleClass="schedule-calendar-filter"
-            inputStyleClass="schedule-calendar-filter-input"
-            panelStyleClass="schedule-calendar-filter-panel"
+            styleClass="app-date-field"
+            panelStyleClass="app-date-field-panel"
             dateFormat="dd/mm/yy"
             [showIcon]="true"
+            [iconDisplay]="'input'"
             [showButtonBar]="true"
             [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.NEXT_DUE_DATE' | translate"
-          ></p-datePicker>
+          >
+            <ng-template pTemplate="inputicon">
+              <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+            </ng-template>
+          </p-datePicker>
         </div>
         <div class="admin-form-field">
           <label class="admin-form-label">

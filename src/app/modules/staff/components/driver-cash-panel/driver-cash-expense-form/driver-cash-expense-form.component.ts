@@ -4,6 +4,10 @@ import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { toCents } from '../../../../../shared/lib/money-cents';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
+import {
+  toDateControlValue,
+  toIsoDateString,
+} from '../../../../admin/pages/expenses/expenses-page.mappers';
 
 /**
  * OBRS-960 — the field-expense categories a driver plausibly pays for AT
@@ -102,6 +106,19 @@ export class DriverCashExpenseFormComponent implements OnChanges, OnDestroy {
    * is from another day.
    */
   protected billDateInput = '';
+
+  /**
+   * OBRS-1814 — the control is a p-datePicker now, so the template binds a Date.
+   * `billDateInput` stays the source of truth: every rule around it (the seed from
+   * `businessDate`, the reset, the mismatch warning) compares "YYYY-MM-DD".
+   */
+  protected get billDate(): Date | null {
+    return toDateControlValue(this.billDateInput);
+  }
+
+  protected set billDate(value: Date | null) {
+    this.billDateInput = toIsoDateString(value);
+  }
 
   private readonly destroy$ = new Subject<void>();
 

@@ -162,27 +162,35 @@
               <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.IN_SERVICE_FROM' | translate }}</label>
               <p-datePicker
                 formControlName="inServiceFrom"
-                styleClass="schedule-calendar-filter"
-                inputStyleClass="schedule-calendar-filter-input"
-                panelStyleClass="schedule-calendar-filter-panel"
+                styleClass="app-date-field"
+                panelStyleClass="app-date-field-panel"
                 dateFormat="dd/mm/yy"
                 [showIcon]="true"
+                [iconDisplay]="'input'"
                 [showButtonBar]="true"
                 [placeholder]="'ADMIN.VEHICLES.DETAILS.IN_SERVICE_UNKNOWN' | translate"
-              ></p-datePicker>
+              >
+                <ng-template pTemplate="inputicon">
+                  <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+                </ng-template>
+              </p-datePicker>
             </div>
             <div class="admin-form-field">
               <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.IN_SERVICE_TO' | translate }}</label>
               <p-datePicker
                 formControlName="inServiceTo"
-                styleClass="schedule-calendar-filter"
-                inputStyleClass="schedule-calendar-filter-input"
-                panelStyleClass="schedule-calendar-filter-panel"
+                styleClass="app-date-field"
+                panelStyleClass="app-date-field-panel"
                 dateFormat="dd/mm/yy"
                 [showIcon]="true"
+                [iconDisplay]="'input'"
                 [showButtonBar]="true"
                 [placeholder]="'ADMIN.VEHICLES.DETAILS.IN_SERVICE_STILL_RUNNING' | translate"
-              ></p-datePicker>
+              >
+                <ng-template pTemplate="inputicon">
+                  <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+                </ng-template>
+              </p-datePicker>
             </div>
             <div class="admin-form-field full">
               <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.NOTE' | translate }}</label>

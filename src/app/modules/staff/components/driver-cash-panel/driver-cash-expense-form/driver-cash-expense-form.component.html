@@ -84,14 +84,22 @@
         <label class="admin-form-label" for="dcp-expense-bill-date">
           {{ 'STAFF.DRIVER_CASH.EXPENSE.BILL_DATE_LABEL' | translate }}
         </label>
-        <input
-          id="dcp-expense-bill-date"
-          type="date"
-          class="admin-field"
-          [(ngModel)]="billDateInput"
+        <p-datePicker
+          inputId="dcp-expense-bill-date"
+          [(ngModel)]="billDate"
           name="expenseBillDate"
           data-testid="driver-cash-expense-bill-date"
-          />
+          styleClass="app-date-field"
+          panelStyleClass="app-date-field-panel"
+          [showIcon]="true"
+          [iconDisplay]="'input'"
+          [showButtonBar]="true"
+          [placeholder]="'STAFF.DRIVER_CASH.EXPENSE.BILL_DATE_LABEL' | translate"
+        >
+          <ng-template pTemplate="inputicon">
+            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+          </ng-template>
+        </p-datePicker>
         @if (hasBillDateMismatch) {
           <small class="dcp-bill-date-warning" data-testid="driver-cash-expense-bill-date-warning">
             {{ 'STAFF.DRIVER_CASH.EXPENSE.BILL_DATE_MISMATCH' | translate: { date: displayDate(businessDate) } }}
