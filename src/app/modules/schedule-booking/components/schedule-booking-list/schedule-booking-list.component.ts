@@ -41,7 +41,7 @@ import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import {
-  getStationFallbackLabel,
+  getStationLabelById,
   getStationSlugById,
   StationApi,
 } from '../../../../shared/interfaces/station.interface';
@@ -644,30 +644,14 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     const toId = isReturn ? scheduleFilter.startStationId : scheduleFilter.stopStationId;
 
     // OBRS-1343: already localized by the backend, which resolved the stop.
-    const fromName = boardingStopName || this.getStationLabelById(fromId, stationList, locale);
-    const toName = this.getStationLabelById(toId, stationList, locale);
+    const fromName = boardingStopName || getStationLabelById(fromId, stationList, locale);
+    const toName = getStationLabelById(toId, stationList, locale);
 
     if (fromName && toName) {
       return `${fromName} - ${toName}`;
     }
 
     return fromName || toName || '';
-  }
-
-  private getStationLabelById(
-    stationId: string | number | null | undefined,
-    stationList: StationApi[] | null | undefined,
-    locale: 'en' | 'th'
-  ): string {
-    if (stationId === null || stationId === undefined || stationId === '') {
-      return '';
-    }
-
-    const parsed = Number(stationId);
-    const match = (stationList ?? []).find((station) => station.id === parsed);
-    if (!match) return '';
-
-    return getStationFallbackLabel(match, locale);
   }
 
   /** Resolves `departureEstimates`/`returnEstimates` for every schedule row

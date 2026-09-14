@@ -4756,3 +4756,61 @@ should share a binding contract), read that sibling's OWN `ngOnChanges` before a
 library are not guaranteed to treat the same-named input reactively the same way, and nothing
 about the TypeScript types would flag the difference; it only shows up by tracing the actual
 lifecycle-hook body.
+
+## Scrutinize self-fixes on OBRS-863 (collapsible search bar)
+
+**1. The "settle once" collapse was wired to the wrong condition.**
+`ngOnInit`'s `combineLatest([scheduleFilter, rawProvinceStationList, lang$])` collapsed the form
+(`isExpanded = false`, `summarySettled = true`) the first time `buildSummary()` could render a
+summary — i.e. the moment `startStationId`/`stopStationId`/`departureDate` all resolved to
+something. But `roundTripOnChange$` (the trip-type pill's `valueChanges` handler) dispatches
+`invokeSetScheduleFilterApi({ schedule_filter: this.bookingForm.getRawValue() })` on EVERY toggle,
+unconditionally — it does not gate on `isSearchable()` the way `onSearch()` does. Sequence: a
+customer picks both stations (a local `bookingForm.patchValue`, not yet in the store), then
+touches the round-trip pill before ever setting a passenger count or pressing Search. That pill
+write lands the picked stations + the form's default `departureDate` (today) in the store. Both
+stations resolve, so `buildSummary()` succeeds — even though passenger count is still 0 and
+`isSearchable()` (which additionally requires `numberOfPassengers >= 1`) is false, so no search
+actually ran. Since it was the first successful summary, `summarySettled` was still false, and the
+form collapsed under the customer mid-fill, with no results underneath it. The UX spec
+(`docs/ux/UX-OBRS-863-collapsed-search-bar.md` §2) names the intended trigger as "arrival, and
+after a successful search" — the code was instead triggering on "a summary CAN be rendered,"
+and those two conditions diverge exactly there. Fixed by moving the settle (`summarySettled`/
+`isExpanded = false`) out of the `combineLatest` subscribe (which now only sets `this.summary`,
+unconditionally, every emission) and into the existing `if (this.isSearchable(payload))` branch
+of the `scheduleFilter` subscription — the same branch that dispatches
+`invokeGetScheduleListApi`, so the form now collapses if and only if a search actually fired.
+The day strip's per-tap write still can't force a reopen (guarded by `summarySettled` as before),
+and `onSearch()`'s own explicit `isExpanded = false` is unaffected (redundant with the fix for the
+common case, but kept as immediate UI feedback in case the store round-trip is ever not
+perfectly synchronous). Verified: `schedule-booking-filter.component.spec.ts` still 67/67 green
+(none of the 7 new OBRS-863 specs exercised this path — they all construct the fixture with an
+already-complete `SAVED_FILTER`, so the bug was invisible to green tests).
+
+**Lesson:** when a "do this only once" flag is set from a *derived* condition (here,
+"can I compute a summary"), check whether every write path that can make the derived condition
+true also implies the thing the flag is supposed to gate on (here, "a search happened"). A
+`combineLatest`/selector-driven side effect and an action-gated dispatch elsewhere in the same
+component can drift apart the moment a THIRD write path (a toggle, a pill, anything that
+dispatches without going through the gated path) satisfies the derived condition without
+satisfying the real one.
+
+**2. Duplicated `getStationLabelById`.** `ScheduleBookingFilterComponent.summaryStationLabel()`
+(new in this diff) was a byte-for-byte reimplementation of
+`ScheduleBookingListComponent.getStationLabelById()` (pre-existing, same file family, same
+module): same null/blank guard, same `Number(stationId)`, same
+`stationList.find(s => s.id === parsed)`, same `getStationFallbackLabel(match, locale)` call.
+Extracted the shared body to `getStationLabelById()` in
+`src/app/shared/interfaces/station.interface.ts` (next to the existing, identically-shaped
+`getStationSlugById()`), and pointed both components at it — the list component's private
+method is gone, the filter component's `summaryStationLabel()` is gone. Verified:
+`schedule-booking-filter.component.spec.ts` + `schedule-booking-list.component.spec.ts`,
+132/132 green.
+
+Also fixed a self-contradicting contrast comment in `schedule-booking-filter.component.scss`
+(`.search-summary__action`): it asserted `$primary-blue is 5.14:1 on $primary-white` in the same
+breath as "(variables.scss:25 records white on it at 5.33:1 — the pair is symmetric)" — symmetric
+means those two numbers must be equal, and 5.14 was the wrong one (recomputed from the WCAG
+relative-luminance formula off `#0772a2`/`#ffffff`: 5.33:1, matching `variables.scss:25`). Does
+not change the AA verdict either way — text is well clear of 4.5:1 at both figures — so this is a
+documentation-accuracy fix, not a compliance one.
