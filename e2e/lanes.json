@@ -27,6 +27,12 @@
       "why": "OBRS-1727 AC-7 AFTER evidence for retiring /admin/expenses as a single page: the approval lane now sits FIRST on /admin/settlements (AC-1, owner ruling A) under a menu that says it covers both jobs (AC-2), /admin/expenses keeps the form and the log without it (AC-4), and the salesperson cash panel has lost its whole four-button entry row (AC-3, owner ruling D2) while keeping both totals boxes. CAPTURE and not GATE because the verdict belongs to the unit suite and to the backend IT suite that proves the endpoints behind those buttons are closed; this exists so the owner can see the three screens the card names. Each frame asserts what it is evidence OF before it is shot -- the lane is above app-settlements-list by bounding box, the lane is absent from /admin/expenses by count, and all four driver-cash-action test ids resolve to zero -- so a frame that caught the wrong state fails here instead of reaching the card. Hermetic on the gate lane's terms: it reuses e2e/support/gate-admin-session.ts, so every /api/** call is fulfilled in-browser."
     },
     {
+      "spec": "obrs-1903-settlement-other-rows.capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1903capture.config.ts",
+      "why": "OBRS-1903 BEFORE/AFTER evidence for the repeatable \"อื่น ๆ\" cost on /staff/settlement, and the replacement for the OBRS-1896 lane whose frames photographed a permanent 6th row the owner then ruled off the screen. Five frames: the table as the counter opens it (five fixed rows, the add button unpressed), three empty rows with the caret waiting in the last, a half-filled THIRD row refused on the row that is wrong instead of by a 400 that would reject the whole day, that row taken back out by its own X with the two named costs and the total they moved in one frame, and the 15-row cap with the button spent. CAPTURE and not GATE because the verdict belongs to driver-settlement-page.component.spec.ts, which asserts the per-row payload, the every-row gate, the amend prefill and the payload landing exactly on the server's @Size(max = 20); this exists so the card carries a picture of the same claim. Hermetic on the gate lane's terms: a synthetic salesperson session plus one in-spec handler for every /api/** call, and it asserts the day-context actually landed before shooting -- the 1896 lane's first run stubbed the wrong path and photographed a five-row table for a reason that had nothing to do with its card."
+    },
+    {
       "spec": "obrs-1832-report-trigger.capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1832capture.config.ts",
@@ -709,6 +715,12 @@
     "lane": "GATE",
     "config": "playwright.gate.config.ts",
     "why": "OBRS-908 AC1/AC2: the blocking loading overlay became opt-in, and the claim is that a customer merely moving through the app never meets one. SweetAlert2 is raised by the HTTP interceptor into document.body, outside every Karma fixture, so this is the same seam obrs-1222-station-load-error.spec.ts is admitted for -- the unit suite owns the rule (error.interceptor.spec.ts), this owns the outcome on a real page. It holds every /api/ response 800ms, well past the new 300ms grace period, so the OLD default would raise an overlay on every call rather than hiding behind the delay; and it counts additions with a MutationObserver rather than sampling a locator, because the old overlay lived 231-272ms per request (OBRS-1436) and a sample would go green on a page that flashed it ten times. Hermetic on this lane's terms: mockPublicPageApis plus a route that only delays and falls through, so every /api/** call is answered in-spec."
+  },
+  {
+    "spec": "obrs-1902-maintenance-capture.spec.ts",
+    "lane": "CAPTURE",
+    "config": "playwright.obrs1902capture.config.ts",
+    "why": "OBRS-1902 AFTER evidence for the scheduled-downtime banner and the payment lock the owner ruled on (2026-09-14): the strip on a customer page, the disabled card pay button with its reason line, proof that opening the QR tab creates NO charge while the lock is open (the QR is not a display of an existing charge - asking for it creates one), and the back-office form the announcement is written from. CAPTURE and not GATE because the verdict belongs to maintenance-window.service.spec.ts and the backend's MaintenanceWindowConfigControllerTest, whose assertions fail a build; this exists so the owner can see the screens. Hermetic: mockPublicPageApis plus in-spec fulfilment of /api/operations-policy, /api/private/bookings, /api/private/payments and the owner config endpoint, so nothing reaches a backend."
   }
   ]
 }

@@ -8,6 +8,7 @@ import { ParcelShareConfigPageComponent } from '../parcel-share-config/parcel-sh
 import { DriverCashRatesPageComponent } from '../driver-cash-rates/driver-cash-rates-page.component';
 import { CancelReschedulePolicyConfigPageComponent } from '../cancel-reschedule-policy-config/cancel-reschedule-policy-config-page.component';
 import { OperationsConfigPageComponent } from '../operations-config/operations-config-page.component';
+import { MaintenanceWindowConfigPageComponent } from '../maintenance-window-config/maintenance-window-config-page.component';
 import { NotificationMessagesTabPageComponent } from '../notification-messages/notification-messages-tab-page.component';
 import { NotificationMessageListPageComponent } from '../notification-messages/notification-message-list-page.component';
 import { NotificationMessageEditPageComponent } from '../notification-messages/notification-message-edit-page.component';
@@ -231,6 +232,24 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
     // to document.
     requiredRoles: ['admin', 'owner'],
     component: OperationsConfigPageComponent,
+  },
+  {
+    // OBRS-1902: new. Sits in OPERATIONS and ADJACENT to `operations` above, which the group
+    // doc requires - a group split across this array renders its dropdown once and reads as if
+    // it were not. It belongs to that group on merit too: both are about the clock the platform
+    // runs on rather than a customer's rights over a ticket.
+    //
+    // Platform-scoped endpoint (GET/PUT/DELETE /private/admin/configs/maintenance-window),
+    // hasRole('OWNER'), which ROLE_GRANTS admits ADMIN to - so ['admin','owner'] like the tabs
+    // around it. There is nothing to owner-scope here even later: one deployment serves every
+    // operator, so it cannot be down for one and up for another.
+    path: 'maintenance-window',
+    legacyPath: 'maintenance-window-config', // no prior standalone page; kept for interface parity
+    labelKey: 'ADMIN.PAGES.MAINTENANCE_WINDOW',
+    groupKey: 'ADMIN.SYSTEM_SETTINGS.GROUPS.OPERATIONS',
+    subtitleKey: 'ADMIN.MAINTENANCE_WINDOW.SUBTITLE',
+    requiredRoles: ['admin', 'owner'],
+    component: MaintenanceWindowConfigPageComponent,
   },
   {
     // Last: the "meta" view over every other tab, same placement it held as the

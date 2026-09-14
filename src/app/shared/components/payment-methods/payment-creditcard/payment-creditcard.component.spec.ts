@@ -13,6 +13,7 @@ import {
   PaymentByBookingIdResponse,
   PaymentResponse,
 } from '../../../../shared/interfaces/payment.interface';
+import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { PaymentCreditcardComponent } from './payment-creditcard.component';
 
 /**
@@ -57,7 +58,8 @@ describe('PaymentCreditcardComponent - payment status "paid" (OBRS-177)', () => 
       bookingService,
       paymentService,
       omiseTokenService,
-      alertService
+      alertService,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
   });
 
@@ -304,7 +306,8 @@ describe('PaymentCreditcardComponent - OmiseCard hosted card entry (OBRS-391)', 
       bookingService,
       paymentService,
       omiseTokenService,
-      alertService
+      alertService,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
   });
 
@@ -475,7 +478,8 @@ describe('PaymentCreditcardComponent - authorizeUri host allow-list (security re
       bookingService,
       paymentService,
       omiseTokenService,
-      alertService
+      alertService,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
     );
     navigateToGateway = spyOn(
       component as unknown as { navigateToGateway(url: string): void },
@@ -541,5 +545,56 @@ describe('PaymentCreditcardComponent - authorizeUri host allow-list (security re
 
     expect(navigateToGateway).not.toHaveBeenCalled();
     expect(alertService.error).toHaveBeenCalledWith('PAYMENT.ALERT.REDIRECT_BLOCKED');
+  });
+});
+
+/**
+ * OBRS-1902 AC-6 — the pay button during a maintenance countdown. The template binds
+ * `[disabled]` to the very same `isPaymentLocked` getter asserted here, and the handler is
+ * guarded independently so that re-enabling the button in devtools still buys nothing.
+ */
+describe('PaymentCreditcardComponent - payment lock during maintenance (OBRS-1902)', () => {
+  function build(locked: boolean) {
+    const alertService = jasmine.createSpyObj<AlertService>('AlertService', ['success', 'error', 'info']);
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', ['getActiveBookingId']);
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    const omiseTokenService = jasmine.createSpyObj<OmiseTokenService>('OmiseTokenService', ['requestCardToken']);
+
+    const component = new PaymentCreditcardComponent(
+      translate,
+      router,
+      bookingService,
+      paymentService,
+      omiseTokenService,
+      alertService,
+      { isPaymentLockedNow: () => locked } as unknown as MaintenanceWindowService
+    );
+    return { component, bookingService, omiseTokenService };
+  }
+
+  it('refuses to start a charge while the lock is open, and never reaches the card form', async () => {
+    const { component, bookingService, omiseTokenService } = build(true);
+
+    expect(component.isPaymentLocked).toBeTrue();
+    await component.submitPayment();
+
+    expect(bookingService.getActiveBookingId).not.toHaveBeenCalled();
+    expect(omiseTokenService.requestCardToken).not.toHaveBeenCalled();
+  });
+
+  it('is untouched when no maintenance window is announced', async () => {
+    const { component, bookingService } = build(false);
+
+    expect(component.isPaymentLocked).toBeFalse();
+    await component.submitPayment();
+
+    // It got as far as looking for the booking - i.e. the lock did not short-circuit it.
+    expect(bookingService.getActiveBookingId).toHaveBeenCalled();
   });
 });

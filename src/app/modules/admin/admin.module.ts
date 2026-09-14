@@ -94,6 +94,7 @@ import { DriverCashRatesPageComponent } from './pages/driver-cash-rates/driver-c
 import { CancelReschedulePolicyConfigPageComponent } from './pages/cancel-reschedule-policy-config/cancel-reschedule-policy-config-page.component';
 import { ConfigSourceBadgeComponent } from './pages/cancel-reschedule-policy-config/config-source-badge/config-source-badge.component';
 import { OperationsConfigPageComponent } from './pages/operations-config/operations-config-page.component';
+import { MaintenanceWindowConfigPageComponent } from './pages/maintenance-window-config/maintenance-window-config-page.component';
 // OBRS-1308 — owner-editable notification message overrides + admin approval.
 import { NotificationMessagesTabPageComponent } from './pages/notification-messages/notification-messages-tab-page.component';
 import { NotificationMessageListPageComponent } from './pages/notification-messages/notification-message-list-page.component';
@@ -654,6 +655,7 @@ export const adminRoutes: Routes = [
     CancelReschedulePolicyConfigPageComponent,
     ConfigSourceBadgeComponent,
     OperationsConfigPageComponent,
+    MaintenanceWindowConfigPageComponent,
     NotificationMessagesTabPageComponent,
     NotificationMessageListPageComponent,
     NotificationMessageListTableComponent,

@@ -169,3 +169,56 @@ describe('ExpenseBillCardComponent', () => {
     });
   });
 });
+
+// OBRS-1588: the odometer the garage writes on the slip. Optional everywhere, and present on the
+// ENVELOPE card only.
+describe('ExpenseBillCardComponent odometer (OBRS-1588)', () => {
+  it('gives the envelope bill an optional odometer control', () => {
+    const group = buildBillGroup(new FormBuilder());
+
+    expect(group.get('odometerKm')).toBeTruthy();
+    expect(group.get('odometerKm')!.value).toBeNull();
+    expect(group.get('odometerKm')!.valid)
+      .withContext('AC1: blank is a real answer, not a missing one')
+      .toBeTrue();
+  });
+
+  // OBRS-1630: the field variant is the staff cash box, where the counter records money and never
+  // reads an odometer off a slip. A control nobody renders is a control that can only confuse.
+  it('does NOT add one to the field (driver-cash) bill', () => {
+    expect(buildFieldRepairBillGroup(new FormBuilder()).get('odometerKm')).toBeNull();
+  });
+
+  it('accepts a whole positive number and rejects the rest', () => {
+    const control = buildBillGroup(new FormBuilder()).get('odometerKm')!;
+
+    control.setValue(375395);
+    expect(control.valid).toBeTrue();
+
+    control.setValue(0);
+    expect(control.valid).withContext('a repair bill that states 0 km is a typo').toBeFalse();
+
+    control.setValue(-1);
+    expect(control.valid).toBeFalse();
+
+    control.setValue(375395.5);
+    expect(control.valid).withContext('odometers are whole kilometres').toBeFalse();
+
+    control.setValue('abc');
+    expect(control.valid).toBeFalse();
+
+    control.setValue('');
+    expect(control.valid).withContext('cleared is optional again, not stuck invalid').toBeTrue();
+  });
+
+  // AC3, the rule this validator must NOT have. Bills are keyed in whenever the paper turns up, so
+  // a back-dated slip legitimately reads lower than one already recorded. Refusing it here would
+  // make the owner unable to record a bill he is holding.
+  it('never demands a number higher than anything already recorded', () => {
+    const control = buildBillGroup(new FormBuilder()).get('odometerKm')!;
+
+    control.setValue(1);
+
+    expect(control.valid).toBeTrue();
+  });
+});

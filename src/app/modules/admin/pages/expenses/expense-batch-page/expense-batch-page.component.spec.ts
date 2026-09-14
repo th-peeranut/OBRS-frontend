@@ -23,13 +23,17 @@ function makeStores() {
   };
 }
 
-function makeComponent(options: { isAdmin?: boolean; createBatch?: jasmine.Spy } = {}) {
+function makeComponent(
+  options: { isAdmin?: boolean; createBatch?: jasmine.Spy; confirmPlans?: boolean } = {}
+) {
   const stores = makeStores();
   const createExpenseBatch =
     options.createBatch ??
     jasmine
       .createSpy('createExpenseBatch')
-      .and.returnValue(of({ code: 201, message: 'Created', data: { expenseIds: [1, 2] } }));
+      .and.returnValue(
+        of({ code: 201, message: 'Created', data: { expenseIds: [1, 2], updatedPlans: [] } })
+      );
   const adminApiService = {
     createExpenseBatch,
     getOwners: jasmine.createSpy('getOwners').and.returnValue(of({ code: 200, message: 'OK', data: [] })),
@@ -38,6 +42,9 @@ function makeComponent(options: { isAdmin?: boolean; createBatch?: jasmine.Spy }
     success: jasmine.createSpy('success').and.resolveTo(undefined),
     warning: jasmine.createSpy('warning').and.resolveTo(undefined),
     error: jasmine.createSpy('error').and.resolveTo(undefined),
+    // OBRS-1588: the post-save plan summary is a confirm, not a success alert - its confirm BUTTON
+    // is the link to the plan page, so "read the summary" and "go fix the number" are one dialog.
+    confirm: jasmine.createSpy('confirm').and.resolveTo(options.confirmPlans ?? false),
   };
   const router = { navigate: jasmine.createSpy('navigate').and.resolveTo(true) };
   const authService = {
@@ -260,6 +267,119 @@ describe('ExpenseBatchPageComponent', () => {
 
   // OBRS-808: an ADMIN has no owner identity, so they must name the operator or the server answers
   // 400 EXPENSE_OWNER_REQUIRED — a failure the screen must prevent rather than relay.
+  // OBRS-1588 AC2/AC1. The field is optional and the payload says so EXPLICITLY: a bill whose
+  // garage wrote no odometer is a normal bill (owner, 2026-08-23), and `null` is what stops the
+  // server inferring one.
+  it('sends odometerKm as null when the bill card was left blank', async () => {
+    const { component, createExpenseBatch } = makeComponent();
+    fillBill(component['billForms'][0], [{ description: 'ค่าแรง', amount: 300 }]);
+
+    await component['submitEnvelope']();
+
+    const bill = (createExpenseBatch.calls.mostRecent().args[0] as CreateExpenseBatchPayload).bills[0];
+    expect(bill.odometerKm).toBeNull();
+  });
+
+  it('sends the typed odometer as a NUMBER, per bill', async () => {
+    const { component, createExpenseBatch } = makeComponent();
+    fillBill(component['billForms'][0], [{ description: 'เปลี่ยนยางหน้า', amount: 8400 }]);
+    component['billForms'][0].get('odometerKm')!.setValue('375395');
+    component['addBill']();
+    fillBill(component['billForms'][1], [{ description: 'ค่าแรง', amount: 300 }]);
+
+    await component['submitEnvelope']();
+
+    const payload = createExpenseBatch.calls.mostRecent().args[0] as CreateExpenseBatchPayload;
+    expect(payload.bills[0].odometerKm)
+      .withContext('a number, not the string the number input hands back')
+      .toBe(375395);
+    expect(payload.bills[1].odometerKm)
+      .withContext('the odometer is per BILL - one slip stating it says nothing about the next')
+      .toBeNull();
+  });
+
+  // Owner ruling 2026-09-13: silent write, ONE summary afterwards. Ten bills must not produce ten
+  // dialogs - that is the per-slip clicking OBRS-1576 exists to have removed.
+  it('shows ONE summary naming the plans the envelope moved', async () => {
+    const createBatch = jasmine.createSpy('createExpenseBatch').and.returnValue(
+      of({
+        code: 201,
+        message: 'Created',
+        data: {
+          expenseIds: [1],
+          updatedPlans: [
+            { planId: 41, vehicleId: 1, partName: 'ยางหน้า', lastDoneKm: 375395, lastDoneDate: '2026-08-14' },
+            { planId: 42, vehicleId: 1, partName: 'น้ำมันเครื่อง', lastDoneKm: 375395, lastDoneDate: '2026-08-14' },
+          ],
+        },
+      })
+    );
+    const { component, alertService, router } = makeComponent({ createBatch });
+    fillBill(component['billForms'][0], [{ description: 'เปลี่ยนยางหน้า', amount: 8400 }]);
+    component['billForms'][0].get('odometerKm')!.setValue(375395);
+
+    await component['submitEnvelope']();
+
+    expect(alertService.confirm).toHaveBeenCalledTimes(1);
+    expect(alertService.success)
+      .withContext('the summary REPLACES the plain success alert, it is not a second dialog')
+      .not.toHaveBeenCalled();
+    const options = alertService.confirm.calls.mostRecent().args[0];
+    expect(options.text).toContain('ADMIN.EXPENSES.BATCH.PLANS_UPDATED');
+    expect(options.text)
+      .withContext('the owner recognises the part name, not the plan id')
+      .toContain('ADMIN.EXPENSES.BATCH.PLAN_UPDATED_LINE');
+    expect(router.navigate)
+      .withContext('declining the link goes where a save always went')
+      .toHaveBeenCalledWith(['/admin/expenses']);
+  });
+
+  it('takes the owner to the plan page when the summary link is accepted', async () => {
+    const createBatch = jasmine.createSpy('createExpenseBatch').and.returnValue(
+      of({
+        code: 201,
+        message: 'Created',
+        data: {
+          expenseIds: [1],
+          updatedPlans: [
+            { planId: 41, vehicleId: 1, partName: 'ยางหน้า', lastDoneKm: 375395, lastDoneDate: '2026-08-14' },
+          ],
+        },
+      })
+    );
+    const { component, router } = makeComponent({ createBatch, confirmPlans: true });
+    fillBill(component['billForms'][0], [{ description: 'เปลี่ยนยางหน้า', amount: 8400 }]);
+
+    await component['submitEnvelope']();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/vehicles']);
+  });
+
+  // By far the common case: no odometer, or a stack that is not repairs. It must still get the
+  // plain "saved" confirmation it always had - a save that says nothing reads as a save that failed.
+  it('keeps the plain success alert for an envelope that moved no plan', async () => {
+    const { component, alertService } = makeComponent();
+    fillBill(component['billForms'][0], [{ description: 'ค่าแรง', amount: 300 }]);
+
+    await component['submitEnvelope']();
+
+    expect(alertService.success).toHaveBeenCalledTimes(1);
+    expect(alertService.confirm).not.toHaveBeenCalled();
+  });
+
+  it('treats a server that sends no updatedPlans key as "nothing moved", not as a crash', async () => {
+    const createBatch = jasmine
+      .createSpy('createExpenseBatch')
+      .and.returnValue(of({ code: 201, message: 'Created', data: { expenseIds: [1] } }));
+    const { component, alertService, router } = makeComponent({ createBatch });
+    fillBill(component['billForms'][0], [{ description: 'ค่าแรง', amount: 300 }]);
+
+    await component['submitEnvelope']();
+
+    expect(alertService.success).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/expenses']);
+  });
+
   it('requires an operator from an admin and none from an owner', () => {
     expect(makeComponent({ isAdmin: true }).component['envelopeForm'].get('ownerSelection')!.valid).toBeFalse();
     expect(makeComponent().component['envelopeForm'].get('ownerSelection')!.valid).toBeTrue();

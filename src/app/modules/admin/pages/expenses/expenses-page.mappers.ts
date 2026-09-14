@@ -418,6 +418,14 @@ export interface ExpenseFormValue {
    * does. There is therefore no empty-string case to unpick at the payload boundary. */
   payeeId: number | null;
   note: string | null;
+  /**
+   * OBRS-1588: the odometer off a repair bill. Optional on this interface because only the ENVELOPE
+   * screen renders the control - the single-bill modal has no such field - which is also why the
+   * value is mapped to the payload by `ExpenseBatchPageComponent#toBillPayload` rather than by
+   * `toExpensePayload` below: a shared mapper reading a property one of its two callers never has
+   * reads as a field somebody forgot to render.
+   */
+  odometerKm?: number | string | null;
   /** OBRS-1374: the repeater's rows. Absent when the caller has no lines at all. */
   items?: ExpenseItemFormValue[];
 }

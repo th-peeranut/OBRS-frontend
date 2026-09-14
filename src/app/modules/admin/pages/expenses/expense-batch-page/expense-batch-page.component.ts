@@ -8,6 +8,7 @@ import {
   AdminOwnerDto,
   AdminVehicleDto,
   CreateExpensePayload,
+  MaintenancePlanTouchDto,
 } from '../../../../../services/admin/admin-api.service';
 import {
   AdminExpensePayeeDto,
@@ -226,12 +227,20 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
     try {
       const bills = this.billForms.map((bill) => this.toBillPayload(bill));
-      await firstValueFrom(this.adminApiService.createExpenseBatch({ bills }));
-      await this.alertService.success(
-        this.translate.instant('ADMIN.EXPENSES.BATCH.SAVED', { n: bills.length })
-      );
+      const response = await firstValueFrom(this.adminApiService.createExpenseBatch({ bills }));
+      const saved = this.translate.instant('ADMIN.EXPENSES.BATCH.SAVED', { n: bills.length });
+      // OBRS-1588: the plain success alert still fires for every envelope that moved no plan, which
+      // is every non-repair stack and every bill with no odometer on it - by far the common case.
+      // Only an envelope that DID move something gets the summary, and only that one offers the link.
+      const updatedPlans = response?.data?.updatedPlans ?? [];
+      let showPlans = false;
+      if (updatedPlans.length > 0) {
+        showPlans = await this.reportPlanUpdates(saved, updatedPlans);
+      } else {
+        await this.alertService.success(saved);
+      }
       await this.expensesStore.refresh();
-      await this.router.navigate(['/admin/expenses']);
+      await this.router.navigate([showPlans ? '/admin/vehicles' : '/admin/expenses']);
     } catch (error) {
       this.collapsed = this.collapsed.map(() => false);
       const message =
@@ -247,6 +256,8 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
    * uses — rather than assembling an object here, so the sentinel handling, the trimming and the
    * date format cannot drift between the two screens that write the same table.
    *
+   * <p>`odometerKm` is the one field mapped outside that shared mapper — see the note on the line.
+   *
    * <p>The three fields this screen does not show are supplied as `null` at this boundary rather
    * than as controls nobody can reach: `receiptNo` and `vatAmount` because the owner ruled them off
    * the screen on 2026-08-24 (the COLUMNS stay), `note` because the approved mock has no place for
@@ -254,14 +265,59 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
    */
   private toBillPayload(bill: FormGroup): CreateExpensePayload {
     const raw = bill.getRawValue() as Partial<ExpenseFormValue>;
-    return toExpensePayload({
-      ...raw,
-      ownerSelection: String(this.envelopeForm.get('ownerSelection')?.value ?? ''),
-      amount: this.billTotal(bill),
-      vatAmount: null,
-      receiptNo: null,
-      note: null,
-    } as ExpenseFormValue);
+    // OBRS-1588: mapped HERE rather than inside `toExpensePayload`, because this is the only screen
+    // with the control — the single-bill modal has no odometer field, and a shared mapper reading a
+    // property that exists on one of its two callers reads as a field someone forgot to render.
+    const odometerKm = String(raw.odometerKm ?? '').trim();
+    return {
+      ...toExpensePayload({
+        ...raw,
+        ownerSelection: String(this.envelopeForm.get('ownerSelection')?.value ?? ''),
+        amount: this.billTotal(bill),
+        vatAmount: null,
+        receiptNo: null,
+        note: null,
+      } as ExpenseFormValue),
+      odometerKm: odometerKm === '' ? null : Number(odometerKm),
+    };
+  }
+
+  /**
+   * OBRS-1588: the ONE post-save summary of what the envelope did to the maintenance plans.
+   *
+   * <p>The owner's 2026-09-13 ruling, in full: the plan write itself is silent — a confirm box per
+   * bill would hand back exactly the per-slip clicking this screen exists to remove, so ten bills
+   * must produce one summary and not ten dialogs — but it must not be INVISIBLE, because a plan
+   * that moved without anyone seeing it cannot be checked when the number on the slip was a typo.
+   *
+   * <p>So it is one dialog, after the save, with the plans named; and its confirm button is the
+   * link to the plan page rather than an OK, because "the number looks wrong" and "take me to where
+   * I can fix it" are the same thought. Declining goes to the expense log as a save always did.
+   *
+   * <p>The count is stated separately from the list on purpose: seeing `3` where he expected one is
+   * how the owner learns a part is tracked by more than one plan — the summary reveals that rather
+   * than hiding it.
+   */
+  private async reportPlanUpdates(saved: string, plans: MaintenancePlanTouchDto[]): Promise<boolean> {
+    const lines = plans
+      .map((plan) =>
+        this.translate.instant('ADMIN.EXPENSES.BATCH.PLAN_UPDATED_LINE', {
+          part: plan.partName ?? this.translate.instant('ADMIN.EXPENSES.BATCH.PLAN_UNNAMED_PART'),
+          km: plan.lastDoneKm.toLocaleString(),
+        })
+      )
+      .join('\n');
+    return this.alertService.confirm({
+      title: saved,
+      text: `${this.translate.instant('ADMIN.EXPENSES.BATCH.PLANS_UPDATED', {
+        n: plans.length,
+      })}\n${lines}`,
+      confirmButtonText: this.translate.instant('ADMIN.EXPENSES.BATCH.GO_TO_PLANS'),
+      cancelButtonText: this.translate.instant('ADMIN.COMMON.CLOSE'),
+      icon: 'success',
+      // The summary is a LIST, not a sentence - without this every bullet collapses onto one line.
+      multiline: true,
+    });
   }
 
   private billTotal(bill: FormGroup): number {

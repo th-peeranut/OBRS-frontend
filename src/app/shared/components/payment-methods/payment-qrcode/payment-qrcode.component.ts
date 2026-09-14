@@ -21,6 +21,7 @@ import {
   PaymentPayload,
   PaymentResponse,
 } from '../../../../shared/interfaces/payment.interface';
+import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { isHandledByBackendMessage } from '../../../../shared/lib/payment-error-codes';
 import { formatMoney } from '../../../lib/money-display';
@@ -106,7 +107,8 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     private bookingService: BookingService,
     private paymentService: PaymentService,
     private alertService: AlertService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private maintenanceWindowService: MaintenanceWindowService
   ) {
     this.amountDisplay = this.formatAmount(0);
   }
@@ -147,8 +149,41 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     this.isWaitingForConfirmation = false;
   }
 
+  /**
+   * OBRS-1902: true while an announced maintenance window has its payment lock open. The owner's
+   * ruling of 2026-09-14 was "disable the pay button during the countdown" - a customer who starts
+   * an Omise charge seconds before the process dies is the case this exists to prevent.
+   *
+   * A getter, re-read on every change-detection pass, because this component already re-renders
+   * once a second from its own seat-hold countdown; a subscription would buy nothing and would
+   * have to be torn down. It gates the button AND the handler: the button is what a customer sees,
+   * the early return is what a customer who re-enables it in devtools gets.
+   *
+   * NOT a security control - the API still accepts the charge. The safety net for a payment that
+   * really is caught mid-outage is ChargeReconciliationService, which is deliberately untouched
+   * by this card.
+   */
+  get isPaymentLocked(): boolean {
+    return this.maintenanceWindowService.isPaymentLockedNow();
+  }
+
+  /**
+   * OBRS-1902: the lock bites only BEFORE a charge exists.
+   *
+   * Once `ensurePromptPayQrCode()` has run, a real PromptPay charge is sitting at the gateway and
+   * its QR is on the customer's screen - payable from their banking app whether or not this page
+   * cooperates. The lock opens minutes before the outage does, so it would otherwise fire in the
+   * middle of that customer's session and take away the QR, the Download button and the confirm
+   * step for a payment they may already have scanned. Stranding someone mid-payment is the exact
+   * thing the owner asked for this feature to PREVENT ("disable the pay button during the
+   * countdown" - a button that starts a payment, not one that finishes an existing one).
+   */
+  get isNewChargeLocked(): boolean {
+    return this.isPaymentLocked && !this.qrImageUrl;
+  }
+
   async confirmPayment(): Promise<void> {
-    if (this.isSubmittingPayment || !this.qrPaymentUrl) {
+    if (this.isSubmittingPayment || !this.qrPaymentUrl || this.isNewChargeLocked) {
       return;
     }
 
@@ -194,7 +229,12 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       this.hasRequestedQrCode ||
       this.qrImageUrl ||
       this.isSubmittingPayment ||
-      this.isWaitingForConfirmation
+      this.isWaitingForConfirmation ||
+      // OBRS-1902: the QR is not a display of an existing charge - asking for it CREATES one
+      // (ngOnInit calls this the moment the tab opens). Gating only the confirm button would
+      // still leave a fresh PromptPay charge sitting at the gateway when the deploy lands,
+      // which is the exact stuck payment the owner asked to prevent.
+      this.isPaymentLocked
     ) {
       return;
     }
