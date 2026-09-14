@@ -308,21 +308,23 @@ app-recent-routes-quick-pick.has-routes + .station-section {
   margin-top: $space-xs;
 }
 
-// OBRS-1020: the five-day quick-date strip. A flex child of `.station-section`
-// that takes a full line of its OWN above the bar — `width: 100%` is the same
-// mechanism `.map-hint-row` uses to take the line below it, and `order: -1`
-// is what lifts it above segments that all default to `order: 0`.
+// OBRS-1020: the five-day quick-date strip. A child of `.booking-card` (a
+// column flex container), NOT of `.station-section` — see the template comment
+// for the two placements that were measured and rejected, one of which squeezed
+// every segment of the bar to 1px outside the card.
 //
-// Inside the bar rather than above it as a sibling: the rule directly above is
-// an ADJACENT-sibling one, so an element between the quick-pick strip and
-// `.station-section` would silently drop OBRS-928's proximity spacing.
-.station-section > .quick-dates-row {
-  order: -1;
-  width: 100%;
+// `margin-top` matches the quick-pick strip below it so the card keeps one
+// rhythm; `.station-section` keeps its own $space-lg, and flex children do not
+// collapse margins, which is what the spacing below this strip is.
+//
+// Deliberately not `.d-flex`, for the reason recent-routes-quick-pick.scss
+// gives: that class as a direct child of `.booking-card` is captured by
+// `.booking-card > .d-flex { gap: … }` and would override this gap.
+.quick-dates-row {
   display: flex;
   flex-direction: column;
   gap: $space-3xs;
-  margin-bottom: $space-2xs;
+  margin-top: $space-lg;
 }
 
 .quick-dates-title {
