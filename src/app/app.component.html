@@ -7,6 +7,11 @@ nothing at all on staff/admin pages or once the flag is flipped back on. -->
 first in the DOM so a screen reader announces "you are viewing as X, the data is
 still yours" before the page it qualifies. Renders nothing unless a preview is on. -->
 <app-role-preview-banner></app-role-preview-banner>
+<!-- OBRS-1902: same placement and the same reasons as the two strips above - normal flow, above
+the outlet, announced first. Unlike them it is NOT limited to customer pages: a counter clerk
+mid-sale is exactly who must not be surprised by the site going down. Renders nothing unless an
+unfinished maintenance window has been announced from the back office. -->
+<app-maintenance-notice></app-maintenance-notice>
 <router-outlet></router-outlet>
 <!-- OBRS-1832: the report MODAL, not a button. It renders nothing until an
 `<app-report-trigger>` somewhere in the chrome asks it to open, so it occupies no

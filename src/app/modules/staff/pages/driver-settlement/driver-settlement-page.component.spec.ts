@@ -551,4 +551,264 @@ describe('DriverSettlementPageComponent (OBRS-1756)', () => {
         .disabled
     ).toBeFalse();
   });
+  it('OBRS-1903 AC-1/AC-2: opens with NO อื่น ๆ row, and the button is how every one of them arrives', async () => {
+    await setUp();
+    pickVehicle();
+
+    // AC-1: the five fixed costs and not one OTHER among them. The sixth row OBRS-1896 put on this
+    // screen permanently is gone from the table - the owner's ruling (1) is that a row nobody
+    // asked for is a row the counter has to notice and clear before the day will submit.
+    expect(component['visibleExpenseRows'].map((r) => r.category)).toEqual([
+      'DRIVER_WAGE',
+      'FUEL',
+      'TOLL',
+      'PERMIT_FEE',
+      'PARKING_FEE',
+    ]);
+    expect(
+      fixture.nativeElement.querySelectorAll('[data-testid^="settlement-other-row-"]').length
+    ).toBe(0);
+
+    const add: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-testid="settlement-add-other"]'
+    );
+    expect(add).not.toBeNull();
+    expect(add.disabled).toBeFalse();
+
+    add.click();
+    fixture.detectChanges();
+
+    // AC-2: one press, one EMPTY row, at the end of the table and not inside the fixed list.
+    expect(component['otherExpenseRows'].length).toBe(1);
+    expect(component['visibleExpenseRows'].map((r) => r.category).slice(-1)).toEqual(['OTHER']);
+    const label: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="settlement-other-label-0"]'
+    );
+    expect(label.value).toBe('');
+    // AC-3: the server's own @Size(max = 100) (OBRS-1363), said on the box so a long name cannot
+    // take the whole day's all-or-nothing submit down with it.
+    expect(label.maxLength).toBe(100);
+
+    add.click();
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelectorAll('[data-testid^="settlement-other-row-"]').length
+    ).toBe(2);
+  });
+
+  it('OBRS-1903 AC-5: two rows send two lines, each under its OWN name, and an empty one is dropped', async () => {
+    await setUp();
+    pickVehicle();
+
+    component['addOtherRow']();
+    component['addOtherRow']();
+    component['addOtherRow']();
+    const [wash, parcel, blank] = component['otherExpenseRows'];
+    wash.otherLabelInput = 'ค่าล้างรถ';
+    wash.amountInput = '300';
+    parcel.otherLabelInput = 'ค่าส่งของ';
+    parcel.amountInput = '120.50';
+    expect(blank.amountInput).toBe('');
+    fixture.detectChanges();
+
+    expect(component['blockedReasonKey']).toBeNull();
+    // Read BEFORE the submit: a success clears the screen (`resetEntryState`), so this total only
+    // has an answer while the day is still up. Both amounts reach it: wage 600 + 300 + 120.50.
+    expect(component['settlementTotal']).toBe(1020.5);
+
+    component['onSubmit']();
+
+    const payload = api.postDriverCashDaySettle.calls.mostRecent()
+      .args[0] as DriverCashDaySettleReqDto;
+    const others = payload.expenses.filter((e) => e.category === 'OTHER');
+    // The whole card in one assertion: two free-text costs the report can tell apart, rather than
+    // one lump with both of them explained in a note.
+    expect(others.map((e) => [e.categoryOtherLabel, e.amount])).toEqual([
+      ['ค่าล้างรถ', '300'],
+      ['ค่าส่งของ', '120.50'],
+    ]);
+    // The blank row is a cost that did not happen, not a zero-baht one.
+    expect(others.length).toBe(2);
+    // The label rides ONLY the rows allowed to carry one - `isCategoryOtherLabelValid` 400s the
+    // whole submit if any other row has it.
+    expect(
+      payload.expenses.every((e) => (e.category === 'OTHER' ? true : !e.categoryOtherLabel))
+    ).toBeTrue();
+  });
+
+  it('OBRS-1903 AC-3: the X takes out the row it sits on - the FIRST one included - down to none', async () => {
+    await setUp();
+    pickVehicle();
+
+    component['addOtherRow']();
+    component['addOtherRow']();
+    component['otherExpenseRows'][0].otherLabelInput = 'ค่าล้างรถ';
+    component['otherExpenseRows'][1].otherLabelInput = 'ค่าส่งของ';
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // The first row's X. A table keyed by category could not tell this row from the second, and
+    // whichever it removed, the survivor would come back holding the wrong name.
+    (
+      fixture.nativeElement.querySelector(
+        '[data-testid="settlement-other-remove-0"]'
+      ) as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component['otherExpenseRows'].map((r) => r.otherLabelInput)).toEqual(['ค่าส่งของ']);
+    expect(
+      (
+        fixture.nativeElement.querySelector(
+          '[data-testid="settlement-other-label-0"]'
+        ) as HTMLInputElement
+      ).value
+    ).toBe('ค่าส่งของ');
+
+    (
+      fixture.nativeElement.querySelector(
+        '[data-testid="settlement-other-remove-0"]'
+      ) as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+
+    // Down to zero, which is the AC-1 screen again.
+    expect(component['otherExpenseRows'].length).toBe(0);
+    expect(component['visibleExpenseRows'].some((r) => r.category === 'OTHER')).toBeFalse();
+    expect(
+      fixture.nativeElement.querySelectorAll('[data-testid^="settlement-other-row-"]').length
+    ).toBe(0);
+  });
+
+  it('OBRS-1903 AC-4: the button stops at 15 - the quota the server actually leaves, not 16', async () => {
+    await setUp();
+    pickVehicle();
+
+    for (let i = 0; i < 15; i += 1) {
+      component['addOtherRow']();
+    }
+    fixture.detectChanges();
+
+    expect(component['otherExpenseRows'].length).toBe(15);
+    expect(component['canAddOtherRow']).toBeFalse();
+    expect(
+      (
+        fixture.nativeElement.querySelector(
+          '[data-testid="settlement-add-other"]'
+        ) as HTMLButtonElement
+      ).disabled
+    ).toBeTrue();
+    expect(fixture.nativeElement.querySelector('[data-testid="settlement-other-full"]')).not.toBeNull();
+
+    // A press that lands anyway - a stale click, a keyboard repeat - adds nothing.
+    component['addOtherRow']();
+    expect(component['otherExpenseRows'].length).toBe(15);
+
+    // WHY 15 and not the 16 the card estimated: `DriverCashDaySettleReqDto.expenses` is
+    // @Size(max = 20) over the WHOLE list, and a day that used every fixed row has already spent
+    // five of those slots - DRIVER_WAGE travels on every submit even though the server is what
+    // prices it (OBRS-1356). Filling the screen right up proves the payload lands ON the bound.
+    component['otherExpenseRows'].forEach((row, index) => {
+      row.otherLabelInput = `รายการที่ ${index + 1}`;
+      row.amountInput = '10';
+    });
+    for (const category of ['FUEL', 'TOLL', 'PERMIT_FEE', 'PARKING_FEE']) {
+      component['expenseRows'].find((r) => r.category === category)!.amountInput = '50';
+    }
+    fixture.detectChanges();
+    expect(component['blockedReasonKey']).toBeNull();
+
+    component['onSubmit']();
+    const payload = api.postDriverCashDaySettle.calls.mostRecent()
+      .args[0] as DriverCashDaySettleReqDto;
+    expect(payload.expenses.length).toBe(20);
+    expect(payload.expenses.filter((e) => e.category === 'OTHER').length).toBe(15);
+  });
+
+  it('OBRS-1903 AC-6: a half-filled row ANYWHERE in the list blocks the submit, and says which row', async () => {
+    await setUp();
+    pickVehicle();
+
+    component['addOtherRow']();
+    component['addOtherRow']();
+    const [first, second] = component['otherExpenseRows'];
+    first.otherLabelInput = 'ค่าล้างรถ';
+    first.amountInput = '300';
+    // The SECOND row is the broken one. A gate that asks only the first row - the shape this
+    // screen had while there was only ever one - passes this day straight into the server's 400,
+    // which refuses the WHOLE submit rather than the row.
+    second.amountInput = '120';
+    fixture.detectChanges();
+
+    expect(component['blockedReasonKey']).toBe('STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="settlement-other-incomplete-1"]')
+    ).not.toBeNull();
+    // Named on the row that is wrong, and only there.
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="settlement-other-incomplete-0"]')
+    ).toBeNull();
+
+    // The other direction of the same rule: a name with no amount is refused too.
+    second.amountInput = '';
+    second.otherLabelInput = 'ค่าส่งของ';
+    fixture.detectChanges();
+    expect(component['blockedReasonKey']).toBe('STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE');
+
+    second.amountInput = '120';
+    fixture.detectChanges();
+    expect(component['blockedReasonKey']).toBeNull();
+    expect(
+      fixture.nativeElement.querySelectorAll('[data-testid^="settlement-other-incomplete-"]').length
+    ).toBe(0);
+  });
+
+  it('OBRS-1903 AC-7: an amended day re-opens with ONE row per OTHER entry that was sent', async () => {
+    // The failure this pins: keyed by category the two collapse into whichever arrived last, the
+    // amend submit carries one line instead of two, and the day is settled 300 short with nothing
+    // on the screen having said so.
+    await setUp(
+      context({
+        alreadySettled: true,
+        lastSubmission: {
+          businessDate: '2026-09-08',
+          vehicleId: 3,
+          driverId: 44,
+          expenses: [
+            { category: 'DRIVER_WAGE', amount: null, note: null },
+            { category: 'FUEL', amount: '500', note: null },
+            { category: 'OTHER', amount: '300', note: 'จ่ายสด', categoryOtherLabel: 'ค่าล้างรถ' },
+            { category: 'OTHER', amount: '120.50', note: null, categoryOtherLabel: 'ค่าส่งของ' },
+          ],
+          repairBills: [],
+        },
+      })
+    );
+    pickVehicle();
+
+    expect(
+      component['otherExpenseRows'].map((r) => [r.otherLabelInput, r.amountInput, r.noteInput])
+    ).toEqual([
+      ['ค่าล้างรถ', '300', 'จ่ายสด'],
+      ['ค่าส่งของ', '120.50', ''],
+    ]);
+    // The fixed rows come back on their own figures and carry no label of their own - one on a
+    // fixed row is the other payload the server refuses outright.
+    expect(component['expenseRows'].find((r) => r.category === 'FUEL')!.amountInput).toBe('500');
+    expect(component['expenseRows'].find((r) => r.category === 'FUEL')!.otherLabelInput).toBe('');
+    expect(component['blockedReasonKey']).toBeNull();
+    // wage 600 + fuel 500 + 300 + 120.50 - the amend charges the box every line it re-opened on,
+    // and like AC-5 this is read before the submit clears the screen.
+    expect(component['settlementTotal']).toBe(1520.5);
+
+    component['onSubmit']();
+    const payload = api.postDriverCashDaySettle.calls.mostRecent()
+      .args[0] as DriverCashDaySettleReqDto;
+    expect(
+      payload.expenses.filter((e) => e.category === 'OTHER').map((e) => e.categoryOtherLabel)
+    ).toEqual(['ค่าล้างรถ', 'ค่าส่งของ']);
+  });
 });

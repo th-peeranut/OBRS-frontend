@@ -39,6 +39,15 @@
   -webkit-backdrop-filter: blur(8px);
 }
 
+// OBRS-1588: opt-in for AlertService.confirm({ multiline: true }). SweetAlert2 sets `text` via
+// textContent and ships no white-space rule for this container, so the browser default collapses
+// every newline escape to a space - which turns a list of "plans updated" into one run-on
+// line. `pre-line` honours the newlines while still collapsing runs of spaces, and leaves the
+// content text-only.
+.swal2-html-container.swal-preline {
+  white-space: pre-line;
+}
+
 * {
   font-family: "Sarabun", sans-serif;
 }

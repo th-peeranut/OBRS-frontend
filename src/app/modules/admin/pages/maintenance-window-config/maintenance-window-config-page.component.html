@@ -1,0 +1,140 @@
+@if (errorMessage) {
+  <section class="admin-page-intro">
+    <div>
+      <p class="admin-muted">{{ errorMessage }}</p>
+    </div>
+  </section>
+}
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.PAGES.MAINTENANCE_WINDOW' | translate }}</h4>
+  </div>
+
+  @if (isLoading) {
+    @for (row of [1, 2, 3]; track row) {
+      <div class="admin-skeleton admin-skeleton--sm mb-2"></div>
+    }
+  }
+
+  @if (!isLoading) {
+    <!-- The state line is first: "nothing is scheduled" is what this page says on an ordinary
+    day, and an admin should not have to read the form to find that out. -->
+    <p class="admin-muted">
+      @if (scheduled) {
+        {{ 'ADMIN.MAINTENANCE_WINDOW.SCHEDULED_NOTE' | translate: {
+            start: (scheduled.startAt | date: 'dd/MM/yyyy HH:mm'),
+            end: (scheduled.endAt | date: 'dd/MM/yyyy HH:mm'),
+            lockedFrom: (scheduled.paymentLockedFrom | date: 'dd/MM/yyyy HH:mm')
+          } }}
+      } @else {
+        {{ 'ADMIN.MAINTENANCE_WINDOW.NONE_SCHEDULED' | translate }}
+      }
+    </p>
+
+    <form [formGroup]="form" class="admin-form-grid mt-3" (ngSubmit)="save()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.MAINTENANCE_WINDOW.START_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <p-datePicker
+          formControlName="startAt"
+          styleClass="app-date-field"
+          panelStyleClass="app-date-field-panel"
+          dateFormat="dd/mm/yy"
+          [showTime]="true"
+          [hourFormat]="'24'"
+          [showIcon]="true"
+          [iconDisplay]="'input'"
+          [showButtonBar]="true"
+          [placeholder]="'ADMIN.MAINTENANCE_WINDOW.START_LABEL' | translate"
+          >
+          <ng-template pTemplate="inputicon">
+            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+          </ng-template>
+        </p-datePicker>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.MAINTENANCE_WINDOW.END_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <p-datePicker
+          formControlName="endAt"
+          styleClass="app-date-field"
+          panelStyleClass="app-date-field-panel"
+          dateFormat="dd/mm/yy"
+          [showTime]="true"
+          [hourFormat]="'24'"
+          [showIcon]="true"
+          [iconDisplay]="'input'"
+          [showButtonBar]="true"
+          [placeholder]="'ADMIN.MAINTENANCE_WINDOW.END_LABEL' | translate"
+          >
+          <ng-template pTemplate="inputicon">
+            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+          </ng-template>
+        </p-datePicker>
+        @if (hasDateRangeError()) {
+          <small class="admin-error" role="alert">
+            {{ 'ADMIN.MAINTENANCE_WINDOW.RANGE_VALIDATION' | translate }}
+          </small>
+        }
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label" for="paymentLockMinutesBefore">
+          {{ 'ADMIN.MAINTENANCE_WINDOW.LOCK_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input
+          id="paymentLockMinutesBefore"
+          class="admin-field"
+          type="number"
+          min="0"
+          max="180"
+          step="1"
+          formControlName="paymentLockMinutesBefore"
+          />
+        <small class="admin-muted">{{ 'ADMIN.MAINTENANCE_WINDOW.LOCK_HELPER' | translate }}</small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label" for="messageTh">
+          {{ 'ADMIN.MAINTENANCE_WINDOW.MESSAGE_TH_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input id="messageTh" class="admin-field" type="text" maxlength="300" formControlName="messageTh" />
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label" for="messageEn">
+          {{ 'ADMIN.MAINTENANCE_WINDOW.MESSAGE_EN_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input id="messageEn" class="admin-field" type="text" maxlength="300" formControlName="messageEn" />
+        <small class="admin-muted">{{ 'ADMIN.MAINTENANCE_WINDOW.MESSAGE_HELPER' | translate }}</small>
+      </div>
+
+      <div class="admin-form-field full">
+        <button
+          type="submit"
+          class="admin-btn admin-btn-primary"
+          [disabled]="isSaving || form.invalid || hasDateRangeError()"
+          [appPending]="isSaving"
+          >
+          {{ 'ADMIN.COMMON.SAVE' | translate }}
+        </button>
+        <!-- Offered only when something is actually scheduled: there is nothing to call off
+        otherwise, and a button that can only ever be a no-op is a button that invites a click. -->
+        @if (scheduled) {
+          <button
+            type="button"
+            class="admin-btn admin-btn-danger"
+            [disabled]="isSaving"
+            (click)="cancelAnnouncement()"
+            >
+            {{ 'ADMIN.MAINTENANCE_WINDOW.CANCEL_ANNOUNCEMENT' | translate }}
+          </button>
+        }
+      </div>
+    </form>
+  }
+</section>
