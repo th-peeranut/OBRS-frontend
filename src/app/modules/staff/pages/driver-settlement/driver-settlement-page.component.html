@@ -195,7 +195,32 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
         <tbody>
           @for (row of visibleExpenseRows; track row.category) {
             <tr [attr.data-testid]="'settlement-expense-row-' + row.category">
-              <td>{{ categoryLabel(row.category) }}</td>
+              @if (isOtherRow(row)) {
+                <!-- OBRS-1896: the one ITEM cell that is typed. The fixed rows name themselves;
+                this row exists precisely because the cost has no category, so its name IS the
+                input. `maxlength` is the server's own `@Size(max = 100)` said here, before a
+                too-long name can take the whole day's submit down with it. -->
+                <td>
+                  <input
+                    type="text"
+                    class="admin-field"
+                    maxlength="100"
+                    [attr.placeholder]="'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate"
+                    [attr.aria-label]="'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate"
+                    data-testid="settlement-other-label"
+                    [(ngModel)]="row.otherLabelInput"
+                    [name]="'settlementLabel' + row.category"
+                    [disabled]="isContextLoading"
+                  />
+                  @if (isOtherRowIncomplete) {
+                    <small class="admin-error ds-other-error" data-testid="settlement-other-incomplete">
+                      {{ 'STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE' | translate }}
+                    </small>
+                  }
+                </td>
+              } @else {
+                <td>{{ categoryLabel(row.category) }}</td>
+              }
 
               @if (isWageRow(row)) {
                 <!-- OBRS-1356: the server prices this from the owner's rate per leg and writes one
