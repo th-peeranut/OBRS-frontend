@@ -21,6 +21,12 @@
       "why": "OBRS-640 Phase A: a hit-tested mobile tap-target (>=44x44) + rendered-text-size (>=12px) sweep of six customer routes, plus the my-bookings overflow menu and e-ticket modal. CAPTURE and not GATE because the owner's own call (docs/prod/LANE-BRIEFS.md#obrs-640) is that this lands silently for now -- Phase A measures the baseline, Phase B (a separate card) fixes it, and only then does a gate belong here. Run on the unfixed tree most of its cases fail on purpose; that failure, with the full population/violation detail the console prints, IS the AC-1 baseline. Hermetic on the gate lane's terms: it reuses e2e/support/customer-pages.ts's seedCustomerSession/seedStore, with two endpoints (/users/me, /bookings/501/tickets) fulfilled locally for the two entries that map does not carry."
     },
     {
+      "spec": "obrs-1727-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1727capture.config.ts",
+      "why": "OBRS-1727 AC-7 AFTER evidence for retiring /admin/expenses as a single page: the approval lane now sits FIRST on /admin/settlements (AC-1, owner ruling A) under a menu that says it covers both jobs (AC-2), /admin/expenses keeps the form and the log without it (AC-4), and the salesperson cash panel has lost its whole four-button entry row (AC-3, owner ruling D2) while keeping both totals boxes. CAPTURE and not GATE because the verdict belongs to the unit suite and to the backend IT suite that proves the endpoints behind those buttons are closed; this exists so the owner can see the three screens the card names. Each frame asserts what it is evidence OF before it is shot -- the lane is above app-settlements-list by bounding box, the lane is absent from /admin/expenses by count, and all four driver-cash-action test ids resolve to zero -- so a frame that caught the wrong state fails here instead of reaching the card. Hermetic on the gate lane's terms: it reuses e2e/support/gate-admin-session.ts, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-1832-report-trigger.capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs1832capture.config.ts",

@@ -134,6 +134,39 @@ export function toExpenseCategoryOptions(labels: ExpenseCategoryLabels): Option[
   ];
 }
 
+/** OBRS-1727: the 21 `ADMIN.EXPENSES.CATEGORIES.*` lookups, in one place.
+ * Two screens now map an expense row — the log on `/admin/expenses` and the
+ * review lane on `/admin/settlements` — and a category that reads one way in
+ * one of them and another way in the other is exactly what OBRS-1356 already
+ * ruled out for the lane and the log when they shared a page. Takes an
+ * `instant` function rather than `TranslateService` so this file stays free of
+ * any Angular dependency, as its header requires. */
+export function toExpenseCategoryOptionsFrom(instant: (key: string) => string): Option[] {
+  return toExpenseCategoryOptions({
+    fuel: instant('ADMIN.EXPENSES.CATEGORIES.FUEL'),
+    repair: instant('ADMIN.EXPENSES.CATEGORIES.REPAIR'),
+    vehicleTax: instant('ADMIN.EXPENSES.CATEGORIES.VEHICLE_TAX'),
+    act: instant('ADMIN.EXPENSES.CATEGORIES.ACT'),
+    insurance: instant('ADMIN.EXPENSES.CATEGORIES.INSURANCE'),
+    inspection: instant('ADMIN.EXPENSES.CATEGORIES.INSPECTION'),
+    tire: instant('ADMIN.EXPENSES.CATEGORIES.TIRE'),
+    gps: instant('ADMIN.EXPENSES.CATEGORIES.GPS'),
+    toll: instant('ADMIN.EXPENSES.CATEGORIES.TOLL'),
+    permitFee: instant('ADMIN.EXPENSES.CATEGORIES.PERMIT_FEE'),
+    driverWage: instant('ADMIN.EXPENSES.CATEGORIES.DRIVER_WAGE'),
+    instalment: instant('ADMIN.EXPENSES.CATEGORIES.INSTALMENT'),
+    parkingFee: instant('ADMIN.EXPENSES.CATEGORIES.PARKING_FEE'),
+    parcelCompensation: instant('ADMIN.EXPENSES.CATEGORIES.PARCEL_COMPENSATION'),
+    staffWage: instant('ADMIN.EXPENSES.CATEGORIES.STAFF_WAGE'),
+    utility: instant('ADMIN.EXPENSES.CATEGORIES.UTILITY'),
+    rent: instant('ADMIN.EXPENSES.CATEGORIES.RENT'),
+    security: instant('ADMIN.EXPENSES.CATEGORIES.SECURITY'),
+    softwareFee: instant('ADMIN.EXPENSES.CATEGORIES.SOFTWARE_FEE'),
+    central: instant('ADMIN.EXPENSES.CATEGORIES.CENTRAL'),
+    other: instant('ADMIN.EXPENSES.CATEGORIES.OTHER'),
+  });
+}
+
 /** UX-OBRS-685 §4.1.1: the central option is always FIRST and carries the
  * sentinel — no option ever carries `code: ''`, so the dropdown's own
  * placeholder-header (driven by the control's value being unset) can never

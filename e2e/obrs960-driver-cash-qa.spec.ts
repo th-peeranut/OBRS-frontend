@@ -54,25 +54,9 @@ test.describe('OBRS-960 driver cash panel — role gate + entries', () => {
     });
   });
 
-  test('salesperson expands ADVANCE section and the entry list/totals render', async ({ page }) => {
-    await login(page, 'salesperson@system.local');
-    await page.goto(`${BASE}/staff/boarding/${SCHEDULE_ID}`);
-
-    const panel = page.locator('app-driver-cash-panel');
-    await expect(panel).toBeVisible({ timeout: 15000 });
-    // Expand every collapsible section (ADVANCE / PER_HEAD / EXPENSE_PAID headers) so the
-    // existing entries (this schedule already carries an ADVANCE + a REMIT_TO_OWNER share from
-    // the QA API pass) and running totals are visible in the capture.
-    for (const testId of ['driver-cash-action-advance', 'driver-cash-action-per-head', 'driver-cash-action-expense']) {
-      await panel.locator(`[data-testid="${testId}"]`).click();
-      await page.waitForTimeout(200);
-    }
-
-    await page.screenshot({
-      path: 'docs/prod/evidence/obrs-960-boarding-panel-entries-expanded-AFTER.png',
-      fullPage: true,
-    });
-  });
+  // OBRS-1727 AC-3 removed the capture that expanded the ADVANCE / PER_HEAD /
+  // EXPENSE_PAID sections: the panel has no entry forms any more, so there is
+  // nothing left to expand. The panel-visible capture above still holds.
 });
 
 test.describe('OBRS-960 owner settlements — driver-cash days list', () => {
