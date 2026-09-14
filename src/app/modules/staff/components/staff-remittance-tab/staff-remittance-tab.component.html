@@ -1,0 +1,375 @@
+<!-- OBRS-1755 — tab ④ "ส่งยอด". Box order, button wording and the sentence under
+each box follow the signed-off mockup (ร่างที่ 7, items ① … ⑮); nothing here is
+re-derived. -->
+
+@if (isLoading && !remittance) {
+  <span class="admin-skeleton admin-skeleton--sm" data-testid="remittance-loading"></span>
+}
+
+@if (loadError; as err) {
+  <section class="admin-card mt-3">
+    <p class="admin-error" data-testid="remittance-load-error">{{ err | translate }}</p>
+    <button type="button" class="admin-btn" (click)="reload()" data-testid="remittance-retry">
+      {{ 'STAFF.REMITTANCE.RETRY' | translate }}
+    </button>
+  </section>
+}
+
+@if (remittance; as r) {
+  <!-- ② every figure below belongs to the round selected on the left. -->
+  <p class="srt-scope admin-muted" data-testid="remittance-scope">
+    {{ 'STAFF.REMITTANCE.SCOPE' | translate: { time: displayTime(r.departureDateTime) } }}
+  </p>
+
+  <!-- ③ เบิกเงินทดรอง — ROUND counters only (BR-6). -->
+  @if (showAdvanceBox) {
+    <section class="admin-card mt-3" data-testid="remittance-advance">
+      <div class="admin-card-head">
+        <h4>{{ 'STAFF.REMITTANCE.ADVANCE.TITLE' | translate }}</h4>
+        <!-- BR-13: this reads `deductions.advancePaidOut`, the SAME field the
+        deduction row in box ⑦ reads — two numbers cannot disagree. -->
+        <strong data-testid="remittance-advance-recorded">
+          {{ formatMoney(recordedAdvanceCents / 100) }}
+        </strong>
+      </div>
+      <p class="admin-muted" data-testid="remittance-advance-recorded-count">
+        {{ 'STAFF.REMITTANCE.ADVANCE.RECORDED' | translate: { n: r.advance.recordedCount } }}
+      </p>
+
+      @if (advanceBlockedKey; as blockedKey) {
+        <!-- ④ -->
+        <p class="admin-error" data-testid="remittance-advance-blocked">
+          {{ blockedKey | translate }}
+        </p>
+      } @else {
+        <!-- Reused verbatim from /staff/boarding — `showSubmit` false because
+        this screen has exactly one primary button (owner, 2026-09-09). -->
+        <app-driver-cash-advance-form
+          [isSubmitting]="isSubmitting"
+          [submitError]="null"
+          [showSubmit]="false"
+          (amountChange)="onAdvanceAmountChange($event)"
+        ></app-driver-cash-advance-form>
+        <p class="admin-muted" data-testid="remittance-advance-note">
+          {{ 'STAFF.REMITTANCE.ADVANCE.NO_BUTTON_NOTE' | translate }}
+        </p>
+      }
+    </section>
+  }
+
+  <!-- ⑤ ตั๋วที่คุณขายในรอบนี้ -->
+  <section class="admin-card mt-3" data-testid="remittance-tickets">
+    <div class="admin-card-head">
+      <h4>{{ 'STAFF.REMITTANCE.TICKETS.TITLE' | translate }}</h4>
+      <strong data-testid="remittance-tickets-total">{{ formatMoney(r.myTickets.totalAmount) }}</strong>
+    </div>
+
+    <div class="srt-pills">
+      <span class="srt-pill">
+        <span class="admin-muted">{{ 'STAFF.REMITTANCE.TICKETS.COUNT' | translate }}</span>
+        <span data-testid="remittance-ticket-count">{{ r.myTickets.ticketCount }}</span>
+      </span>
+      <span class="srt-pill">
+        <span class="admin-muted">{{ 'STAFF.REMITTANCE.TICKETS.CASH' | translate }}</span>
+        <span data-testid="remittance-ticket-cash">{{ formatMoney(r.myTickets.cashAmount) }}</span>
+      </span>
+    </div>
+
+    <p class="srt-subhead">{{ 'STAFF.REMITTANCE.TICKETS.BY_FARE' | translate }}</p>
+    @if (r.myTickets.byFare.length === 0) {
+      <p class="admin-muted" data-testid="remittance-by-fare-empty">
+        {{ 'STAFF.REMITTANCE.TICKETS.EMPTY' | translate }}
+      </p>
+    } @else {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>{{ 'STAFF.REMITTANCE.TICKETS.COL.PRICE' | translate }}</th>
+              <th>{{ 'STAFF.REMITTANCE.TICKETS.COL.TYPE' | translate }}</th>
+              <th class="srt-num">{{ 'STAFF.REMITTANCE.TICKETS.COL.QTY' | translate }}</th>
+              <th class="srt-num">{{ 'STAFF.REMITTANCE.TICKETS.COL.AMOUNT' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of r.myTickets.byFare; track line.netPrice + '|' + line.occupantType + '|' + line.fareCategory) {
+              <tr>
+                <td>{{ formatMoney(line.netPrice) }}</td>
+                <!-- BR-8: occupantType first. A parcel that bought a seat carries
+                the entity's default fareCategory ("adult") and would otherwise
+                print as a passenger. -->
+                <td>{{ fareLineLabelKey(line) | translate }}</td>
+                <td class="srt-num">{{ line.ticketCount }}</td>
+                <td class="srt-num">{{ formatMoney(line.amount) }}</td>
+              </tr>
+            }
+            <tr class="srt-sum">
+              <td colspan="2">{{ 'STAFF.REMITTANCE.TICKETS.SUM' | translate }}</td>
+              <td class="srt-num">{{ r.myTickets.ticketCount }}</td>
+              <td class="srt-num">{{ formatMoney(r.myTickets.totalAmount) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <p class="srt-subhead">{{ 'STAFF.REMITTANCE.TICKETS.BY_METHOD' | translate }}</p>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'STAFF.REMITTANCE.TICKETS.COL.METHOD' | translate }}</th>
+            <th class="srt-num">{{ 'STAFF.REMITTANCE.TICKETS.COL.QTY' | translate }}</th>
+            <th class="srt-num">{{ 'STAFF.REMITTANCE.TICKETS.COL.AMOUNT' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of r.myTickets.byMethod; track line.method) {
+            <tr>
+              <td>{{ methodLabelKey(line.method) | translate }}</td>
+              <td class="srt-num">{{ line.ticketCount }}</td>
+              <td class="srt-num">{{ formatMoney(line.amount) }}</td>
+            </tr>
+          }
+          <!-- ⑭ / BR-21: a FIXED placeholder row. Taking transfer money at the
+          counter is a whole payment channel (OBRS-1714), not a display change —
+          this screen must not imply it is open. ⛔ do not wire this to data. -->
+          <tr class="srt-muted-row" data-testid="remittance-transfer-row">
+            <td>
+              {{ 'STAFF.REMITTANCE.TICKETS.TRANSFER' | translate }}
+              <span class="srt-chip">{{ 'STAFF.REMITTANCE.TICKETS.TRANSFER_CLOSED' | translate }}</span>
+            </td>
+            <td class="srt-num">{{ 'STAFF.REMITTANCE.TICKETS.NONE' | translate }}</td>
+            <td class="srt-num">{{ 'STAFF.REMITTANCE.TICKETS.NONE' | translate }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="admin-muted" data-testid="remittance-mine-only">
+      {{ 'STAFF.REMITTANCE.TICKETS.MINE_ONLY' | translate }}
+    </p>
+  </section>
+
+  <!-- ⑦ เงินสดที่ต้องส่งให้เจ้าของ -->
+  <section class="admin-card mt-3" data-testid="remittance-equation">
+    <div class="admin-card-head">
+      <h4>{{ 'STAFF.REMITTANCE.EQUATION.TITLE' | translate }}</h4>
+      <!-- BR-6: the badge names the CADENCE the server sent, never a stop. -->
+      <span class="srt-chip" data-testid="remittance-cadence">
+        {{ (isRoundCadence ? 'STAFF.REMITTANCE.CADENCE.ROUND' : 'STAFF.REMITTANCE.CADENCE.DAY') | translate }}
+      </span>
+    </div>
+
+    <div class="srt-eq">
+      <div class="srt-eq-row">
+        <span>{{ 'STAFF.REMITTANCE.EQUATION.CASH_IN' | translate }}</span>
+        <span data-testid="remittance-eq-cash-in">{{ formatMoney(r.myTickets.cashAmount) }}</span>
+      </div>
+
+      <!-- ⑥ / BR-25 — owner ruling 2026-09-13 (option ①): a POSITIVE TERM of the
+      equation, grouped with the ticket cash above the total rule, not a note.
+      The backend has already folded it into `myExpectedCash` and taken it out of
+      the seller's close-of-day pile in the same change (BR-26) — ⛔ the client
+      neither adds it again nor totals the column itself. Drawn only when it
+      carries money: most rounds sell no return ticket, and a standing `+0` row
+      would be noise on every one of them. -->
+      @if (showReturnLegRow) {
+        <div class="srt-eq-row srt-plus" data-testid="remittance-eq-return-leg">
+          <span>
+            {{ 'STAFF.REMITTANCE.RETURN_LEG.LABEL' | translate }}
+            @for (leg of r.returnLeg.lines; track leg.scheduleId) {
+              <span class="srt-chip">
+                {{ 'STAFF.REMITTANCE.RETURN_LEG.LEG' | translate: { time: displayTime(leg.departureDateTime), n: leg.ticketCount } }}
+              </span>
+            }
+          </span>
+          <span>+{{ formatMoney(r.returnLeg.cashAmount) }}</span>
+        </div>
+      }
+
+      <!-- Drawn only when it deducts something — box 3 above stays regardless,
+      because that is where an advance gets recorded in the first place. -->
+      @if (showAdvanceDeductionRow) {
+        <div class="srt-eq-row srt-minus">
+          <span>
+            {{ 'STAFF.REMITTANCE.EQUATION.LESS_ADVANCE' | translate }}
+            <span class="srt-chip">{{ 'STAFF.REMITTANCE.EQUATION.FROM_BOX_ADVANCE' | translate }}</span>
+          </span>
+          <!-- Moves as the box above is typed into: recorded + pending. -->
+          <span data-testid="remittance-eq-advance">−{{ formatMoney(pendingAdvanceCents / 100) }}</span>
+        </div>
+      }
+
+      @if (showPerHeadDeductionRow) {
+        <!-- WHOLE-ROUND (BR-3), so it can be larger than the head counts below
+        add up to: another counter's ค่าหัว on the same round is inside it and
+        this counter may not see the breakdown. The sub-line below names that
+        gap rather than leaving the arithmetic on screen looking broken. -->
+        <div class="srt-eq-row srt-minus">
+          <span>{{ 'STAFF.REMITTANCE.EQUATION.LESS_PER_HEAD' | translate }}</span>
+          <span data-testid="remittance-eq-per-head">−{{ formatMoney(pendingPerHeadCents / 100) }}</span>
+        </div>
+
+        @if (hasOtherCountersPerHead) {
+          <div class="srt-eq-row srt-info" data-testid="remittance-per-head-other-counters">
+            <span>{{ 'STAFF.REMITTANCE.PER_HEAD.OTHER_COUNTERS' | translate }}</span>
+            <span>{{ formatMoney(otherCountersPerHeadCents / 100) }}</span>
+          </div>
+        }
+
+        @for (line of perHeadLines; track line.stopId) {
+          <div class="srt-eq-row srt-info" [attr.data-testid]="'remittance-per-head-' + line.stopId">
+            <span>
+              {{ line.stopName }}
+              <span class="admin-muted">
+                {{ 'STAFF.REMITTANCE.PER_HEAD.RATE' | translate: { rate: formatMoney(line.ratePerHead) } }}
+              </span>
+            </span>
+            <span class="srt-head-edit">
+              <label class="admin-form-label" [attr.for]="'remittance-head-' + line.stopId">
+                {{ 'STAFF.REMITTANCE.PER_HEAD.HEAD_COUNT' | translate }}
+              </label>
+              <input
+                [id]="'remittance-head-' + line.stopId"
+                type="text"
+                inputmode="numeric"
+                class="admin-field srt-head-input"
+                [disabled]="!line.configured"
+                [ngModel]="headCountInputs[line.stopId]"
+                (ngModelChange)="onHeadCountInput(line.stopId, $event)"
+                [ngModelOptions]="{ standalone: true }"
+                [attr.data-testid]="'remittance-head-input-' + line.stopId"
+                />
+            </span>
+          </div>
+          <!-- BR-10 / owner ruling 2026-09-09: the system's own count is shown
+          ALWAYS, and shown as an OVERRIDE the moment it is typed over — the
+          owner has to see that a number was lowered, not just a smaller total. -->
+          <div class="srt-eq-row srt-info" [attr.data-testid]="'remittance-per-head-system-' + line.stopId">
+            <span>
+              @if (isHeadCountOverridden(line)) {
+                {{ 'STAFF.REMITTANCE.PER_HEAD.OVERRIDDEN' | translate: { typed: headCountOf(line), system: line.systemHeadCount } }}
+              } @else {
+                {{ 'STAFF.REMITTANCE.PER_HEAD.SYSTEM_MATCHES' | translate: { system: line.systemHeadCount } }}
+              }
+            </span>
+            <span></span>
+          </div>
+        }
+      }
+
+      <div class="srt-eq-row srt-total" [class.srt-total-neg]="expectedCashState === 'NEGATIVE'">
+        <span>
+          @switch (expectedCashState) {
+            @case ('NEGATIVE') { {{ (isRoundCadence ? 'STAFF.REMITTANCE.TOTAL.NEGATIVE_ROUND' : 'STAFF.REMITTANCE.TOTAL.NEGATIVE_DAY') | translate }} }
+            @case ('ZERO_NO_CASH') { {{ 'STAFF.REMITTANCE.TOTAL.ZERO_NO_CASH' | translate }} }
+            @case ('ZERO_NETTED') { {{ 'STAFF.REMITTANCE.TOTAL.ZERO_NETTED' | translate }} }
+            @default { {{ (isRoundCadence ? 'STAFF.REMITTANCE.TOTAL.HAND_OVER' : 'STAFF.REMITTANCE.TOTAL.KEEP_UNTIL_CLOSE') | translate }} }
+          }
+        </span>
+        <span data-testid="remittance-expected">{{ formatMoney(expectedCashMagnitude) }}</span>
+      </div>
+    </div>
+
+    <!-- ⑮ a number that is ≤ 0 must SAY who pays whom — and say it differently
+    on the two cadences: at a ROUND counter the owner physically hands the
+    shortfall back, at a DAY counter nobody pays anybody now. -->
+    @if (expectedCashState === 'NEGATIVE') {
+      <p class="srt-payout" data-testid="remittance-negative-note">
+        {{ (isRoundCadence ? 'STAFF.REMITTANCE.TOTAL.NEGATIVE_ROUND_NOTE' : 'STAFF.REMITTANCE.TOTAL.NEGATIVE_DAY_NOTE') | translate }}
+      </p>
+    }
+
+    <!-- BR-3: the deduction rows are the whole round's, whoever sold what. -->
+    @if (isSharedRound) {
+      <p class="admin-muted" data-testid="remittance-shared-round">
+        {{ 'STAFF.REMITTANCE.EQUATION.SHARED_ROUND' | translate: { n: r.roundSellerCount } }}
+      </p>
+    }
+
+    @if (!isRoundCadence) {
+      <!-- ⑫ -->
+      <p class="admin-muted" data-testid="remittance-keep-note">
+        {{ 'STAFF.REMITTANCE.EQUATION.KEEP_NOTE' | translate }}
+      </p>
+    } @else if (showNoPerHeadNote) {
+      <!-- ⑧ หนองชาก pays a daily wage, so there is no per-head line to misread.
+      OBRS-1890: only when the round really deducts none — the same round can
+      carry a whole-round per-head, and this used to deny it. -->
+      <p class="admin-muted" data-testid="remittance-no-per-head-note">
+        {{ 'STAFF.REMITTANCE.EQUATION.NO_PER_HEAD_NOTE' | translate }}
+      </p>
+    }
+  </section>
+
+  <!-- ⑨ ส่งยอดให้เจ้าของ — the ONE primary button of this screen. -->
+  <section class="admin-card mt-3 srt-submit-card" data-testid="remittance-submit">
+    <div class="admin-card-head">
+      <h4>{{ 'STAFF.REMITTANCE.SUBMIT.TITLE' | translate }}</h4>
+    </div>
+
+    @if (submission; as sent) {
+      <div class="srt-sent" data-testid="remittance-submitted">
+        <span>{{ 'STAFF.REMITTANCE.SUBMIT.SENT_AT' | translate: { time: displayTime(sent.submittedAt) } }}</span>
+        <span>{{ 'STAFF.REMITTANCE.SUBMIT.SENT_AMOUNT' | translate: { amount: formatMoney(sent.submittedExpectedCash) } }}</span>
+      </div>
+    }
+
+    <!-- ⑩ BR-17: the figure moved after it was sent. The screen says how much
+    cash to take back out of / add to the envelope; it never parses the server's
+    sentence for the number. -->
+    @if (isStale) {
+      <div class="srt-stale" data-testid="remittance-stale">
+        <p>{{ 'STAFF.REMITTANCE.SUBMIT.STALE_TITLE' | translate }}</p>
+        <p>
+          @if (staleDeltaCents < 0) {
+            {{ 'STAFF.REMITTANCE.SUBMIT.STALE_TAKE_BACK' | translate: { amount: formatMoney(staleDeltaMagnitude) } }}
+          } @else if (staleDeltaCents > 0) {
+            {{ 'STAFF.REMITTANCE.SUBMIT.STALE_ADD' | translate: { amount: formatMoney(staleDeltaMagnitude) } }}
+          } @else {
+            {{ 'STAFF.REMITTANCE.SUBMIT.STALE_SAME' | translate }}
+          }
+        </p>
+      </div>
+    }
+
+    <p class="admin-muted" data-testid="remittance-submit-hint">
+      {{ 'STAFF.REMITTANCE.SUBMIT.HINT' | translate: { amount: formatMoney(expectedCashMagnitude) } }}
+    </p>
+
+    @if (submitBlockedKey; as blockedKey) {
+      <p class="admin-error" data-testid="remittance-submit-blocked">{{ blockedKey | translate }}</p>
+    }
+
+    @if (submitError; as err) {
+      <p class="admin-error" data-testid="remittance-submit-error">{{ err | translate }}</p>
+    }
+
+    <button
+      type="button"
+      class="admin-btn admin-btn-primary srt-submit-btn"
+      [class.srt-submit-btn-stale]="isStale"
+      [disabled]="!canSubmit"
+      (click)="onSubmit()"
+      data-testid="remittance-submit-button"
+      >
+      @if (isSubmitting) {
+        {{ 'STAFF.DRIVER_CASH.SUBMITTING' | translate }}
+      } @else if (isStale) {
+        {{ 'STAFF.REMITTANCE.SUBMIT.RESUBMIT' | translate: { amount: formatMoney(expectedCashMagnitude) } }}
+      } @else {
+        {{ 'STAFF.REMITTANCE.SUBMIT.ACTION' | translate: { time: displayTime(r.departureDateTime), amount: formatMoney(expectedCashMagnitude) } }}
+      }
+    </button>
+
+    <p class="admin-muted" data-testid="remittance-submit-meaning">
+      {{ 'STAFF.REMITTANCE.SUBMIT.MEANING' | translate }}
+    </p>
+  </section>
+
+  <!-- ⑪ -->
+  <p class="admin-muted mt-3" data-testid="remittance-elsewhere">
+    {{ 'STAFF.REMITTANCE.ELSEWHERE' | translate }}
+  </p>
+}

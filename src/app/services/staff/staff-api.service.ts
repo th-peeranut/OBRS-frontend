@@ -57,6 +57,10 @@ import {
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
+import {
+  StaffRemittanceDto,
+  StaffRemittanceSubmitReqDto,
+} from '../../shared/interfaces/staff-remittance.interface';
 import { DriverDto } from '../admin/admin-api.service';
 // OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
 // SHAPE for its supplementary print/export trip header, but must not take a
@@ -1330,6 +1334,55 @@ export class StaffApiService {
     const headers = new HttpHeaders({ 'Idempotency-Key': idempotencyKey });
     return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
       `${environment.apiUrl}/api/private/driver-cash/days/settle`,
+      payload,
+      { context: this.driverCashActionContext, headers }
+    );
+  }
+
+  // ── OBRS-1755: the salesperson's own remittance for ONE round ──
+  // Base path is `/api/private/settlements` — the same one `AdminApiService`
+  // uses for the owner's pending list and sign-off, with NO `/admin/` segment
+  // (`SettlementController`). These two are the SALESPERSON-authorized pair;
+  // the owner's `GET /settlements/schedules/{id}` stays admin-only because its
+  // payload carries `settled`, `discrepancy` and every other seller's money.
+
+  /**
+   * OBRS-1755 — everything the "ส่งยอด" tab renders for one round, in one call.
+   *
+   * `skipContext` (not the action context below): a READ that fires whenever the
+   * tab is opened or the selected round changes, so a global banner on each one
+   * would be noise — the tab renders its own message.
+   */
+  getMyRemittance(scheduleId: number): Observable<ResponseAPI<StaffRemittanceDto>> {
+    return this.http.get<ResponseAPI<StaffRemittanceDto>>(
+      `${environment.apiUrl}/api/private/settlements/schedules/${scheduleId}/my-remittance`,
+      { context: this.skipContext }
+    );
+  }
+
+  /**
+   * OBRS-1755 — record the driver advance AND hand the round's cash to the owner
+   * in ONE transaction (owner ruling 2026-09-09: one button, not two).
+   *
+   * The `Idempotency-Key` header is the caller's to own across a retry, exactly
+   * as on `payWalkIn` and `postDriverCashDaySettle`: the server replays the
+   * stored response for a repeated key, so retrying the SAME payload must reuse
+   * the key or the advance is written twice.
+   *
+   * Reuses `driverCashActionContext` rather than declaring a fourth identical
+   * one: the reason that context exists — a domain 409 on a retryable
+   * salesperson money action must never force-logout nor raise a second global
+   * alert — is this endpoint's situation verbatim, and it answers with nine
+   * distinct 409s.
+   */
+  postRemittanceSubmit(
+    scheduleId: number,
+    payload: StaffRemittanceSubmitReqDto,
+    idempotencyKey: string
+  ): Observable<ResponseAPI<StaffRemittanceDto>> {
+    const headers = new HttpHeaders({ 'Idempotency-Key': idempotencyKey });
+    return this.http.post<ResponseAPI<StaffRemittanceDto>>(
+      `${environment.apiUrl}/api/private/settlements/schedules/${scheduleId}/submit`,
       payload,
       { context: this.driverCashActionContext, headers }
     );

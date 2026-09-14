@@ -3860,6 +3860,7 @@
       "TAB_TICKET_SALES": "售票",
       "TAB_TRIP_DETAILS": "班次详情",
       "TAB_BOARDING": "登车",
+      "TAB_REMITTANCE": "上缴款",
       "PAYMENT_CASH": "现金",
       "PAYMENT_PROMPTPAY": "PromptPay",
       "PAYMENT_CREDIT": "信用卡",
@@ -4463,6 +4464,122 @@
       "ERROR": {
         "RANGE_INVALID": "开始日期不得晚于结束日期。",
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
+      }
+    },
+    "REMITTANCE": {
+      "RETRY": "重试",
+      "SCOPE": "本页所有数字只属于 {{time}} 这一班次 — 在左侧换班次，数字随之改变。",
+      "ADVANCE": {
+        "TITLE": "司机备用金",
+        "RECORDED": "本班次已支取（{{n}} 笔）",
+        "NO_BUTTON_NOTE": "此框没有自己的保存按钮 — 填入金额后，下方“扣除司机支取的备用金”一行立即变动，但要按下方唯一的“上缴”按钮才真正记账。",
+        "BLOCKED": {
+          "NO_VEHICLE": "本班次尚未派车，暂时无法支付备用金 — 请先在“班次详情”页派车。",
+          "NO_DRIVER": "本班次尚未派司机，暂时无法支付备用金 — 请先在“班次详情”页指派司机。",
+          "NOT_DEPARTED": "本班次尚未发车，暂时无法支付备用金。",
+          "GENERIC": "本班次无法支付备用金。"
+        }
+      },
+      "TICKETS": {
+        "TITLE": "本班次由你售出的票",
+        "COUNT": "票数",
+        "CASH": "抽屉中来自售票的现金",
+        "BY_FARE": "按票价明细",
+        "BY_METHOD": "按付款方式",
+        "SUM": "合计",
+        "EMPTY": "本班次你还没有售票。",
+        "MINE_ONLY": "只统计本班次你本人售出的票，不是整个班次的总额 — 同柜台的同事各算各的。",
+        "TRANSFER": "转账 / PromptPay",
+        "TRANSFER_CLOSED": "柜台尚未开放",
+        "NONE": "—",
+        "COL": {
+          "PRICE": "单价",
+          "TYPE": "类别",
+          "QTY": "数量",
+          "AMOUNT": "小计",
+          "METHOD": "付款方式"
+        },
+        "OCCUPANT": {
+          "PARCEL": "包裹（占座）"
+        },
+        "FARE": {
+          "ADULT": "成人",
+          "CHILD": "儿童"
+        }
+      },
+      "RETURN_LEG": {
+        "LABEL": "本班次你售出的回程票",
+        "LEG": "{{time}} 班次 · {{n}} 张"
+      },
+      "EQUATION": {
+        "TITLE": "应上缴给业主的现金",
+        "CASH_IN": "抽屉中来自本班次你售票的现金",
+        "LESS_ADVANCE": "扣除司机支取的备用金",
+        "FROM_BOX_ADVANCE": "来自上方备用金框",
+        "LESS_PER_HEAD": "扣除售票员留存的人头费",
+        "SHARED_ROUND": "本班次有 {{n}} 人售票 — 扣除的各行属于整个班次，不是你一个人的。",
+        "KEEP_NOTE": "本班次暂时不用上缴 — 留在抽屉里，收班时一并交给业主；各班次金额相加就是应交的总额。",
+        "NO_PER_HEAD_NOTE": "本站按日发工资，不收人头费，因此这里没有人头费一行以免误读。"
+      },
+      "CADENCE": {
+        "ROUND": "班次结束时上缴",
+        "DAY": "收班时上缴"
+      },
+      "PER_HEAD": {
+        "RATE": "每人 {{rate}}",
+        "HEAD_COUNT": "人头数",
+        "OVERRIDDEN": "已改为 {{typed}} 人 · 系统统计为 {{system}}",
+        "SYSTEM_MATCHES": "系统统计为 {{system}} 人 · 一致",
+        "OTHER_COUNTERS": "上述金额中包含其他柜台在同一班次记录的人头费"
+      },
+      "TOTAL": {
+        "HAND_OVER": "应点交给业主的现金",
+        "KEEP_UNTIL_CLOSE": "应留存至收班再交给业主的现金",
+        "NEGATIVE_ROUND": "业主应补给你",
+        "NEGATIVE_DAY": "本班次抽屉支出多于收入",
+        "NEGATIVE_ROUND_NOTE": "本班次你不用交钱给任何人 — 收进抽屉的现金少于付出去的，业主签收班次时由业主把差额补给你。",
+        "NEGATIVE_DAY_NOTE": "此处当下没有人需要付给谁 — 亏空的班次会与同一天其他班次相抵。",
+        "ZERO_NO_CASH": "本班次没有任何现金经过抽屉",
+        "ZERO_NETTED": "刚好抵平，没有余款需要点交"
+      },
+      "SUBMIT": {
+        "TITLE": "上缴给业主",
+        "HINT": "点 {{amount}} 装入信封后按此按钮 — 业主的待收列表会立刻出现这一笔。",
+        "ACTION": "上缴 {{time}} 班次 — {{amount}}",
+        "RESUBMIT": "重新上缴 — {{amount}}",
+        "MEANING": "“确认已收到款”仍然是业主的按钮。此按钮的意思是“我已点清装入信封”，不是“此事已了”。",
+        "SENT_AT": "已于 {{time}} 上缴",
+        "SENT_AMOUNT": "上缴金额 {{amount}} · 业主尚未签收",
+        "STALE_TITLE": "上缴后金额有变动 — 需要重新上缴",
+        "STALE_TAKE_BACK": "从信封中取回 {{amount}}，然后重新上缴。",
+        "STALE_ADD": "往信封中再放入 {{amount}}，然后重新上缴。",
+        "STALE_SAME": "重新上缴以确认最新金额。"
+      },
+      "BLOCKED": {
+        "SETTLED": "业主已签收本班次，无法重复上缴。",
+        "NOT_DEPARTED": "本班次尚未发车，暂时无法上缴。"
+      },
+      "UNSAVED": {
+        "TITLE": "尚未上缴",
+        "TEXT": "你填了备用金或改了人头数，但还没有按“上缴”。离开本页后，系统不会知道现金已经离开抽屉。",
+        "CONFIRM": "不上缴就离开",
+        "CANCEL": "留在本页"
+      },
+      "ELSEWHERE": "车辆费用 · 人头费 · 维修单不在此页 — 它们在“司机结账”菜单，按日结算而非按班次。",
+      "ERROR": {
+        "GENERIC": "上缴失败，请重试。",
+        "ADVANCE_NOT_ALLOWED": "本站不支付司机备用金。",
+        "PER_HEAD_NOT_ALLOWED": "本站未设置人头费，无法记录人头数。",
+        "AMOUNT_STALE": "上缴过程中金额发生变化，已为你重新载入最新数字 — 核对后再上缴一次。",
+        "NOT_DEPARTED": "本班次尚未发车，暂时无法上缴。",
+        "ALREADY_SETTLED": "业主已签收本班次，无法重复上缴。",
+        "SCOPE_FORBIDDEN": "本班次不属于你所在的站点。",
+        "NOT_FOUND": "找不到该班次。",
+        "ACCESS_DENIED": "你没有权限上缴本班次。",
+        "IDEMPOTENCY_MISMATCH": "该防重复键已用于另一次请求 — 请刷新页面后重新上缴。",
+        "IDEMPOTENCY_INCOMPLETE": "上一次请求尚未完成，请稍候再上缴。",
+        "NO_VEHICLE": "本班次尚未派车。",
+        "NO_DRIVER": "本班次尚未派司机。"
       }
     },
     "SETTLEMENT": {

@@ -859,6 +859,62 @@ describe('WalkInCenterPanelComponent', () => {
       expect(emitted).toEqual([TICKET_SALES_TAB, TRIP_DETAILS_TAB, BOARDING_TAB]);
     });
   });
+
+  // OBRS-1755 - the 4th tab. It is bound to the SAME selected round as the
+  // Boarding tab, and the panel has to TELL it when it is on screen, because
+  // p-tabpanel is eager: without that the tab would fetch a round's cash
+  // position on every row the clerk clicks in the left-hand list.
+  describe('OBRS-1755 remittance tab', () => {
+    const BOARDING_TAB_INDEX = 2;
+    const REMITTANCE_TAB = 3;
+
+    function callOnTabChange(index: number): void {
+      (component as unknown as { onTabChange: (i: number) => void }).onTabChange(index);
+    }
+
+    function isRemittanceActive(): boolean {
+      return (component as unknown as { isRemittanceTabActive: boolean }).isRemittanceTabActive;
+    }
+
+    it('renders a 4th tab header after the three existing ones', () => {
+      component.selectedTrip = makeTrip();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('STAFF.SELL.TAB_REMITTANCE');
+    });
+
+    it('reports the remittance tab as active ONLY while it is the open one', () => {
+      expect(isRemittanceActive()).withContext('the panel opens on Ticket Sales').toBeFalse();
+
+      callOnTabChange(REMITTANCE_TAB);
+      expect(isRemittanceActive()).toBeTrue();
+
+      callOnTabChange(BOARDING_TAB_INDEX);
+      expect(isRemittanceActive()).toBeFalse();
+    });
+
+    it('emits index 3 to the parent like every other tab', () => {
+      const emitted: number[] = [];
+      component.activeTabChange.subscribe((i) => emitted.push(i));
+
+      callOnTabChange(REMITTANCE_TAB);
+
+      expect(emitted).toEqual([REMITTANCE_TAB]);
+    });
+
+    // BR-18 - the panel is one link of the chain the sell page's route guard
+    // walks; it holds no unsaved state of its own.
+    it('leaves without asking when the remittance tab is not mounted', () => {
+      expect(component.canDeactivate()).toBeTrue();
+    });
+
+    it('delegates the leave decision to the remittance tab when it IS mounted', () => {
+      const tab = { canDeactivate: jasmine.createSpy('canDeactivate').and.returnValue(false) };
+      component.remittanceTabRef = tab as never;
+
+      expect(component.canDeactivate()).toBeFalse();
+      expect(tab.canDeactivate).toHaveBeenCalled();
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
