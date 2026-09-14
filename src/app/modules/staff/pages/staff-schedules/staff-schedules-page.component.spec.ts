@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { PrimeNG } from 'primeng/config';
 import { DatePickerModule } from 'primeng/datepicker';
 import { BehaviorSubject, throwError } from 'rxjs';
 import { StaffSchedulesPageComponent } from './staff-schedules-page.component';
@@ -13,6 +14,7 @@ import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { StaffSchedulesStore } from './staff-schedules.store';
 import { ScheduleRow } from './staff-schedules-page.mappers';
+import thI18n from '../../../../../../public/i18n/th.json';
 
 // OBRS-283: smart delete/cancel branch driven by the row's `deletable` +
 // `confirmedBookingCount` fields, mirroring the admin schedules page's
@@ -308,6 +310,14 @@ describe('StaffSchedulesPageComponent — OBRS-667 owner-only cancel gate (DOM)'
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
+    // OBRS-1815: this page's date fields carry no `dateFormat` of their own
+    // any more, so PrimeNG resolves the locale's `CALENDAR.dateFormat` — which
+    // in the running app `LanguageService.switch()` has already pushed in here.
+    // Without this line the picker falls back to PrimeNG's own `mm/dd/yy`
+    // default, and a spec that types a Thai-order date reads it as a different
+    // month while looking entirely correct.
+    TestBed.inject(PrimeNG).setTranslation(thI18n.CALENDAR);
+
     const fixture = TestBed.createComponent(StaffSchedulesPageComponent);
     const component = fixture.componentInstance;
     fixture.detectChanges(); // ngOnInit
@@ -400,7 +410,12 @@ describe('StaffSchedulesPageComponent — OBRS-667 owner-only cancel gate (DOM)'
       .withContext('an emptied field must not fall back to every trip')
       .toEqual([3, 2]);
 
-    for (let i = 1; i <= '04/08/2026'.length; i++) typeInto(input, '04/08/2026'.slice(0, i));
+    // Typed in the shipped Thai grammar (`d M yy`), month name read from the
+    // locale file rather than spelled here — OBRS-1815 made this the format a
+    // counter clerk actually keys, and the reason it had to stay typeable at
+    // all: `CALENDAR.dateFormat` is the parse grammar, not a display choice.
+    const typed = `4 ${thI18n.CALENDAR.monthNamesShort[7]} 2026`;
+    for (let i = 1; i <= typed.length; i++) typeInto(input, typed.slice(0, i));
     fixture.detectChanges();
     expect((component as any).filteredRows.map((r: ScheduleRow) => r.id))
       .withContext('the typed day must be the one filtered on')

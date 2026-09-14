@@ -18,7 +18,6 @@
         <p-datePicker
           styleClass="app-date-field"
           panelStyleClass="app-date-field-panel"
-          dateFormat="dd/mm/yy"
           [ngModel]="selectedDate"
           (ngModelChange)="onDateChange($event)"
           (onBlur)="onDateBlur()"
@@ -125,7 +124,7 @@
               <div class="row g-3">
                 <div class="col-md-6">
                   <label class="form-label">{{ 'STAFF.SCHEDULES.DEPARTURE_DATE' | translate }}</label>
-                  <p-datePicker formControlName="departureDate" [showIcon]="true" [iconDisplay]="'input'" dateFormat="yy-mm-dd"
+                  <p-datePicker formControlName="departureDate" [showIcon]="true" [iconDisplay]="'input'"
                     styleClass="app-date-field" panelStyleClass="app-date-field-panel"
                     [class.is-invalid]="isFieldInvalid('departureDate')">
                     <ng-template pTemplate="inputicon">
