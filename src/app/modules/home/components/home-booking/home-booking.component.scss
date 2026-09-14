@@ -308,6 +308,105 @@ app-recent-routes-quick-pick.has-routes + .station-section {
   margin-top: $space-xs;
 }
 
+// OBRS-1020: the five-day quick-date strip. A flex child of `.station-section`
+// that takes a full line of its OWN above the bar — `width: 100%` is the same
+// mechanism `.map-hint-row` uses to take the line below it, and `order: -1`
+// is what lifts it above segments that all default to `order: 0`.
+//
+// Inside the bar rather than above it as a sibling: the rule directly above is
+// an ADJACENT-sibling one, so an element between the quick-pick strip and
+// `.station-section` would silently drop OBRS-928's proximity spacing.
+.station-section > .quick-dates-row {
+  order: -1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3xs;
+  margin-bottom: $space-2xs;
+}
+
+.quick-dates-title {
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
+// $text-lightblack is 3.25:1 on the booking card's $dk-bg-soft — the same
+// measurement that moved `.recent-routes-title` to $dk-text-muted (OBRS-769).
+// `:host-context` per OBRS-767: a component rule outranks `body.is-dark .a .b`.
+:host-context(body.is-dark) .quick-dates-title {
+  color: $dk-text-muted;
+}
+
+// AC#7: the strip WRAPS, it never scrolls. A sideways-scrolling strip inside a
+// card is one bad drag away from taking the whole page with it on a phone, and
+// `flex-wrap` cannot produce a horizontal overflow at any width.
+.quick-dates-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2xs;
+}
+
+// design-system.md §12's "transparent-background outline pill for a
+// customer-shell repeatable quick-pick action" — deliberately the SAME shape as
+// `.recent-route-btn` one strip above it, because two chip strips on one card
+// that disagree about what a chip looks like is worse than either shape.
+.quick-date-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  @include tap-target-min;
+  padding: 0 $space-2xs;
+
+  background-color: transparent;
+  color: $brand-customer-strong;
+  border: 1px solid $brand-customer-strong;
+  border-radius: $radius-xl;
+
+  font-weight: $font-weight-medium;
+  line-height: 1.2;
+  cursor: pointer;
+
+  transition: background-color $duration-fast $easing-standard,
+    color $duration-fast $easing-standard;
+
+  &:hover,
+  &:focus-visible {
+    background-color: $brand-customer-strong;
+    color: $text-white;
+  }
+
+  // AC#2's selected chip. Same fill as :hover deliberately — one filled look,
+  // not two (the sibling strip made the same call for the same reason).
+  &.is-active {
+    background-color: $brand-customer-strong;
+    color: $text-white;
+  }
+}
+
+.quick-date-chip__day {
+  font-size: $font-size-sm;
+}
+
+.quick-date-chip__date {
+  font-size: $font-size-base;
+}
+
+// $brand-customer-strong is 2.79:1 on the dark card — the number that sent
+// `.recent-route-btn` to $dk-accent in dark-theme.scss §6. Same repoint here,
+// kept in this file rather than there for the OBRS-767 precedence reason above.
+:host-context(body.is-dark) .quick-date-chip {
+  color: $dk-accent;
+  border-color: $dk-accent;
+
+  &:hover,
+  &:focus-visible,
+  &.is-active {
+    background-color: $dk-accent;
+    color: $dk-bg-soft;
+  }
+}
+
 // OBRS-185: the calendar icon + panel look now live in the shared
 // `.app-date-field` / `.app-date-field-panel` / `.app-date-field-icon`
 // classes in src/styles.scss (this component is the canonical reference for

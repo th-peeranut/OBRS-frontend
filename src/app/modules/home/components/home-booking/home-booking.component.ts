@@ -58,6 +58,29 @@ import { carryReturnDate, defaultReturnDate } from '../../../../shared/lib/retur
 // become STRICTER than the policy it stands in for (backend default is 60
 // since OBRS-647), so a failed fetch hid a month of sellable departures.
 
+// OBRS-1020: how many days the quick-date strip offers, counting today.
+// Exported so the spec pins the number where it lives instead of restating it.
+// Five is the window the strip exists for; anything further out is what the
+// calendar beside it is still there for (AC#4).
+export const QUICK_DATE_CHIP_COUNT = 5;
+
+/** OBRS-1020: one chip of the quick-date strip above the departure calendar. */
+export interface QuickDateChip {
+  /** The value written into the `departureDate` control when the chip is
+   *  tapped. It carries `minDate`'s time-of-day rather than midnight: `minDate`
+   *  is `new Date()` — i.e. NOW — and PrimeNG blanks an input whose value falls
+   *  outside [minDate, maxDate] (`formatDateTime`: `formattedValue =
+   *  isDateValid ? formattedValue : ''`), so a midnight "today" would tap
+   *  through to an EMPTY date field. */
+  date: Date;
+  /** `Date.getDay()` — the index `CALENDAR.dayNamesShort` is keyed by. */
+  dayIndex: number;
+  /** Day of the month, the only number the chip prints. */
+  dayOfMonth: number;
+  /** Identity for `@for`'s `track`. */
+  key: string;
+}
+
 @Component({
     selector: 'app-home-booking',
     templateUrl: './home-booking.component.html',
@@ -107,6 +130,11 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
    *  English visitor read `03/08/2026` in Thai field order — ambiguous with
    *  8 March on the screen where they commit to a ticket. */
   readonly calendarDateFormat: Signal<string | undefined>;
+
+  /** OBRS-1020: the five-day strip rendered above the departure calendar.
+   *  Rebuilt rather than recomputed per change-detection pass — the days it
+   *  offers only move when `maxDate` does. */
+  quickDateChips: QuickDateChip[] = [];
 
   bookingForm: FormGroup;
 
@@ -200,6 +228,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       .add(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK, 'day')
       .toDate();
     this.calendarDateFormat = languageService.calendarDateFormat;
+    this.buildQuickDateChips();
 
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
@@ -251,6 +280,11 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
         next: (response) => {
           if (response.data) {
             this.maxDate = dayjs(this.minDate).add(response.data.maxAdvanceDays, 'day').toDate();
+            // OBRS-1020 AC#5: the strip is capped by the SAME value the
+            // calendar is, so it has to be rebuilt whenever that value moves —
+            // a chip the calendar would refuse is a chip that writes a date
+            // the server rejects on submit.
+            this.buildQuickDateChips();
           }
         },
         // Explicit no-op: keeping the fallback IS the handling. An observer
@@ -381,6 +415,47 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   onRecentRouteSelected(candidate: RecentRouteCandidate): void {
     this.onStartStationChange(candidate.originStation);
     this.onEndStationChange(candidate.destinationStation);
+  }
+
+  /**
+   * OBRS-1020: the days the quick-date strip offers, counting today.
+   *
+   * <p>Capped at `maxDate` (AC#5) and NOT at a fixed five: the cap is the
+   * owner-editable `maxAdvanceDays` the calendar beside it already honours, so
+   * a policy of two days leaves three chips rather than five, two of which
+   * would write a date the server rejects.
+   */
+  private buildQuickDateChips(): void {
+    const first = dayjs(this.minDate);
+    const last = dayjs(this.maxDate);
+
+    this.quickDateChips = Array.from({ length: QUICK_DATE_CHIP_COUNT }, (_, offset) =>
+      first.add(offset, 'day')
+    )
+      .filter((day) => !day.isAfter(last))
+      .map((day) => ({
+        date: day.toDate(),
+        dayIndex: day.day(),
+        dayOfMonth: day.date(),
+        key: day.format('YYYY-MM-DD'),
+      }));
+  }
+
+  /** OBRS-1020 AC#2: whether `chip` is the day the form is currently on.
+   *  Compared by CALENDAR DAY and never by timestamp — the seeded default
+   *  carries the moment the page loaded and a chip carries the moment the
+   *  strip was built, so the two are never `===` even on the same day. */
+  isQuickDateSelected(chip: QuickDateChip): boolean {
+    const current = this.getFormValue('departureDate');
+    return !!current && dayjs(current).isSame(chip.date, 'day');
+  }
+
+  /** OBRS-1020 AC#3: write through the EXISTING control. That is what keeps
+   *  `getPayload()` untouched, repaints the calendar beside the strip from the
+   *  same value, and lets OBRS-1185's returnDate carry-forward run exactly as
+   *  it does for a date picked out of the calendar. */
+  onQuickDateSelected(chip: QuickDateChip): void {
+    this.bookingForm.controls['departureDate'].setValue(chip.date);
   }
 
   onStartStationChange(station: StationApi) {

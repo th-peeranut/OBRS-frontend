@@ -98,6 +98,50 @@
                 ></app-dropdown-group-obrs>
               </div>
             }
+            <!-- QUICK DATE CHIPS (OBRS-1020). The one item on the "smart
+            default" comparison the owner sent that this form did not already
+            do: trip type, passenger count, a pre-filled date and a pre-filled
+            route all shipped (OBRS-1025 / 1185 / 575 / 928), so what was left
+            was never a DEFAULT — it is the AFFORDANCE of changing the date
+            without opening a calendar, scrolling it and tapping.
+
+            A child of `.station-section` rather than a sibling above it, which
+            is where `app-recent-routes-quick-pick` sits. That strip's spacing
+            rule is `app-recent-routes-quick-pick.has-routes + .station-section`
+            — ADJACENT-sibling — so an element inserted between the two would
+            silently drop the proximity OBRS-928 exists to create. `width: 100%`
+            + `order: -1` in the stylesheet put it on its own line above the
+            bar, the same mechanism `.map-hint-row` uses to take the line below
+            it.
+
+            AC#6: outbound only. The window a RETURN date should offer starts at
+            the outbound date, not at today, so a second strip of these same
+            five days would be wrong rather than merely redundant. -->
+            <div class="quick-dates-row">
+              <span class="quick-dates-title">
+                {{ (isRoundTripReturn ? "HOME.HOME_BOOKING.ROUND_DEPARTURE" : "HOME.HOME_BOOKING.DEPARTURE_DATE") | translate }}
+              </span>
+              <div class="quick-dates-list">
+                <!-- AC#1: the day name comes from `CALENDAR.dayNamesShort`,
+                which all three locales already ship and which PrimeNG's own `D`
+                token resolves against in the field below (OBRS-1023). So the
+                chip and the field cannot print two different words for the same
+                day, and no i18n key was created for names that already existed
+                three times over. -->
+                @for (chip of quickDateChips; track chip.key) {
+                  <button
+                    type="button"
+                    class="quick-date-chip"
+                    [class.is-active]="isQuickDateSelected(chip)"
+                    [attr.aria-pressed]="isQuickDateSelected(chip)"
+                    (click)="onQuickDateSelected(chip)"
+                    >
+                    <span class="quick-date-chip__day">{{ ("CALENDAR.dayNamesShort" | translate)[chip.dayIndex] }}</span>
+                    <span class="quick-date-chip__date">{{ chip.dayOfMonth }}</span>
+                  </button>
+                }
+              </div>
+            </div>
             <!-- DEPARTURE DATE. OBRS-1189: `has-inline-label` + the segment
             styleClass are what make this a SEGMENT of the station bar rather
             than a differently-shaped control parked beside it — same height,
