@@ -49,10 +49,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: npm
@@ -400,10 +400,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: npm
@@ -445,10 +445,10 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: npm
@@ -555,9 +555,13 @@ jobs:
       # trace: 'retain-on-failure' and screenshot: 'only-on-failure', so a green run
       # produces nothing worth keeping. Without this, a CI-only failure has to be
       # re-guessed locally instead of read.
+      # OBRS-1173: v6, not v5 like its neighbours. upload-artifact is the one action here whose
+      # NEXT major did not leave Node 20 - measured 2026-09-09, `runs.using` is node20 in v5 and
+      # node24 only from v6 (gh api repos/actions/upload-artifact/contents/action.yml?ref=vN).
+      # Aligning this back to v5 for tidiness would put the deprecation warning straight back.
       - name: Upload Playwright trace on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-gate-failure
           path: |
