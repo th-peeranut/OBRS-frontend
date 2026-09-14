@@ -425,3 +425,21 @@
     background: $primary-blue-hover;
   }
 }
+
+// OBRS-1902: the one line that explains a pay button which has gone quiet. Without it a disabled
+// button is indistinguishable from a broken one.
+.payment-maintenance-hint {
+  margin: $space-2xs 0 0;
+  font-size: $font-size-xs;
+  line-height: $line-height-base;
+  color: $text-softblack;
+  text-align: right;
+}
+
+// OBRS-1902: when the lock replaces the whole QR panel, the line is the panel - centred and
+// given the panel's own vertical room, not tucked right like the one that sits above the buttons.
+.payment-maintenance-hint--panel {
+  text-align: center;
+  padding: $space-lg 0;
+  font-size: $font-size-sm;
+}

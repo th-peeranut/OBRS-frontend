@@ -23,6 +23,7 @@ import {
   PaymentPayload,
   PaymentResponse,
 } from '../../../../shared/interfaces/payment.interface';
+import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { isHandledByBackendMessage } from '../../../../shared/lib/payment-error-codes';
 import {
@@ -81,11 +82,31 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     private paymentService: PaymentService,
     private omiseTokenService: OmiseTokenService,
     private alertService: AlertService,
+    private maintenanceWindowService: MaintenanceWindowService,
   ) {}
 
   ngOnInit(): void {
     this.startCountdown();
   }
+
+  /**
+   * OBRS-1902: true while an announced maintenance window has its payment lock open. The owner's
+   * ruling of 2026-09-14 was "disable the pay button during the countdown" - a customer who starts
+   * an Omise charge seconds before the process dies is the case this exists to prevent.
+   *
+   * A getter, re-read on every change-detection pass, because this component already re-renders
+   * once a second from its own seat-hold countdown; a subscription would buy nothing and would
+   * have to be torn down. It gates the button AND the handler: the button is what a customer sees,
+   * the early return is what a customer who re-enables it in devtools gets.
+   *
+   * NOT a security control - the API still accepts the charge. The safety net for a payment that
+   * really is caught mid-outage is ChargeReconciliationService, which is deliberately untouched
+   * by this card.
+   */
+  get isPaymentLocked(): boolean {
+    return this.maintenanceWindowService.isPaymentLockedNow();
+  }
+
 
   ngOnDestroy(): void {
     this.clearCountdown();
@@ -101,7 +122,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   }
 
   async submitPayment(): Promise<void> {
-    if (this.isSubmittingPayment || this.isWaitingForConfirmation) {
+    if (this.isSubmittingPayment || this.isWaitingForConfirmation || this.isPaymentLocked) {
       return;
     }
 

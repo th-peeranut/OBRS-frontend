@@ -20,6 +20,12 @@
     "BODY": "请通过 Facebook 专页联系我们订票：",
     "CHANNEL": "NJ Phuyaipu"
   },
+  "MAINTENANCE_NOTICE": {
+    "ARIA_LABEL": "公告：网站即将进行例行维护",
+    "COUNTDOWN": "系统将在 {{minutes}} 分钟后维护（{{start}} – {{end}}）",
+    "IN_PROGRESS": "系统维护中，预计 {{end}} 恢复。",
+    "PAYMENT_LOCKED": "维护期间暂停付款，以免出现未完成的订单。"
+  },
   "ROLE_PREVIEW": {
     "MENU": "以其他角色查看…",
     "ARIA_LABEL": "您正在以其他角色查看此页面",
@@ -585,6 +591,7 @@
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "取消与改签",
       "NOTIFICATION_MESSAGES": "通知消息",
       "OPERATIONS_CONFIG": "运营",
+      "MAINTENANCE_WINDOW": "维护时间公告",
       "EXPENSE_BATCH": "批量录入单据"
     },
     "NAV": {
@@ -1850,6 +1857,27 @@
         "DONE": "已恢复使用平台默认值。",
         "FAILED": "交还政策失败,未做任何更改。"
       }
+    },
+    "MAINTENANCE_WINDOW": {
+      "SUBTITLE": "在系统维护导致订票网站暂停前提前公告，并在倒计时期间暂停新的付款。",
+      "NONE_SCHEDULED": "目前没有公告。访客看不到横幅，付款照常。",
+      "SCHEDULED_NOTE": "已公告：{{start}} - {{end}}；{{lockedFrom}} 起暂停付款。",
+      "START_LABEL": "开始维护",
+      "END_LABEL": "预计恢复",
+      "LOCK_LABEL": "提前多少分钟暂停付款",
+      "LOCK_HELPER": "填 0 表示一直售卖到维护开始；最多 180 分钟。",
+      "MESSAGE_TH_LABEL": "公告内容（泰文）",
+      "MESSAGE_EN_LABEL": "公告内容（英文）",
+      "MESSAGE_HELPER": "两种语言都必填。中文读者会看到英文内容。",
+      "RANGE_VALIDATION": "结束时间必须晚于开始时间。",
+      "CANCEL_ANNOUNCEMENT": "取消本次维护",
+      "CANCEL_CONFIRM_TITLE": "要删除这条公告吗？",
+      "CANCEL_CONFIRM_TEXT": "横幅会立即消失，付款也会立即恢复。",
+      "CANCEL_CONFIRM_BUTTON": "删除",
+      "SAVED": "公告已发布。",
+      "CANCELLED": "公告已删除。",
+      "SAVE_FAILED": "保存维护时间失败。",
+      "LOAD_FAILED": "加载维护时间失败。"
     },
     "OPERATIONS_CONFIG": {
       "SUBTITLE": "设置您自己的运营参数——留座时间、未乘车(no-show)截止时间、以及座位即将订满的提醒阈值。尚未设置的项目将使用平台默认值。",
@@ -3323,6 +3351,7 @@
     }
   },
   "PAYMENT": {
+    "MAINTENANCE_LOCKED": "暂停付款 — 系统即将维护",
     "INFO": {
       "TITLE": "选择付款方式"
     },
