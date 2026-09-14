@@ -33,6 +33,7 @@ import {
 @Component({
     selector: 'app-expense-approval-section',
     templateUrl: './expense-approval-section.component.html',
+    styleUrl: './expense-approval-section.component.scss',
     standalone: false
 })
 export class ExpenseApprovalSectionComponent implements OnInit, OnDestroy {
