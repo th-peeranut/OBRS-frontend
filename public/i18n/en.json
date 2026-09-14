@@ -2306,7 +2306,14 @@
         "VEHICLE": "Plate",
         "CATEGORY": "Category",
         "PAID_BY": "Paid by",
-        "LINE_PART_NONE": "Not a part"
+        "LINE_PART_NONE": "Not a part",
+        "ODOMETER": "Odometer",
+        "ODOMETER_HINT": "Only if the bill states one — optional",
+        "ODOMETER_INVALID": "Enter a whole number greater than zero",
+        "PLANS_UPDATED": "{{n}} maintenance plans updated",
+        "PLAN_UPDATED_LINE": "• {{part}} · {{km}} km",
+        "PLAN_UNNAMED_PART": "A part no longer in the registry",
+        "GO_TO_PLANS": "Go to the maintenance plans"
       }
     },
     "EXPENSE_PAYEES": {

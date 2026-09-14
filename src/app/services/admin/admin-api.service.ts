@@ -1300,6 +1300,13 @@ export interface CreateExpensePayload {
    * payee is not on record, which every row written before this card is. */
   payeeId: number | null;
   note: string | null;
+  /**
+   * OBRS-1588: the odometer the garage wrote on the bill, or `null` when it wrote none — which the
+   * owner ruled on 2026-08-23 is the normal case, not an omission. On a REPAIR bill whose lines name
+   * parts, this is what moves the vehicle's maintenance plans; see `updatedPlans` on the batch
+   * response for what came of it.
+   */
+  odometerKm?: number | null;
   /** OBRS-1374: the bill's lines. `[]` means "this bill has no breakdown", which is the
    * normal case and is accepted unchanged. When lines ARE sent their amounts must sum to
    * `amount`, or the server answers 400 `EXPENSE_ITEMS_TOTAL_MISMATCH` - the modal blocks that
@@ -1321,10 +1328,30 @@ export interface CreateExpenseBatchPayload {
   bills: CreateExpensePayload[];
 }
 
+/**
+ * OBRS-1588: one maintenance plan a just-saved bill moved.
+ *
+ * <p>The owner ruled on 2026-09-13 that the plan write is silent — no confirm box per bill, which
+ * would undo the very clicking OBRS-1576's envelope screen removed — but that it must not be
+ * invisible. This is what the ONE post-save summary is built from.
+ */
+export interface MaintenancePlanTouchDto {
+  planId: number;
+  vehicleId: number;
+  /** The registry name, e.g. `ยางหน้า` — what the owner recognises. `null` only for a plan whose
+   * registry row has gone, which the summary renders as the plan id rather than as a blank. */
+  partName: string | null;
+  lastDoneKm: number;
+  /** ISO date, taken from the BILL, not from today. */
+  lastDoneDate: string;
+}
+
 /** OBRS-1576: `POST /api/private/expenses/batch` 201 body — the ids it created, in the order the
- * bills were sent. */
+ * bills were sent. OBRS-1588 added `updatedPlans`, which is always present and `[]` when nothing
+ * moved: an absent key would make the screen unable to tell "nothing moved" from "older server". */
 export interface CreateExpenseBatchRespDto {
   expenseIds: number[];
+  updatedPlans: MaintenancePlanTouchDto[];
 }
 
 /**
