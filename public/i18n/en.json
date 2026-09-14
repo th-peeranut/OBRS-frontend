@@ -1784,6 +1784,13 @@
       "HELPER": "When off, staff cannot sell the jump seat even when the normal seats are full — has no effect on the online channel.",
       "LOAD_FAILED": "Unable to load the jump-seat config."
     },
+    "LEGAL_POLICY_NOTICE": {
+      "TITLE": "This policy is stricter than BKS shared-bus regulation 2547 clauses 78/79 — the owner accepts the risk",
+      "DETAIL": "The regulation allows a deduction of at most 10% and draws its line 1 hour before departure. The values below deduct {{earlyDeductPct}}% / {{lateDeductPct}}%, draw the line at {{earlyWindowHours}} hours, and charge a late reschedule fee of {{rescheduleFee}}. Clause 97 penalty: a 500–2,000 baht fine or a 3–7 day service suspension.",
+      "POINTER": "The values this concerns live on the “Cancel & Reschedule” tab of this group.",
+      "LINK": "Go to the Cancel & Reschedule tab",
+      "SOURCE": "Decision 2026-08-19 · OBRS-1434 — deliberate, not a misconfiguration"
+    },
     "BOOKING_POLICY_CONFIG": {
       "SUBTITLE": "Set the online advance-booking cap and last-minute cutoff shown on the public policy page.",
       "MAX_ADVANCE_DAYS_LABEL": "Advance Booking Cap (days)",
@@ -3404,6 +3411,8 @@
   "E_TICKET": {
     "RETRIEVAL_NOTE": "Keep your booking reference {{bookingNumber}}. You can open this ticket again without signing in — just enter it together with the phone number you booked with:",
     "RETRIEVAL_LINK": "Find your booking",
+    "CONDITIONS_NOTE": "Conditions of carriage: cancelling or rescheduling must be requested before departure within the stated window, and a fee is deducted depending on how early you ask.",
+    "CONDITIONS_LINK": "Read the refund and reschedule policy",
     "INCOMPLETE_TITLE": "This is not your full ticket",
     "INCOMPLETE_BODY": "This link can only show the trip details — it has no booking reference, no seat and no boarding QR code. Retrieve the real ticket with your booking reference and the phone number you booked with:",
     "TITLE": "E-Ticket",
