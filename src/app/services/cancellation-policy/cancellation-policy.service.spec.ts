@@ -5,8 +5,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { CancellationPolicyDto, CancellationPolicyService } from './cancellation-policy.service';
 import { environment } from '../../../environments/environment';
 import {
+  SHOW_BLOCKING_LOADING,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 describe('CancellationPolicyService', () => {
@@ -59,7 +59,7 @@ describe('CancellationPolicyService', () => {
     service.getCancellationPolicy().subscribe({ error: () => undefined });
 
     const req = httpMock.expectOne(`${environment.apiUrl}/api/cancellation-policy`);
-    expect(req.request.context.get(SKIP_GLOBAL_LOADING_ALERT)).toBeTrue();
+    expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeFalse();
     expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
 
     req.flush({ code: 200, message: 'OK', data: payload });

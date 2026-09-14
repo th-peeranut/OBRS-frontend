@@ -61,9 +61,9 @@ export class BoardingQrService implements OnDestroy {
    * leg) resolves to a "no token" sentinel instead of erroring the whole
    * `forkJoin` — every other ticket's QR still renders.
    *
-   * `skipGlobalLoadingAlert` is forwarded to `TicketService.getBoardingToken`
-   * verbatim, and only when `true` — the receipt page opts out (own inline
-   * spinner) while the e-ticket page keeps its original call shape.
+   * OBRS-908 removed the loading-alert opt-out argument this used to forward to
+   * `TicketService.getBoardingToken`: the blocking overlay is opt-in now and a token
+   * fetch never opts in, so both callers make the same call.
    *
    * No-ops (never calls `onUpdated`) when every id is already fetched — this
    * matches the original per-component method, which simply `return`ed with
@@ -79,11 +79,7 @@ export class BoardingQrService implements OnDestroy {
    * does have a token, `QRCode.toDataURL` is awaited and `onUpdated` fires
    * once rendering settles, same as before.
    */
-  fetchBoardingTokens(
-    ticketIds: (number | null)[],
-    onUpdated: () => void,
-    skipGlobalLoadingAlert = false
-  ): void {
+  fetchBoardingTokens(ticketIds: (number | null)[], onUpdated: () => void): void {
     const pendingTicketIds = ticketIds.filter(
       (ticketId): ticketId is number =>
         ticketId !== null && !this.fetchedTicketIds.has(ticketId)
@@ -96,13 +92,7 @@ export class BoardingQrService implements OnDestroy {
 
     forkJoin(
       pendingTicketIds.map((ticketId) =>
-        // Keep the call shape byte-identical to what each caller used to
-        // issue directly: only pass the second arg when opting in, so a
-        // spy asserting on call args still sees the same call.
-        (skipGlobalLoadingAlert
-          ? this.ticketService.getBoardingToken(ticketId, true)
-          : this.ticketService.getBoardingToken(ticketId)
-        ).pipe(
+        this.ticketService.getBoardingToken(ticketId).pipe(
           map((response) => ({
             ticketId,
             boardingToken: response?.data?.boardingToken?.trim() ?? '',

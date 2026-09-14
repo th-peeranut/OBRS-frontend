@@ -6,7 +6,6 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import {
   PageResponse,
@@ -1599,7 +1598,6 @@ export class AdminApiService {
 
   private createAdminContext(): HttpContext {
     return new HttpContext()
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true);
   }
 

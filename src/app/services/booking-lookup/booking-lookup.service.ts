@@ -6,7 +6,6 @@ import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import {
   BookingLookupRequest,
@@ -38,11 +37,9 @@ export class BookingLookupService {
    * - `SKIP_GLOBAL_ERROR_ALERT` — a wrong pair is the NORMAL outcome of a typo, not an incident.
    *   The page renders its own inline "not found" state; a global red toast on every mistyped
    *   digit would be both wrong in tone and, on a throttled endpoint, a nudge to retry faster.
-   * - `SKIP_GLOBAL_LOADING_ALERT` — same, for the blocking spinner.
    */
   private readonly publicContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true)
     .set(SKIP_AUTH_LOGOUT, true);
 
   constructor(private readonly http: HttpClient) {}

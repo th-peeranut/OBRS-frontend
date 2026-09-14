@@ -33,6 +33,7 @@ import {
   TripDetailsEditFormComponent,
   TripEditFormValue,
 } from '../trip-details-edit/trip-details-edit-form/trip-details-edit-form.component';
+import { StaffRemittanceTabComponent } from '../staff-remittance-tab/staff-remittance-tab.component';
 
 export interface TripDetailsUpdatedEvent {
   scheduleId: number;
@@ -207,6 +208,35 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   /** Zero-based index of the "Trip Details" tab in the p-tabView. */
   private static readonly TRIP_DETAILS_TAB_INDEX = 1;
 
+  /** OBRS-1755 — zero-based index of the "ส่งยอด" tab (4th, after ขึ้นรถ). */
+  private static readonly REMITTANCE_TAB_INDEX = 3;
+
+  /**
+   * OBRS-1755 — the tab currently on screen, kept here as well as emitted.
+   *
+   * `p-tabpanel` is eager by default, so every panel's content is constructed as
+   * soon as a trip is selected. The remittance tab therefore has to be TOLD when
+   * it is the visible one, or it would fetch a round's money the moment the
+   * clerk clicked that round in the left-hand list.
+   */
+  protected activeTab = 0;
+
+  protected get isRemittanceTabActive(): boolean {
+    return this.activeTab === WalkInCenterPanelComponent.REMITTANCE_TAB_INDEX;
+  }
+
+  /**
+   * OBRS-1755 — reached by the sell page's `canDeactivate()`. The remittance tab
+   * is the only thing on this panel holding money that the server does not know
+   * about yet (a typed driver advance, a corrected head count).
+   */
+  @ViewChild(StaffRemittanceTabComponent) remittanceTabRef?: StaffRemittanceTabComponent;
+
+  /** Implements the panel's half of BR-18 — see the sell page's `canDeactivate()`. */
+  canDeactivate(): boolean | Promise<boolean> {
+    return this.remittanceTabRef ? this.remittanceTabRef.canDeactivate() : true;
+  }
+
   ngOnInit(): void {
     // Tell the parent the starting tab (Ticket Sales, index 0) so it never
     // renders a stale/undefined layout before the first user-driven tab
@@ -242,6 +272,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     const index = typeof value === 'number' ? value : Number(value);
     if (!Number.isFinite(index)) return;
 
+    this.activeTab = index;
     this.activeTabChange.emit(index);
 
     if (index === WalkInCenterPanelComponent.TRIP_DETAILS_TAB_INDEX) {

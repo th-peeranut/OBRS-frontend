@@ -22,6 +22,24 @@ export class DriverCashAdvanceFormComponent implements OnChanges {
   @Input() submitError: string | null = null;
   @Output() submitAdvance = new EventEmitter<{ amount: string }>();
 
+  /**
+   * OBRS-1755 — additive, `true` by default so `driver-cash-panel` is unchanged.
+   *
+   * The "ส่งยอด" tab embeds this form under a screen that has exactly ONE
+   * primary button (owner ruling 2026-09-09: the "บันทึกเงินทดรอง" button was
+   * removed), so there it renders the field without its own submit. The form is
+   * otherwise identical — including the `ngOnChanges` clear-on-success contract
+   * below, which that tab drives the same way the panel does.
+   */
+  @Input() showSubmit = true;
+
+  /**
+   * OBRS-1755 — additive. Emits the raw text on every keystroke so a host can
+   * move a dependent figure live (the tab's "หักเงินที่คนขับขอเบิกไป" row).
+   * `driver-cash-panel` binds nothing to it, so nothing changes there.
+   */
+  @Output() amountChange = new EventEmitter<string>();
+
   protected amountInput = '';
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -40,6 +58,12 @@ export class DriverCashAdvanceFormComponent implements OnChanges {
 
   protected get amountCents(): number | null {
     return toCents(this.amountInput);
+  }
+
+  /** OBRS-1755: the `[(ngModel)]` write, split so the raw text can also be published. */
+  protected onAmountInput(value: string): void {
+    this.amountInput = value;
+    this.amountChange.emit(value);
   }
 
   protected get canSubmit(): boolean {

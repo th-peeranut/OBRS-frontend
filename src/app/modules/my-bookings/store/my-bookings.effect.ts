@@ -63,31 +63,29 @@ export class MyBookingsEffect {
     this.actions$.pipe(
       ofType(invokeLoadMyBookingsApi),
       withLatestFrom(this.store.pipe(select(selectMyBookings))),
-      switchMap(([{ status, showLoading, preserveWindow }, state]) => {
+      switchMap(([{ status, preserveWindow }, state]) => {
         const size = preserveWindow
           ? Math.max(MY_BOOKINGS_PAGE_SIZE, state.pagesLoaded * MY_BOOKINGS_PAGE_SIZE)
           : MY_BOOKINGS_PAGE_SIZE;
 
-        return this.service
-          .getMyBookings({ status, page: 0, size, showLoadingDialog: showLoading })
-          .pipe(
-            map((response) =>
-              invokeLoadMyBookingsApiSuccess({
-                bookings: response.data?.content ?? [],
-                totalElements: response.data?.totalElements ?? 0,
-                totalPages: response.data?.totalPages ?? 0,
+        return this.service.getMyBookings({ status, page: 0, size }).pipe(
+          map((response) =>
+            invokeLoadMyBookingsApiSuccess({
+              bookings: response.data?.content ?? [],
+              totalElements: response.data?.totalElements ?? 0,
+              totalPages: response.data?.totalPages ?? 0,
+            })
+          ),
+          catchError((error: unknown) =>
+            of(
+              invokeLoadMyBookingsApiFailure({
+                error:
+                  extractApiErrorMessage(error) ||
+                  this.translate.instant('MY_BOOKINGS.LOAD_FAILED'),
               })
-            ),
-            catchError((error: unknown) =>
-              of(
-                invokeLoadMyBookingsApiFailure({
-                  error:
-                    extractApiErrorMessage(error) ||
-                    this.translate.instant('MY_BOOKINGS.LOAD_FAILED'),
-                })
-              )
             )
-          );
+          )
+        );
       })
     )
   );
@@ -95,9 +93,10 @@ export class MyBookingsEffect {
   // OBRS-577 AC2/AC6: fetches the next MY_BOOKINGS_PAGE_SIZE-row page and the
   // reducer APPENDS it (never replaces) — the customer-shell incremental
   // "Load more" idiom (design-system §12, OBRS-433 precedent), not a
-  // page-number paginator. `showLoadingDialog: false` is explicit (not just
-  // the service default) so this never surfaces the global loading dialog
-  // even if that default ever changes.
+  // page-number paginator. OBRS-908: it used to pass `showLoadingDialog: false`
+  // explicitly so a later change to that default could not surface the global
+  // loading dialog here; the flag is gone because the dialog is opt-in now and a
+  // list fetch does not opt in.
   //
   // Scrutinize round 3 (this effect's OWN guard was structurally
   // unreachable): a `filter` reading `!state.loadingMore` mirrored
@@ -144,7 +143,6 @@ export class MyBookingsEffect {
             status: state.statusFilter,
             page: state.pagesLoaded,
             size: MY_BOOKINGS_PAGE_SIZE,
-            showLoadingDialog: false,
           })
           .pipe(
             map((response) =>

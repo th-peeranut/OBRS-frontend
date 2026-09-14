@@ -77,9 +77,7 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
 
     try {
       const response = await firstValueFrom(
-        this.paymentService.getBookingPayments(bookingId, {
-          skipGlobalLoadingAlert: true,
-        }).pipe(take(1))
+        this.paymentService.getBookingPayments(bookingId).pipe(take(1))
       );
 
       if (this.isPaymentConfirmed(response.data)) {

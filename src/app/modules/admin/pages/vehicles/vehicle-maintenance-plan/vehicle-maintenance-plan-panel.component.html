@@ -109,6 +109,7 @@
                       type="button"
                       class="admin-icon-btn"
                       [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                      [title]="'ADMIN.COMMON.EDIT' | translate"
                       (click)="openEditModal(row)"
                       >
                       <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
@@ -121,6 +122,7 @@
                         class="admin-icon-btn"
                         [disabled]="isRowSaving(row)"
                         [attr.aria-label]="'ADMIN.VEHICLES.MAINTENANCE_PLAN.DEACTIVATE_BTN' | translate"
+                        [title]="'ADMIN.VEHICLES.MAINTENANCE_PLAN.DEACTIVATE_BTN' | translate"
                         (click)="toggleActive(row)"
                         >
                         <span class="material-symbols-outlined" [attr.translate]="'no'">visibility_off</span>
@@ -132,6 +134,7 @@
                         class="admin-icon-btn"
                         [disabled]="isRowSaving(row)"
                         [attr.aria-label]="'ADMIN.VEHICLES.MAINTENANCE_PLAN.RESTORE_BTN' | translate"
+                        [title]="'ADMIN.VEHICLES.MAINTENANCE_PLAN.RESTORE_BTN' | translate"
                         (click)="toggleActive(row)"
                         >
                         <span class="material-symbols-outlined" [attr.translate]="'no'">visibility</span>

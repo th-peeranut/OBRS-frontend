@@ -5,7 +5,6 @@ import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import { CustomerTripPositionRespDto } from '../../shared/lib/trip-track-view';
 
@@ -15,8 +14,9 @@ import { CustomerTripPositionRespDto } from '../../shared/lib/trip-track-view';
  * Follows `StaffApiService`'s shape: inline URL (there is no endpoint-
  * constants file on the FE), `Observable<ResponseAPI<T>>`.
  *
- * BR-19: `SKIP_GLOBAL_ERROR_ALERT` + `SKIP_GLOBAL_LOADING_ALERT` are set — a
- * 60s poll must never raise a modal or flash the global loader — but
+ * BR-19: `SKIP_GLOBAL_ERROR_ALERT` is set — a 60s poll must never raise a modal.
+ * (It used to set a loader opt-out beside it; OBRS-908 made the blocking overlay
+ * opt-in, so a poll cannot flash it any more however often it runs.) But
  * `SKIP_AUTH_LOGOUT` is deliberately NOT set: a genuine 401 on this private
  * endpoint must still drive the app's normal force-logout path (the
  * OBRS-181/OBRS-187 trap — that token belongs on endpoints whose 4xx is a
@@ -25,8 +25,7 @@ import { CustomerTripPositionRespDto } from '../../shared/lib/trip-track-view';
 @Injectable({ providedIn: 'root' })
 export class TripTrackService {
   private readonly context = new HttpContext()
-    .set(SKIP_GLOBAL_ERROR_ALERT, true)
-    .set(SKIP_GLOBAL_LOADING_ALERT, true);
+    .set(SKIP_GLOBAL_ERROR_ALERT, true);
 
   constructor(private readonly http: HttpClient) {}
 

@@ -1,8 +1,26 @@
 import { HttpContextToken } from '@angular/common/http';
 
-export const SKIP_GLOBAL_LOADING_ALERT = new HttpContextToken<boolean>(
-  () => false
-);
+/**
+ * Opts a request INTO the blocking full-screen loading overlay that
+ * `error.interceptor.ts` raises through `AlertService.showLoading()`.
+ *
+ * OBRS-908 inverted this. What stood here was the skip-shaped opposite (named on that
+ * card, and in `git log` for this file) whose default was to cover the whole screen on
+ * EVERY `/api/` request, so a page that merely fetched its own data locked the customer
+ * out of it — `allowOutsideClick` and `allowEscapeKey` are both false, so until
+ * OBRS-642's 8s escape hatch the only exit was a page refresh. That the default was
+ * backwards is measured, not a matter of taste: 51 call sites across 21 services had
+ * already opted out by hand, out of 115 `HttpClient` call sites in all (`git grep` on
+ * `origin/dev`, 2026-09-14), and that count had grown from 29 in the five weeks the
+ * card sat open.
+ *
+ * Set this ONLY on an action the customer deliberately started and must not be able
+ * to start twice or walk out of half-way: paying, confirming a booking,
+ * cancelling/refunding one. Data a page loads for itself renders its own inline
+ * state — skeletons and button spinners, which is what OBRS-907/OBRS-910 built — and
+ * must not reach for this.
+ */
+export const SHOW_BLOCKING_LOADING = new HttpContextToken<boolean>(() => false);
 
 export const SKIP_GLOBAL_ERROR_ALERT = new HttpContextToken<boolean>(
   () => false

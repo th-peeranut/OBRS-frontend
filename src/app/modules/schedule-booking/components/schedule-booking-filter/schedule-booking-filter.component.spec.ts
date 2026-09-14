@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Store } from '@ngrx/store';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import dayjs from 'dayjs';
@@ -35,6 +36,10 @@ import { LanguageService } from '../../../../shared/services/language.service';
 // of silently making it pass against an action nobody dispatches any more.
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-list/schedule-list.action';
+// OBRS-863: the two slices the collapsed summary reads — the same two the
+// result list reads, which is the whole point of AC#4.
+import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 // OBRS-1222: this template now renders `app-station-load-error`. Declared here
 // rather than schema-suppressed so the slices keep failing on a REAL unknown
 // element. With `createStoreStub()` its two selectors both read null, so it
@@ -1866,3 +1871,207 @@ function station(id: number): StationApi {
     updatedAt: '',
   };
 }
+
+// OBRS-863. The bar collapses to a one-line summary of the search that produced
+// the list below it, and the customer opens the SAME form back up to change it.
+//
+// `provideMockStore` + `overrideSelector`, not the hand-written store stub the
+// older slices above use: the day-strip and list specs in this same module
+// override `selectProvinceWithStation`/`selectScheduleFilter` through MockStore,
+// and an override outlives the file that set it. A stub that answered a real
+// `select()` call here read THEIR frozen `[]` and `null` instead of this
+// fixture — green alone in this file, six failures in a whole-module run.
+describe('ScheduleBookingFilterComponent — collapsed search summary (OBRS-863)', () => {
+  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
+  let component: ScheduleBookingFilterComponent;
+  let store: MockStore;
+
+  const BANGKOK: any = {
+    id: 1,
+    slug: 'bangkok',
+    status: 'active',
+    stopType: 'station',
+    display: { th: { label: 'กรุงเทพฯ' }, en: { label: 'Bangkok' } },
+  };
+  const NAKHON_PHANOM: any = {
+    id: 2,
+    slug: 'nakhon-phanom',
+    status: 'active',
+    stopType: 'station',
+    display: { th: { label: 'นครพนม' }, en: { label: 'Nakhon Phanom' } },
+  };
+
+  const SAVED_FILTER: any = {
+    roundTrip: 2,
+    passengerInfo: [
+      { type: 'ADULT', count: 2 },
+      { type: 'KIDS', count: 0 },
+    ],
+    startStationId: 1,
+    stopStationId: 2,
+    departureDate: dayjs().add(3, 'day').format('YYYY-MM-DD'),
+    returnDate: dayjs().add(6, 'day').format('YYYY-MM-DD'),
+  };
+
+  async function setup(scheduleFilter: any): Promise<void> {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingFilterComponent, StationLoadErrorComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        StationSwapButtonComponent,
+        TripTypeToggleComponent,
+        DropdownObrsPassengerComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: StationService, useValue: createStationServiceStub() },
+        provideMockStore(),
+        {
+          provide: AlertService,
+          useValue: { warning: () => {}, error: () => {}, success: () => {} },
+        },
+        {
+          provide: BookingPolicyService,
+          useValue: createBookingPolicyServiceStub(),
+        },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+      ],
+    }).compileComponents();
+
+    store = TestBed.inject(MockStore);
+    store.overrideSelector(selectScheduleFilter, scheduleFilter);
+    store.overrideSelector(selectProvinceWithStation, [
+      BANGKOK,
+      NAKHON_PHANOM,
+    ] as any);
+
+    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    // Leaving these set is exactly what broke this block the first time.
+    store?.resetSelectors();
+  });
+
+  function toggle(): HTMLButtonElement {
+    return fixture.debugElement.query(
+      By.css('[data-testid="search-summary-toggle"]')
+    ).nativeElement as HTMLButtonElement;
+  }
+
+  /** The trip-type pills are the first control of the form proper, so their
+   *  count IS the number of copies of the form on the page. */
+  function formCopies(): number {
+    return fixture.debugElement.queryAll(By.css('app-trip-type-toggle')).length;
+  }
+
+  it('AC#1: a restored search renders collapsed, with the form gone', async () => {
+    await setup(SAVED_FILTER);
+
+    expect(component.isExpanded).toBeFalse();
+    expect(formCopies()).toBe(0);
+    expect(toggle().textContent).toContain('Bangkok → Nakhon Phanom');
+  });
+
+  it('AC#1: with nothing searched the form stays open instead', async () => {
+    await setup(null);
+
+    expect(component.summary).toBeNull();
+    expect(component.isExpanded).toBeTrue();
+    expect(formCopies()).toBe(1);
+  });
+
+  // The two halves of the collapse condition, each pinned from the side that
+  // used to get it wrong. Every case above seeds a filter for which BOTH hold,
+  // which is exactly why neither was caught by them.
+  it('AC#1: a renderable summary is not enough — no search ran, so the form stays open', async () => {
+    // Stations and a date resolve, so `buildSummary()` succeeds; no passenger
+    // does, so `isSearchable()` does not. This is the store the trip-type pill
+    // writes when a customer picks a route and touches it before setting a
+    // passenger count — it dispatches `getRawValue()` unconditionally, unlike
+    // the Search button. Collapsing here put the form away mid-fill, above an
+    // empty result list.
+    await setup({ ...SAVED_FILTER, passengerInfo: [{ type: 'ADULT', count: 0 }] });
+
+    expect(component.summary).not.toBeNull();
+    expect(component.isExpanded).toBeTrue();
+    expect(formCopies()).toBe(1);
+  });
+
+  it('AC#1: a search with nothing to summarise does not collapse either', async () => {
+    // `isSearchable()` never looks at the date, so this searches; the summary
+    // reads the STORE's null `departureDate` and cannot be built. Collapsing on
+    // the search alone would hide the form behind a bar reading "no route
+    // selected yet" over a full result list.
+    await setup({ ...SAVED_FILTER, departureDate: null });
+
+    expect(component.summary).toBeNull();
+    expect(component.isExpanded).toBeTrue();
+    expect(formCopies()).toBe(1);
+  });
+
+  it('AC#2: opening it renders the one existing form, never a second copy', async () => {
+    await setup(SAVED_FILTER);
+
+    toggle().click();
+    fixture.detectChanges();
+
+    expect(component.isExpanded).toBeTrue();
+    expect(formCopies()).toBe(1);
+
+    // The summary stays on screen, so the same control closes it again.
+    toggle().click();
+    fixture.detectChanges();
+    expect(formCopies()).toBe(0);
+  });
+
+  it('AC#3: a successful search collapses the form, a refused one does not', async () => {
+    await setup(SAVED_FILTER);
+    component.isExpanded = true;
+
+    component.onSearch();
+    expect(component.isExpanded).toBeFalse();
+
+    // Same component, now missing a destination: the press only warns, and the
+    // form has to stay open at the field the warning names.
+    component.isExpanded = true;
+    component.bookingForm.patchValue({ stopStationId: '' });
+    component.onSearch();
+    expect(component.isExpanded).toBeTrue();
+  });
+
+  it('AC#4: the summary reads the store, not the form the customer is editing', async () => {
+    await setup(SAVED_FILTER);
+
+    component.bookingForm.patchValue({ startStationId: 2, stopStationId: 1 });
+
+    expect(component.summary!.route).toBe('Bangkok → Nakhon Phanom');
+    expect(component.summary!.passengers).toBe(2);
+    expect(component.summary!.dateLabel).toContain('–');
+  });
+
+  it('AC#4: a one-way search summarises one date, not a range', async () => {
+    await setup({ ...SAVED_FILTER, roundTrip: 1 });
+
+    expect(component.summary!.dateLabel).not.toContain('–');
+  });
+
+  it('AC#7: the toggle is a real button that publishes its expanded state', async () => {
+    await setup(SAVED_FILTER);
+
+    expect(toggle().getAttribute('type')).toBe('button');
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+
+    toggle().click();
+    fixture.detectChanges();
+
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+  });
+});

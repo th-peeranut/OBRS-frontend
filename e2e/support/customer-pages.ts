@@ -1176,3 +1176,44 @@ export async function seedStore(page: Page, overrides: Record<string, unknown> =
     store.dispatch({ type: '[Booking API] Set Booking Success', booking: seed.bookingResult });
   }, { ...STORE_SEED, ...overrides } as typeof STORE_SEED);
 }
+
+/**
+ * Ask Angular to catch up before a sweep measures the DOM.
+ *
+ * `seedStore` dispatches from inside `page.evaluate`, i.e. the browser's ROOT
+ * zone, so every async task the seed sets off completes OUTSIDE the Angular zone
+ * and schedules no tick. The clearest case is the results page: the day strip's
+ * availability POST lands, `renderChips()` recomputes correctly, and the DOM
+ * stays one render behind the component's own `days` array.
+ *
+ * That was invisible for as long as those pages also held a component that kept
+ * producing in-zone tasks of its own — on `/schedule-booking` the always-mounted
+ * PrimeNG search form. OBRS-863 collapsed that form and the free tick went with
+ * it, at which point `.day-strip__chip.is-unavailable` rendered zero times in a
+ * strip whose `days` said `['selected','available','unavailable',…]`. Measured
+ * three ways: `ng.applyChanges()` repaints it, ONE real bound click repaints it,
+ * and `page.mouse.click` on unbound space does not.
+ *
+ * So this is not a product defect and the flush is not a workaround for one — a
+ * customer arrives here by pressing Search, which puts the whole cascade in the
+ * Angular zone. It is the harness owing Angular a tick it never scheduled, and a
+ * sweep that scores a DOM Angular was never asked to paint is scoring the
+ * harness rather than the page.
+ */
+export async function flushAngular(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const ng = (window as unknown as {
+      ng?: { getComponent(el: Element): unknown; applyChanges(cmp: unknown): void };
+    }).ng;
+    if (!ng?.applyChanges || !ng.getComponent) return;
+    for (const el of Array.from(document.querySelectorAll('*'))) {
+      const cmp = ng.getComponent(el);
+      if (cmp) {
+        // Marks it dirty and runs ApplicationRef.tick(), so one component is
+        // enough to flush every view.
+        ng.applyChanges(cmp);
+        return;
+      }
+    }
+  });
+}

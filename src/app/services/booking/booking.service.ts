@@ -29,9 +29,9 @@ import {
 import { PageResponse } from '../../shared/interfaces/payment.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
+  SHOW_BLOCKING_LOADING,
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import { normalizeSeatAssignments } from '../../shared/lib/seat-number';
 import { map, Observable } from 'rxjs';
@@ -88,7 +88,6 @@ export interface GetMyBookingsParams {
   status?: string | null;
   page?: number;
   size?: number;
-  showLoadingDialog?: boolean;
   skipAuthLogout?: boolean;
 }
 
@@ -154,12 +153,18 @@ export class BookingService {
       ? `${environment.apiUrl}/api/private/bookings`
       : `${environment.apiUrl}/api/bookings`;
 
+    // OBRS-908: one of the three things that still earns the blocking overlay. This is
+    // the customer confirming a booking — seats are held against this call, and a second
+    // press while the first is in flight is exactly what the overlay exists to prevent.
+    // It reaches the screen only if the call is still running after
+    // BLOCKING_LOADING_DELAY_MS, so a fast confirm stays as silent as every other call.
     return this.http
-      .post<ResponseAPI<CreateBookingResponse>>(
-        url,
-        payload,
-        suppressGlobalErrorAlert ? { context: this.silentErrorContext() } : {}
-      )
+      .post<ResponseAPI<CreateBookingResponse>>(url, payload, {
+        context: (suppressGlobalErrorAlert
+          ? this.silentErrorContext()
+          : new HttpContext()
+        ).set(SHOW_BLOCKING_LOADING, true),
+      })
       .pipe(
         map((response) => ({
           ...response,
@@ -238,9 +243,7 @@ export class BookingService {
    * and paginated (`page`/`size` — OBRS-577 AC2/AC6: `size` defaults to 20,
    * paired with `/my-bookings`'s own incremental "Load more" button, so a
    * >100-booking history is reachable instead of silently capped at the old
-   * hardcoded 100). Pass `showLoadingDialog` to surface the global loading
-   * dialog (e.g. when switching the status filter); the page renders its own
-   * skeletons otherwise.
+   * hardcoded 100). The page renders its own skeletons.
    *
    * `skipAuthLogout` — OBRS-575 (#37-style null-default extension, not a
    * fork): the Home page's recent-route quick-pick calls this in the
@@ -257,7 +260,7 @@ export class BookingService {
   getMyBookings(
     params: GetMyBookingsParams = {}
   ): Observable<ResponseAPI<PageResponse<MyBookingDto>>> {
-    const { status, page = 0, size = 20, showLoadingDialog = false, skipAuthLogout = false } = params;
+    const { status, page = 0, size = 20, skipAuthLogout = false } = params;
     let httpParams = new HttpParams().set('page', String(page)).set('size', String(size));
     if (status) {
       httpParams = httpParams.set('status', status);
@@ -265,7 +268,7 @@ export class BookingService {
 
     return this.http.get<ResponseAPI<PageResponse<MyBookingDto>>>(
       `${environment.apiUrl}/api/private/bookings/me`,
-      { params: httpParams, context: this.listContext(showLoadingDialog, skipAuthLogout) }
+      { params: httpParams, context: this.listContext(skipAuthLogout) }
     );
   }
 
@@ -291,10 +294,14 @@ export class BookingService {
     bookingId: number,
     payload: CancelBookingReqDto = {}
   ): Observable<ResponseAPI<CancelBookingResult>> {
+    // OBRS-908: cancelling is irreversible and refunds money, so it blocks — sent twice
+    // it is two cancel attempts on one booking. `silentContext()` still suppresses the
+    // global error alert, because this flow renders its own result dialog; what is added
+    // here is only the in-flight lock, and only past BLOCKING_LOADING_DELAY_MS.
     return this.http.post<ResponseAPI<CancelBookingResult>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/cancel`,
       payload,
-      { context: this.silentContext() }
+      { context: this.silentContext().set(SHOW_BLOCKING_LOADING, true) }
     );
   }
 
@@ -429,11 +436,12 @@ export class BookingService {
     );
   }
 
-  // The cancel flow drives its own SweetAlert confirm/success/error dialogs,
-  // so opt out of the global loading spinner and error alert.
+  // The cancel flow drives its own SweetAlert confirm/success/error dialogs, so opt
+  // out of the global error alert. OBRS-908: it no longer opts out of the loading
+  // overlay either, because nothing opts out of that any more — it is opt-in now, and
+  // `cancelBooking` is the one caller here that asks for it.
   private silentContext(): HttpContext {
     return new HttpContext()
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true);
   }
 
@@ -442,11 +450,13 @@ export class BookingService {
   // `skipAuthLogout` (OBRS-575): default false keeps `/my-bookings`'s existing
   // force-logout-on-401 behavior untouched; only a background caller (Home's
   // recent-route quick-pick) opts in.
-  private listContext(showLoadingDialog: boolean, skipAuthLogout = false): HttpContext {
+  //
+  // OBRS-908 removed this method's `showLoadingDialog` parameter along with the
+  // skip-token it set. Listing bookings is a page loading its own data, so it never
+  // qualifies for the blocking overlay under the new rule and there is nothing left
+  // for the flag to choose between — `/my-bookings` already renders skeletons.
+  private listContext(skipAuthLogout = false): HttpContext {
     const context = new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true);
-    if (!showLoadingDialog) {
-      context.set(SKIP_GLOBAL_LOADING_ALERT, true);
-    }
     if (skipAuthLogout) {
       context.set(SKIP_AUTH_LOGOUT, true);
     }

@@ -62,6 +62,7 @@
                 class="admin-nav-search-clear"
                 (click)="clearNavSearch(); navSearchInput.value = ''"
                 [attr.aria-label]="'ADMIN.NAV.SEARCH_CLEAR_ARIA' | translate"
+                [title]="'ADMIN.NAV.SEARCH_CLEAR_ARIA' | translate"
                 >
                 <span class="material-symbols-outlined" [attr.translate]="'no'">close</span>
               </button>
@@ -163,6 +164,7 @@
             (click)="toggleSidebar()"
             [attr.aria-expanded]="isSidebarOpen"
             [attr.aria-label]="(isSidebarOpen ? 'ADMIN.LAYOUT.CLOSE_MENU' : 'ADMIN.LAYOUT.OPEN_MENU') | translate"
+            [title]="(isSidebarOpen ? 'ADMIN.LAYOUT.CLOSE_MENU' : 'ADMIN.LAYOUT.OPEN_MENU') | translate"
             >
             <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isSidebarOpen ? 'close' : 'menu' }}</span>
           </button>
@@ -184,6 +186,7 @@
               (click)="toggleTheme()"
               [attr.aria-pressed]="isDarkMode"
               [attr.aria-label]="'ADMIN.LAYOUT.THEME_TOGGLE' | translate"
+              [title]="'ADMIN.LAYOUT.THEME_TOGGLE' | translate"
               >
               <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
             </button>

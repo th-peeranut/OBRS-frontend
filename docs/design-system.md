@@ -597,8 +597,15 @@ One color = one meaning. Never pick a button color for looks.
   `height`/`width` on a flex item inside an overflowing column is not what the user
   gets. `.admin-sidebar-pin` declared 28x28 but rendered 20px tall once its column
   overflowed (OBRS-913); the fix was `flex-shrink: 0`, not a bigger declared size.
-  This is a repo-wide expectation, not a repo-wide *gate* — the automated check for
-  it is OBRS-925, not this note.
+  **This note is not what enforces it** — prose has no teeth, and this rule was true
+  and written down while the button was 20px on prod. `e2e/tests/target-size-sweep.spec.ts`
+  (OBRS-925) is the enforcement: it measures every visible interactive control on all
+  47 screens the hermetic gate lane reaches with `getBoundingClientRect()` and fails
+  the merge on any that renders under 24×24 without meeting one of SC 2.5.8's own
+  exceptions (user-agent-sized, inline in a sentence, spaced clear of every neighbour,
+  or a declared full-size equivalent on the same page). A control that cannot be fixed
+  yet is named on that spec's `ALLOW` list against a card, so the debt is counted and
+  reprinted on every run rather than forgotten.
 
 ---
 
@@ -795,7 +802,12 @@ Run this against any UI diff (and during the live-verify screenshot glance):
       customer-surface rule, so the 44 px exemption above does not carry over to it:
       `.refund-void-info-btn` at 22 px is exempted from 44 but is **below 24 and
       therefore unresolved**, not grandfathered. Whether to raise it is the owner's
-      call (raised on OBRS-913); the repo-wide check is OBRS-925.
+      call (raised on OBRS-913). The repo-wide check now runs —
+      `e2e/tests/target-size-sweep.spec.ts` (OBRS-925), in the gate lane — and it does
+      **not** flag that button: measured 2026-09-14, nothing else is inside the 24 px
+      circle around it, so SC 2.5.8's *Spacing* exception applies and by the AA letter
+      it passes. "Unresolved" above is the house preference, not a WCAG failure, and
+      the gate enforces the standard rather than the preference.
 - [ ] **No layout jump:** anything arriving async reserves its space first — images and
       map tiles get explicit dimensions or `aspect-ratio`, and a list that will become
       rows renders the `skeleton` variant rather than collapsing to zero height.

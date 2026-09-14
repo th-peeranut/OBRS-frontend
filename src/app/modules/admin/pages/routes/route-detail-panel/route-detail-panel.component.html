@@ -213,6 +213,7 @@
               type="button"
               class="admin-icon-btn"
               [attr.aria-label]="'ADMIN.COMMON.PREVIOUS' | translate"
+              [title]="'ADMIN.COMMON.PREVIOUS' | translate"
               [disabled]="!canPreviousPage"
               (click)="goToPreviousPage()"
               >
@@ -228,6 +229,7 @@
               type="button"
               class="admin-icon-btn"
               [attr.aria-label]="'ADMIN.COMMON.NEXT' | translate"
+              [title]="'ADMIN.COMMON.NEXT' | translate"
               [disabled]="!canNextPage"
               (click)="goToNextPage()"
               >

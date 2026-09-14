@@ -5,25 +5,24 @@ import { StationApi } from '../../shared/interfaces/station.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import { Observable } from 'rxjs';
 import { shareReplay } from 'rxjs/operators';
 import { ProvinceStopsApi } from '../../shared/lib/station-groups';
 
 /**
- * Per-call opt-outs for `StationService.getAll()`. An OBJECT, not positional
- * booleans (OBRS-1222): there are two of them now, they are independent, and
- * `getAll(true, true)` says nothing at the call site about which is which.
- * Same shape `BookingService.getMyBookings({ showLoadingDialog, skipAuthLogout })`
- * already uses.
+ * Per-call opt-outs for `StationService.getAll()`. An OBJECT, not a positional
+ * boolean (OBRS-1222): `getAll(true)` says nothing at the call site about which
+ * behavior is being switched. Same shape `BookingService.getMyBookings()` uses.
  *
- * Both default to `false` — i.e. to whatever `error.interceptor.ts` does on its
- * own. A caller opts out; the service never decides for anyone.
+ * OBRS-908 removed the `skipLoadingAlert` flag that used to sit beside this one.
+ * The blocking overlay is opt-in now and this lookup never opts in, so there is
+ * nothing left to opt out of — see the `getAll` docblock.
+ *
+ * Defaults to `false` — i.e. to whatever `error.interceptor.ts` does on its own.
+ * A caller opts out; the service never decides for anyone.
  */
 export interface StationGetAllOptions {
-  /** See the `getAll` docblock — OBRS-1056. */
-  skipLoadingAlert?: boolean;
   /** See the `getAll` docblock — OBRS-1222. */
   skipErrorAlert?: boolean;
 }
@@ -38,22 +37,25 @@ export class StationService {
   constructor(private http: HttpClient) {}
 
   /**
-   * `skipLoadingAlert` (OBRS-1056): a caller that loads this lookup BEHIND an
-   * already-open modal must opt out. Otherwise `error.interceptor.ts` raises the
-   * global SweetAlert2 loading popup on top of the dialog, and that popup
-   * focuses itself and stops keydown propagation (sweetalert2 ships
+   * OBRS-908 deleted the `skipLoadingAlert` flag this docblock used to open with.
+   * It existed because `error.interceptor.ts` raised the blocking SweetAlert2
+   * overlay for every `/api/` request, and a caller loading this lookup BEHIND an
+   * already-open modal had to opt out or the overlay would land on top of the dialog
+   * — it focuses itself and stops keydown propagation (sweetalert2 ships
    * `stopKeydownPropagation: true` + `keydownListenerCapture: false`), so the
-   * dialog's own `document:keydown.escape` host listener never fires and Escape
-   * silently does nothing. It also contradicts what those effects promise in
-   * their own comments — "modals open optimistically, never gated on an awaited
-   * fetch" (design-system §6).
+   * dialog's own `document:keydown.escape` host listener never fired and Escape
+   * silently did nothing. That whole class of collision is gone with the default:
+   * a stop lookup is data a page fetches for itself, so it never raises the overlay
+   * and no caller has to remember anything. The promise those effects make in their
+   * own comments — "modals open optimistically, never gated on an awaited fetch"
+   * (design-system §6) — is now what the interceptor does by default.
    *
    * `skipErrorAlert` (OBRS-1222): opts out of the global SweetAlert2 ERROR
    * modal so the CALLER can render the failure where the customer is already
    * looking. Only `ProvinceEffect` passes it, and only because it ships a
    * replacement surface (`app-station-load-error`) in the same card.
    *
-   * ⛔ NEITHER FLAG MAY EVER BECOME THE DEFAULT, and `skipErrorAlert` above all.
+   * ⛔ `skipErrorAlert` MAY NEVER BECOME THE DEFAULT.
    * This method has three callers and they are not interchangeable: the other
    * two (`change-stop.effect.ts:77`, `reschedule.effect.ts:71`) run while a
    * customer is mid-change to a REAL ticket, and their `catchError` only writes
@@ -62,27 +64,18 @@ export class StationService {
    * That is the exact lie OBRS-642 was opened to remove. Make the decision at
    * the call site or not at all; `station.service.spec.ts` fails if this drifts.
    *
-   * ⚠️ CORRECTED BY OBRS-642. This used to add: "Default `false` keeps the three
-   * non-modal callers (`ProvinceEffect`, `DriverCashRatesStore`,
-   * `ParcelBookingPageComponent`) showing the spinner they show today — this endpoint
-   * is their page's primary fetch, not a background one." Being the page's primary
-   * fetch is an argument for showing progress, not for a modal that covers the page and
-   * cannot be dismissed: `ProvinceEffect` is the HOME page's station lookup, and a
-   * customer whose `/api/stops` stalls is locked out of the booking form entirely
-   * (measured: 2/10 public customer routes blocked on page load, `/` and
-   * `/schedule-booking`, both from this call). `ProvinceEffect` now passes `true`.
-   *
-   * Default `false` remains for the other two, which are admin/parcel surfaces this card
-   * did not measure — flip them when someone measures them, not on the strength of this
-   * sentence.
+   * ⚠️ OBRS-642 measured what the old overlay default cost on this very endpoint:
+   * 2/10 public customer routes were blocked on page load (`/` and `/schedule-booking`,
+   * both from this call), because a customer whose `/api/stops` stalls was locked out
+   * of the booking form entirely. That is the measurement OBRS-908 generalized into
+   * the interceptor's default rather than leaving as a per-caller flag.
    */
   getAll(options: StationGetAllOptions = {}): Observable<ResponseAPI<StationApi[]>> {
-    // Built unconditionally and only SET for the flags that were asked for.
+    // Built unconditionally and only SET for the flag that was asked for.
     // An `HttpContext` with nothing in it is indistinguishable from no context
     // at all as far as the interceptor is concerned (every token falls back to
     // its `() => false` default), so there is no branch to keep in sync here.
     const context = new HttpContext();
-    if (options.skipLoadingAlert) context.set(SKIP_GLOBAL_LOADING_ALERT, true);
     if (options.skipErrorAlert) context.set(SKIP_GLOBAL_ERROR_ALERT, true);
 
     return this.http.get<ResponseAPI<StationApi[]>>(
@@ -113,7 +106,6 @@ export class StationService {
       this.provincesWithStops$ = this.http
         .get<ResponseAPI<ProvinceStopsApi[]>>(`${environment.apiUrl}/api/provinces/stops`, {
           context: new HttpContext()
-            .set(SKIP_GLOBAL_LOADING_ALERT, true)
             .set(SKIP_GLOBAL_ERROR_ALERT, true),
         })
         .pipe(shareReplay({ bufferSize: 1, refCount: false }));

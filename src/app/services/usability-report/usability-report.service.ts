@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import {
   MyUsabilityReportDetail,
@@ -28,7 +27,6 @@ export class UsabilityReportService {
     // ensures an anonymous reporter never gets bounced to /login on a 401.
     const context = new HttpContext()
       .set(SKIP_GLOBAL_ERROR_ALERT, true)
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_AUTH_LOGOUT, true);
 
     // Do NOT set Content-Type — the browser sets it automatically with the
@@ -52,7 +50,6 @@ export class UsabilityReportService {
   // logout + redirect to /login rather than being tolerated.
   private privateContext(): HttpContext {
     return new HttpContext()
-      .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true);
   }
 

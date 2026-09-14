@@ -131,6 +131,16 @@ export default defineConfig({
     // outside every Karma fixture, so "no modal reaches the page" is a claim
     // only a real app can settle -- and that seam is where OBRS-642 shipped.
     '**/obrs-1222-station-load-error.spec.ts',
+    // OBRS-908. The entry above admits its spec because SweetAlert2 lands in
+    // document.body where no Karma fixture can see it; this is the same seam asked the
+    // opposite question -- not "does the modal stay away when a call FAILS" but "does it
+    // stay away when every call SUCCEEDS, slowly". It holds every /api/ response 800ms,
+    // past the 300ms grace period the card added, so the old every-request default could
+    // not hide behind the delay, and counts container ADDITIONS with a MutationObserver
+    // rather than sampling -- the overlay lived 231-272ms per request (OBRS-1436), which
+    // a `toHaveCount(0)` would miss ten times over. Hermetic: mockPublicPageApis plus a
+    // route that only delays and falls through.
+    '**/obrs-908-blocking-overlay.spec.ts',
     '**/route-smoke.spec.ts',
     '**/confirm-guidance-flow.spec.ts',
     '**/report-usability-issue.spec.ts',
@@ -284,6 +294,24 @@ export default defineConfig({
     // terms as the rest: public fixtures for three families, a synthetic session
     // for the admin one.
     '**/obrs-568-dropdown-panel-geometry.spec.ts',
+    // OBRS-925. The generalisation of the two entries above: instead of one
+    // control's rendered size, every interactive control on all 47 screens this
+    // lane reaches, against WCAG 2.2 SC 2.5.8's 24x24 minimum. The argument for
+    // a browser is the one OBRS-913 paid for -- a declaration is an input to
+    // layout, so every source parser in scripts/ passed a button that was 20px
+    // on prod. Hermetic on the same terms as the rest: it adds no page
+    // and no session helper, it walks e2e/support/host-boxes.ts.
+    '**/target-size-sweep.spec.ts',
+    // OBRS-931. `position: sticky` is a used value, not a declared one: any ancestor
+    // with an `overflow` or a `transform` turns it back into a bar that scrolls away,
+    // and `<app-navbar>` is mounted per page on 21 customer templates. A stylesheet
+    // assertion would pass on every one of them; only a real scroll in a real engine
+    // knows which pages keep it. Belongs on the merge gate rather than in CAPTURE
+    // because the regression it catches is silent - the bar looks right until someone
+    // scrolls - and it is exactly the kind an unrelated layout change reintroduces.
+    // Hermetic on this lane's terms: it reuses e2e/support/customer-pages.ts, so every
+    // /api/** call is fulfilled in-browser.
+    '**/obrs-931-sticky-navbar.spec.ts',
   ],
 
   timeout: 60_000,

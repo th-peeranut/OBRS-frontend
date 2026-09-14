@@ -5,7 +5,6 @@ import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { Observable } from 'rxjs';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 @Injectable({
@@ -43,6 +42,6 @@ export class UserService {
   }
 
   private quietContext(): HttpContext {
-    return new HttpContext().set(SKIP_GLOBAL_LOADING_ALERT, true).set(SKIP_GLOBAL_ERROR_ALERT, true);
+    return new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true);
   }
 }

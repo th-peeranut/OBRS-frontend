@@ -7,7 +7,6 @@ import { BankDto } from '../../shared/interfaces/bank.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
-  SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 
 @Injectable({
@@ -40,7 +39,6 @@ export class BankService {
       this.banks$ = this.http
         .get<ResponseAPI<BankDto[]>>(`${environment.apiUrl}/api/private/banks`, {
           context: new HttpContext()
-            .set(SKIP_GLOBAL_LOADING_ALERT, true)
             .set(SKIP_GLOBAL_ERROR_ALERT, true),
         })
         .pipe(
