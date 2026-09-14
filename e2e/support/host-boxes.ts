@@ -611,6 +611,34 @@ export const ADMIN_SWEEP: SweepPage[] = [
     requires: 'app-expense-bill-card p-datepicker',
   },
 
+  // --- OBRS-1902 ------------------------------------------------------------
+  // The scheduled-downtime announcement form carries two `p-datepicker`s (the
+  // window's start and end), and `primeng host users are all swept` named it on
+  // the first CI run after it was added - which is the gate working exactly as
+  // written, since a global rule in src/styles/ would reach these two instances
+  // like any other.
+  //
+  // ADMIN_SWEEP and not OWNER_SWEEP, for the same reason as
+  // `admin-expenses-batch` above: the tab is requiredRoles: ['admin','owner'],
+  // so this sweep's ['admin'] session lands on it without widening the session.
+  //
+  // `requires` names the datepicker rather than the page selector alone: the
+  // form is gated on `!isLoading`, and this lane's empty backend answers the
+  // config GET with an ordinary 200 / `data: null` - the "nothing is scheduled"
+  // SUCCESS path, the same shape every other page in this sweep resolves with,
+  // not an error. The form mounts either way (isLoading clears in `finally`),
+  // but only once the request has settled, which is what `requires` waits for.
+  //
+  // So nothing here drives a real FAILURE response at this endpoint: a later
+  // change that hides the form on a load error would NOT be covered by this
+  // entry, and must not be signed off on the strength of it.
+  {
+    key: 'admin-settings-maintenance-window',
+    url: '/admin/settings/maintenance-window',
+    landsOn: /\/admin\/settings\/maintenance-window$/,
+    requires: 'app-maintenance-window-config-page p-datepicker',
+  },
+
   // --- OBRS-884 -------------------------------------------------------------
   // The per-vehicle P&L screen carries the same two `p-datepicker`s as the
   // filter rows above, and the coverage gate named it on the first CI run after

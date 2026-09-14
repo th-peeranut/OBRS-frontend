@@ -16,20 +16,39 @@ function createThemeServiceStub(): any {
   };
 }
 
+// OBRS-1902: the announcement is fetched from the shell, not from the banner component, so that
+// it is cached even for a visitor who never had the banner on screen.
+function createMaintenanceWindowServiceStub(): any {
+  return {
+    start: () => {},
+    notice$: of(null),
+    paymentLocked$: of(false),
+    isPaymentLockedNow: () => false,
+  };
+}
+
 describe('AppComponent', () => {
   let component: AppComponent;
   let analytics: any;
+  let maintenance: any;
 
   beforeEach(() => {
     analytics = createAnalyticsServiceStub();
     spyOn(analytics, 'init').and.callThrough();
+    maintenance = createMaintenanceWindowServiceStub();
+    spyOn(maintenance, 'start').and.callThrough();
 
     component = new AppComponent(
       createTranslateStub(),
       createLanguageServiceStub(),
       createThemeServiceStub(),
-      analytics
+      analytics,
+      maintenance
     );
+  });
+
+  it('starts reading the maintenance announcement on boot (OBRS-1902)', () => {
+    expect(maintenance.start).toHaveBeenCalled();
   });
 
   it('should create the app', () => {
