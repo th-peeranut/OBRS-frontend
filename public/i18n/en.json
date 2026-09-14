@@ -4619,7 +4619,10 @@
           "NOTE": "Note"
         },
         "WAGE_BASIS": "Priced at {{rate}} x {{legs}} legs",
-        "OTHER_INCOMPLETE": "The \"Other\" row needs both an item name and an amount"
+        "OTHER_INCOMPLETE": "The \"Other\" row needs both an item name and an amount",
+        "ADD_OTHER": "+ Add other expense",
+        "REMOVE_OTHER": "Remove this item",
+        "OTHER_FULL": "Up to {{max}} other expenses per day"
       },
       "REPAIR": {
         "TITLE": "Repairs",

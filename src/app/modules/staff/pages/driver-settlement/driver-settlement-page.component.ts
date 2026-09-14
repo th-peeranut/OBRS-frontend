@@ -1,4 +1,11 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  QueryList,
+  ViewChildren,
+} from '@angular/core';
 import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
 import { Subject, of } from 'rxjs';
 import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
@@ -51,8 +58,26 @@ const PARKING_FEE_CATEGORY = 'PARKING_FEE';
 
 /** OBRS-1896 — the free-text row, and the only one whose ITEM cell is typed. The server has taken
  * it all along (`OTHER` is in `DriverCashExpensePaidReqDto.ALLOWED_CATEGORIES` and the payload
- * carries `categoryOtherLabel`, OBRS-1363); what this screen lacked was somewhere to put the name. */
+ * carries `categoryOtherLabel`, OBRS-1363); what this screen lacked was somewhere to put the name.
+ *
+ * <p>OBRS-1903 made it REPEATABLE and moved it out of the fixed table. A day that paid for the car
+ * wash and the parcel run had to lump the two into one figure and explain it in the note, which is
+ * money the per-vehicle report can no longer tell apart. */
 const OTHER_CATEGORY = 'OTHER';
+
+/**
+ * OBRS-1903 — how many `OTHER` rows one day may carry.
+ *
+ * <p>`DriverCashDaySettleReqDto.expenses` is `@Size(max = 20)` over the WHOLE list, and five of
+ * those slots are already spoken for on a day that used every fixed row: `buildPayload` sends
+ * `DRIVER_WAGE` on every submit (amount `null` — the server prices it, but the entry still travels
+ * and still counts) plus the four fixed rows that carry an amount. 20 - 5 = 15.
+ *
+ * <p>The owner's ruling was "as many as the server's quota leaves". That is this number, measured;
+ * the card estimated 16 by assuming the wage entry travels free, and 16 would have 400'd the whole
+ * day's submit on exactly the days that need the rows most.
+ */
+const MAX_OTHER_ROWS = 15;
 
 /**
  * OBRS-1756 — the settlement screen's expense rows, in the owner's order.
@@ -65,9 +90,9 @@ const OTHER_CATEGORY = 'OTHER';
  * <p>Every code here is already in that form's `DRIVER_CASH_EXPENSE_CATEGORIES`, so the backend's
  * `ALLOWED_CATEGORIES` accepts every one of them and the office's
  * `verify-field-expense-categories.ps1` comparison is unaffected. `REPAIR` is the one code still
- * absent on purpose: it has the bill box below (OBRS-1630). `OTHER` was absent for its own reason
- * — a free-text label these fixed rows had nowhere to put — until OBRS-1896 made its ITEM cell the
- * box that holds it.
+ * absent on purpose: it has the bill box below (OBRS-1630). `OTHER` is absent for its own reason:
+ * it is not ONE cost but 0..N of them, each under a name the counter types, so OBRS-1903 puts it
+ * under this table on a button instead of in it.
  */
 const SETTLEMENT_EXPENSE_CATEGORIES: readonly string[] = [
   WAGE_CATEGORY,
@@ -75,7 +100,6 @@ const SETTLEMENT_EXPENSE_CATEGORIES: readonly string[] = [
   'TOLL',
   'PERMIT_FEE',
   PARKING_FEE_CATEGORY,
-  OTHER_CATEGORY,
 ];
 
 /**
@@ -95,6 +119,9 @@ const SETTLE_ERROR_KEYS: Record<string, string> = {
 /** One editable cost line. Plain fields rather than a FormGroup: these rows have no cross-field
  * rule, and a form rebuilt on every context load is how mid-edit values get orphaned. */
 interface SettlementExpenseRow {
+  /** OBRS-1903 — unique per row and never reused. Two `OTHER` rows carry the same category, so the
+   * category can no longer name a row's form control nor track it across a delete. */
+  id: number;
   category: string;
   amountInput: string;
   noteInput: string;
@@ -161,6 +188,11 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
   // ── Expense rows + repair bills ──────────────────────────────────────────
   protected expenseRows: SettlementExpenseRow[] = [];
   protected repairBills: FormGroup[] = [];
+  /** Monotonic, never reset: an id reused after a delete is an id `@for` can confuse with the row
+   * that just left, and the two would swap what was typed in them. */
+  private nextRowId = 0;
+  @ViewChildren('otherLabelInput')
+  private otherLabelInputs?: QueryList<ElementRef<HTMLInputElement>>;
   protected payees: AdminExpensePayeeDto[] = [];
   protected parts: AdminMaintenancePartDto[] = [];
 
@@ -343,22 +375,34 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
     if (!submission) {
       return;
     }
+    const sentExpenses = submission.expenses ?? [];
     const sentByCategory = new Map<string, DriverCashDaySettleExpenseReqDto>(
-      (submission.expenses ?? []).map((expense) => [expense.category, expense])
+      sentExpenses
+        .filter((expense) => expense.category !== OTHER_CATEGORY)
+        .map((expense) => [expense.category, expense])
     );
     this.expenseRows = this.expenseRows.map((row) => {
       const sent = sentByCategory.get(row.category);
       // The wage row is deliberately left blank: its amount is the server's (OBRS-1356), and the
       // submission carries null for it precisely because a number there would be discarded.
       return sent
-        ? {
-            category: row.category,
-            amountInput: sent.amount ?? '',
-            noteInput: sent.note ?? '',
-            otherLabelInput: sent.categoryOtherLabel ?? '',
-          }
+        ? { ...row, amountInput: sent.amount ?? '', noteInput: sent.note ?? '' }
         : row;
     });
+    // OBRS-1903: one row back per `OTHER` entry SENT, not one row for all of them. Keyed by
+    // category they would collapse into whichever arrived last, and the amend submit would then
+    // settle the day short by every free-text cost but that one.
+    this.expenseRows = [
+      ...this.expenseRows,
+      ...sentExpenses
+        .filter((expense) => expense.category === OTHER_CATEGORY)
+        .map((expense) => ({
+          ...this.buildRow(OTHER_CATEGORY),
+          amountInput: expense.amount ?? '',
+          noteInput: expense.note ?? '',
+          otherLabelInput: expense.categoryOtherLabel ?? '',
+        })),
+    ];
     this.repairBills = (submission.repairBills ?? []).map((bill) =>
       buildFieldRepairBillGroupFrom(this.formBuilder, bill)
     );
@@ -419,6 +463,25 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** The fixed table: the named costs this screen offers by itself. */
+  protected get fixedExpenseRows(): SettlementExpenseRow[] {
+    return this.visibleExpenseRows.filter((row) => !this.isOtherRow(row));
+  }
+
+  /** OBRS-1903 — the free-text rows, in the order they were added. Rendered under the fixed rows
+   * and never keyed like them: two of these share one category. */
+  protected get otherExpenseRows(): SettlementExpenseRow[] {
+    return this.expenseRows.filter((row) => this.isOtherRow(row));
+  }
+
+  protected get canAddOtherRow(): boolean {
+    return this.otherExpenseRows.length < MAX_OTHER_ROWS;
+  }
+
+  protected get maxOtherRows(): number {
+    return MAX_OTHER_ROWS;
+  }
+
   protected isWageRow(row: SettlementExpenseRow): boolean {
     return row.category === WAGE_CATEGORY;
   }
@@ -433,12 +496,34 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
    * amount with no name is the one shape the server refuses (`isCategoryOtherLabelValid`,
    * OBRS-1363) — and it refuses the WHOLE day's submit, not the row.
    */
-  protected get isOtherRowIncomplete(): boolean {
-    const row = this.expenseRows.find((candidate) => this.isOtherRow(candidate));
-    if (!row) return false;
+  protected isOtherRowIncomplete(row: SettlementExpenseRow): boolean {
     const hasAmount = row.amountInput.trim().length > 0;
     const hasLabel = row.otherLabelInput.trim().length > 0;
     return hasAmount !== hasLabel;
+  }
+
+  /** OBRS-1903 — the gate walks EVERY free-text row. Asking only the first is how the fifth
+   * half-filled one reaches the server, which refuses the WHOLE day rather than that row. */
+  protected get hasIncompleteOtherRow(): boolean {
+    return this.otherExpenseRows.some((row) => this.isOtherRowIncomplete(row));
+  }
+
+  /**
+   * OBRS-1903 — 0..MAX_OTHER_ROWS, starting at 0 (owner ruling (1)). The same "+ / X" idiom the
+   * repair box below already uses (OBRS-1630) rather than a second one on one screen, and for the
+   * reason that box gives: a blank row nobody asked for is a row the salesperson has to notice and
+   * delete before the day will submit.
+   */
+  protected addOtherRow(): void {
+    if (!this.canAddOtherRow) return;
+    this.expenseRows = [...this.expenseRows, this.buildRow(OTHER_CATEGORY)];
+    // The new row is why the button was pressed - put the caret in its name box rather than make
+    // the counter find it. After the frame that paints it, the shape the account dialogs use.
+    setTimeout(() => this.otherLabelInputs?.last?.nativeElement.focus());
+  }
+
+  protected removeOtherRow(row: SettlementExpenseRow): void {
+    this.expenseRows = this.expenseRows.filter((candidate) => candidate !== row);
   }
 
   /**
@@ -520,7 +605,7 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
     if (this.visibleExpenseRows.some((row) => this.isAmountInvalid(row))) {
       return 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID';
     }
-    if (this.isOtherRowIncomplete) {
+    if (this.hasIncompleteOtherRow) {
       return 'STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE';
     }
     if (this.repairBills.some((bill) => !bill.valid || this.billTotal(bill) <= 0)) {
@@ -646,12 +731,17 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
   }
 
   private resetExpenseRows(): void {
-    this.expenseRows = SETTLEMENT_EXPENSE_CATEGORIES.map((category) => ({
+    this.expenseRows = SETTLEMENT_EXPENSE_CATEGORIES.map((category) => this.buildRow(category));
+  }
+
+  private buildRow(category: string): SettlementExpenseRow {
+    return {
+      id: this.nextRowId++,
       category,
       amountInput: '',
       noteInput: '',
       otherLabelInput: '',
-    }));
+    };
   }
 
   /** Everything typed for the previous (date, van, driver) — never carried across a selection. */
