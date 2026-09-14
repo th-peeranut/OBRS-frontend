@@ -1,9 +1,10 @@
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, Signal } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { canSwapStationPair, isEmptyStationValue } from '../../../../shared/lib/station-swap';
+import { LanguageService } from '../../../../shared/services/language.service';
 
 /** OBRS-1035: the origin/destination pair after a swap. `null` = that side is
  *  still empty (only one field was filled when the user swapped). */
@@ -73,7 +74,14 @@ export class ParcelTripFormComponent implements OnInit, OnDestroy {
   protected readonly form: FormGroup;
   private readonly destroy$ = new Subject<void>();
 
-  constructor(private readonly fb: FormBuilder) {
+  /** OBRS-1037: the picker's `dateFormat`, live per language. A hardcoded `dd/mm/yy`
+   *  showed an English reader Thai field order on the screen where they book a parcel.
+   *  Must stay a BINDING, not a value read once: PrimeNG repaints text already in the
+   *  input only when `dateFormat` itself changes (OBRS-1023). */
+  readonly calendarDateFormat: Signal<string | undefined>;
+
+  constructor(private readonly fb: FormBuilder, languageService: LanguageService) {
+    this.calendarDateFormat = languageService.calendarDateFormat;
     this.form = this.fb.group(
       {
         fromStationId: ['', [Validators.required]],
