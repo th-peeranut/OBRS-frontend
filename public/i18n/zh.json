@@ -186,6 +186,15 @@
         "VEHICLE": "车辆",
         "BOARDING_STOP": "您的上车点"
       },
+      "PROGRESS": {
+        "LIVE_REMAINING": "还有 {{count}} 站到达您的上车点",
+        "LIVE_NEXT_IS_YOURS": "下一站就是您的上车点",
+        "LIVE_PASSED": "车辆已经过您的上车点",
+        "STALE_REMAINING": "最新数据：还有 {{count}} 站到达您的上车点",
+        "STALE_NEXT_IS_YOURS": "最新数据：下一站就是您的上车点",
+        "STALE_PASSED": "最新数据：车辆已经过您的上车点",
+        "STOPS_PASSED_COUNT": "已经过 {{passed}} / {{total}} 站"
+      },
       "ERROR": {
         "UNAVAILABLE": "无法显示此票的车辆位置。"
       }
