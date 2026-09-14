@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, Signal } from '@angular/core';
+import { LanguageService } from '../../../../../shared/services/language.service';
 
 /**
  * Dumb "pick a new departure date" step. Emits the chosen date as
@@ -15,6 +16,17 @@ export class RescheduleDatePickerStepComponent {
   @Input() maxDate: Date | null = null;
   @Input() selectedDate: Date | null = null;
   @Output() readonly dateSelected = new EventEmitter<string>();
+
+  /** OBRS-1037: the picker's `dateFormat`, live per language. A hardcoded `dd/mm/yy`
+   *  showed an English reader Thai field order on the screen where they move a ticket
+   *  they have already paid for. Must stay a BINDING, not a value read once: PrimeNG
+   *  repaints text already in the input only when `dateFormat` itself changes
+   *  (OBRS-1023). */
+  readonly calendarDateFormat: Signal<string | undefined>;
+
+  constructor(languageService: LanguageService) {
+    this.calendarDateFormat = languageService.calendarDateFormat;
+  }
 
   onSelect(value: Date): void {
     if (!(value instanceof Date) || Number.isNaN(value.getTime())) {

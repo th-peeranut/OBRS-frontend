@@ -51,10 +51,15 @@
       <label class="field-inline-label" for="parcelTripDate">{{
         "PARCEL_BOOKING.TRIP.DATE" | translate
       }}</label>
+      <!-- OBRS-1036: the format below carries the `D` token, and `getDateFormat()` serves
+         parse as well as render - so typed text with no day name throws and `onUserInput`
+         answers by emptying the box. readonly, never disabled: the input must still
+         focus and still open the calendar it is now the only way into. -->
       <p-datePicker
         styleClass="app-date-field app-date-field--segment"
         panelStyleClass="app-date-field-panel"
-        dateFormat="dd/mm/yy"
+        [dateFormat]="calendarDateFormat()"
+        [readonlyInput]="true"
         [minDate]="minDate"
         [iconDisplay]="'input'"
         [showIcon]="true"

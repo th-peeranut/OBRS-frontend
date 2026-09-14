@@ -7,9 +7,14 @@
     {{ "MY_BOOKINGS.RESCHEDULE.DATE_LABEL" | translate }}
   </label>
 
+  <!-- OBRS-1036: the format below carries the `D` token, and `getDateFormat()` serves
+       parse as well as render - so typed text with no day name throws and `onUserInput`
+       answers by emptying the box. readonly, never disabled: the input must still
+       focus and still open the calendar it is now the only way into. -->
   <p-datePicker
     inputId="reschedule-date-input"
-    dateFormat="dd/mm/yy"
+    [dateFormat]="calendarDateFormat()"
+    [readonlyInput]="true"
     [showIcon]="true"
     [iconDisplay]="'input'"
     styleClass="app-date-field"
