@@ -583,7 +583,7 @@
       "NOTIFICATION_MESSAGES": "通知消息",
       "OPERATIONS_CONFIG": "运营",
       "MAINTENANCE_WINDOW": "维护时间公告",
-      "EXPENSE_BATCH": "批量录入单据"
+      "EXPENSE_BATCH": "录入单据"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -2313,9 +2313,9 @@
       "SOURCE_FIELD": "系统自动生成（来自司机）",
       "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。",
       "BATCH": {
-        "OPEN": "批量录入单据",
-        "SUBTITLE": "一次保存整批单据",
-        "PAGE_PURPOSE": "修理厂往往一次交来多张单据。在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
+        "OPEN": "录入单据",
+        "SUBTITLE": "一次保存多张单据",
+        "PAGE_PURPOSE": "同时送来的多张单据，在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
         "BILL_N": "第 {{n}} 张",
         "BILL_TOTAL": "本张合计",
         "BILL_COUNT": "{{n}} 张单据",
@@ -2327,9 +2327,9 @@
         "GARAGE": "修理厂",
         "LINE_DESCRIPTION": "明细（按修理厂所写）",
         "LINE_PART": "配件 / 工时",
-        "SAVE_ENVELOPE": "保存整批",
+        "SAVE_ENVELOPE": "全部保存",
         "SAVED": "已录入 {{n}} 张单据",
-        "OWNER_HINT": "本批单据均计入该运营商。",
+        "OWNER_HINT": "此次保存的单据均计入该运营商。",
         "BILL_DATE": "单据日期",
         "VEHICLE": "车牌",
         "CATEGORY": "类别",
