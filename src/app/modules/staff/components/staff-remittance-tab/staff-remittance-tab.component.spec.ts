@@ -322,6 +322,39 @@ describe('StaffRemittanceTabComponent', () => {
     expect(component['pendingExpectedCents']).toBe(168000 - 30000);
   });
 
+  // ── owner ruling 2026-09-14: no advance on this round ⇒ no `−0` row ──────
+
+  /** ROUND cadence, but nobody has asked for cash out of the box yet. */
+  function roundPayloadNoAdvance(): StaffRemittanceDto {
+    return roundPayload({
+      advance: { allowed: true, recordedCount: 0, recordedAmount: '0.00', blockedReason: null },
+      deductions: { perHeadDeducted: '0.00', advancePaidOut: '0.00', deferredTicketCash: '0.00' },
+      myExpectedCash: '2180.00',
+      roundExpectedCash: '2180.00',
+    });
+  }
+
+  it('hides the advance deduction row when nothing was advanced - but KEEPS box 3', () => {
+    open(roundPayloadNoAdvance());
+
+    expect(present('remittance-eq-advance')).toBeFalse();
+    // The input the salesperson needs in order to record one is still there.
+    expect(present('remittance-advance')).toBeTrue();
+  });
+
+  it('brings the advance row back the moment the box is typed into', () => {
+    open(roundPayloadNoAdvance());
+    expect(present('remittance-eq-advance')).toBeFalse();
+
+    component['onAdvanceAmountChange']('150');
+    fixture.detectChanges();
+
+    // The total moved, so the line explaining why has to be on screen.
+    expect(present('remittance-eq-advance')).toBeTrue();
+    expect(text('remittance-eq-advance')).toContain('150');
+    expect(component['pendingExpectedCents']).toBe(218000 - 15000);
+  });
+
   // ── BR-10: the system's own head count is visible either way ────────────
 
   // POSITIVE CONTROL (OBRS-1755 BR-31). This used to run on a fixture with

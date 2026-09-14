@@ -188,7 +188,9 @@ re-derived. -->
         </div>
       }
 
-      @if (showAdvanceBox) {
+      <!-- Drawn only when it deducts something — box 3 above stays regardless,
+      because that is where an advance gets recorded in the first place. -->
+      @if (showAdvanceDeductionRow) {
         <div class="srt-eq-row srt-minus">
           <span>
             {{ 'STAFF.REMITTANCE.EQUATION.LESS_ADVANCE' | translate }}

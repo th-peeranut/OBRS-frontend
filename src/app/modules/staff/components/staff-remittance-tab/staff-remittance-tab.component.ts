@@ -298,6 +298,21 @@ export class StaffRemittanceTabComponent implements OnChanges, OnDestroy {
   }
 
   /**
+   * ⑦ — the advance DEDUCTION row, drawn only when it deducts something (owner
+   * ruling 2026-09-14: a standing `−0` line is one more thing to read before
+   * pressing send, on the majority of rounds where no driver asked for cash).
+   *
+   * ⛔ NOT the same gate as `showAdvanceBox`: box ③ is the INPUT the salesperson
+   * needs in order to record an advance at all, so it stays on every ROUND
+   * round. And this reads `pendingAdvanceCents`, not the recorded figure, so
+   * typing into that box brings the row up at once — the total must never move
+   * without a visible line saying why.
+   */
+  protected get showAdvanceDeductionRow(): boolean {
+    return this.showAdvanceBox && this.pendingAdvanceCents !== 0;
+  }
+
+  /**
    * OBRS-1755 F1 — ค่าหัว recorded on this round that this counter cannot see:
    * another counter's stop, or a row with no stop. An opaque lump by design.
    *
