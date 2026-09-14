@@ -8,6 +8,7 @@ import { CancelReschedulePolicyConfigPageComponent } from './cancel-reschedule-p
 import { ConfigSourceBadgeComponent } from './config-source-badge/config-source-badge.component';
 import { CancelReschedulePolicyConfigStore } from './cancel-reschedule-policy-config.store';
 import { AdminRefreshHintComponent } from '../../components/admin-refresh-hint/admin-refresh-hint.component';
+import { LegalPolicyNoticeComponent } from '../../components/legal-policy-notice/legal-policy-notice.component';
 import { AdminApiService, OwnerCancelReschedulePolicyDto } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { PendingButtonDirective } from '../../../../shared/directives/pending-button.directive';
@@ -380,6 +381,11 @@ describe('CancelReschedulePolicyConfigPageComponent (OBRS-699)', () => {
           CancelReschedulePolicyConfigPageComponent,
           ConfigSourceBadgeComponent,
           AdminRefreshHintComponent,
+          // OBRS-1434: the page renders the legal notice above its fields. Declared
+          // rather than schema-suppressed, so this block keeps measuring the real
+          // page — the notice is a warning chip pair on the same card these cases
+          // read their backgrounds through.
+          LegalPolicyNoticeComponent,
           PendingButtonDirective,
         ],
         imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
