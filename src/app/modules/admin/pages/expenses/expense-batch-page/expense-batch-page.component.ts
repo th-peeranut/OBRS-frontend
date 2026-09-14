@@ -315,6 +315,8 @@ export class ExpenseBatchPageComponent implements OnInit, OnDestroy {
       confirmButtonText: this.translate.instant('ADMIN.EXPENSES.BATCH.GO_TO_PLANS'),
       cancelButtonText: this.translate.instant('ADMIN.COMMON.CLOSE'),
       icon: 'success',
+      // The summary is a LIST, not a sentence - without this every bullet collapses onto one line.
+      multiline: true,
     });
   }
 
