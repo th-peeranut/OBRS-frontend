@@ -529,3 +529,51 @@ describe('StopsPageComponent - adding and deleting a stop (OBRS-1678)', () => {
 function stopEvent(): MouseEvent {
   return { stopPropagation: () => undefined } as unknown as MouseEvent;
 }
+
+describe('StopsPageComponent - map picker fallback center (OBRS-1030, AC3)', () => {
+  // AC3's own case: POST /private/stops creates a stop with no coordinates, so the DTO
+  // getStopDetail answers for it carries real `latitude: null, longitude: null`. Driven
+  // through the actual screen path (openStop, same call the row-click/edit-button use) -
+  // not by poking `selected` directly - so this proves the value ACTUALLY reaching
+  // <app-stop-map-picker>'s [latitude]/[longitude] inputs (which stop-form-modal.component.html
+  // binds straight off `selected.latitude`/`selected.longitude`), not just the getter in
+  // isolation.
+  it('opens a null-coordinate stop (as returned by getStopDetail) on its measured province center', async () => {
+    const NULL_COORD_CHONBURI_DETAIL = {
+      id: 11,
+      slug: 'new_stop',
+      status: { slug: 'active' },
+      stopType: { slug: 'pickup' },
+      province: { slug: 'chonburi' },
+      translations: { th: { label: 'จุดใหม่' } },
+      latitude: null,
+      longitude: null,
+      primaryPhotoUrl: null,
+      addresses: {},
+    };
+    const { component, adminApi } = makeComponent();
+    adminApi.getStopDetail.and.returnValue(of({ data: NULL_COORD_CHONBURI_DETAIL }));
+    await component.load();
+
+    await component.openStop(11);
+
+    // The values that actually flow into the picker's [latitude]/[longitude] inputs.
+    expect(component.selected.latitude).toBeNull();
+    expect(component.selected.longitude).toBeNull();
+    expect(component.mapFallbackCenter).toEqual({ lat: 13.311178, lng: 101.119701 });
+  });
+
+  it('is null for a province with no measured center - the picker falls back to its own fixed constant', () => {
+    const { component } = makeComponent();
+
+    component.selected = { provinceCode: 'trang' };
+
+    expect(component.mapFallbackCenter).toBeNull();
+  });
+
+  it('is null when nothing is open yet', () => {
+    const { component } = makeComponent();
+
+    expect(component.mapFallbackCenter).toBeNull();
+  });
+});

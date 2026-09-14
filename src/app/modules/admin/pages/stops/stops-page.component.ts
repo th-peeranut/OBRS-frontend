@@ -12,8 +12,10 @@ import {
 import { AlertService } from '../../../../shared/services/alert.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { environment } from '../../../../../environments/environment';
 import {
   Option,
+  PROVINCE_MAP_CENTERS,
   ReturnStopOption,
   StopDetailForm,
   StopRow,
@@ -104,6 +106,10 @@ export class StopsPageComponent implements OnInit, OnDestroy {
    * cannot change without a new sign-in or a role preview, both of which rebuild this component.
    */
   protected readonly canEditPhysical: boolean;
+
+  /** OBRS-1030: the picker's own two inputs — read once, same as `canEditPhysical` above. */
+  protected readonly mapsApiKey = environment.mapsApiKey;
+  protected readonly mapsMapId = environment.mapsMapId;
 
   protected provinceOptions: Option[] = [];
   // OBRS-1481: rebuilt in applyLocalization AND whenever a stop is opened, because the list
@@ -267,6 +273,12 @@ export class StopsPageComponent implements OnInit, OnDestroy {
         this.isDetailLoading = false;
       }
     }
+  }
+
+  /** OBRS-1030 (AC3): measured province centers — see `PROVINCE_MAP_CENTERS`' own doc. Null
+   *  for a province not in that table, which the picker reads as "use the fixed constant". */
+  protected get mapFallbackCenter(): { lat: number; lng: number } | null {
+    return PROVINCE_MAP_CENTERS[this.selected?.provinceCode ?? ''] ?? null;
   }
 
   protected closeDetail(): void {

@@ -57,6 +57,14 @@ export class StopFormModalComponent {
   /** OBRS-1678: the form is opening a stop that does not exist yet. */
   @Input() isCreating = false;
 
+  /**
+   * OBRS-1030: the map picker's own inputs, all supplied by `StopsPageComponent` so this
+   * modal stays presentational (no `environment` import of its own — see the class doc).
+   */
+  @Input() mapsApiKey = '';
+  @Input() mapsMapId = '';
+  @Input() mapFallbackCenter: { lat: number; lng: number } | null = null;
+
   @Output() closed = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();
   @Output() photoSelected = new EventEmitter<Event>();
