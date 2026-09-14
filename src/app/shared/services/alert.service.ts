@@ -136,12 +136,24 @@ export class AlertService {
     void Toast.fire();
   }
 
+  /**
+   * @param multiline OBRS-1588: render newline escapes in `text` as real line breaks, for callers whose
+   *                  message is a LIST rather than a sentence. SweetAlert2 writes `text` through
+   *                  `textContent` and `.swal2-html-container` inherits the browser default
+   *                  `white-space: normal`, which collapses every newline to a space - so a bulleted
+   *                  summary silently renders as one run-on line, and gets worse the more items it
+   *                  has. Deliberately a CSS switch (`.swal-preline` in styles.scss) and NOT an
+   *                  `html` option: the security note at the top of this class says nothing reaching
+   *                  here is ever parsed as markup, and a payee/part name the owner typed is exactly
+   *                  the untrusted-shaped content that rule exists for.
+   */
   async confirm(options: {
     title: string;
     text: string;
     confirmButtonText: string;
     cancelButtonText: string;
     icon?: SweetAlertIcon;
+    multiline?: boolean;
   }): Promise<boolean> {
     this.resetLoadingState();
     const result = await Swal.fire({
@@ -154,6 +166,7 @@ export class AlertService {
       reverseButtons: true,
       focusCancel: true,
       theme: this.theme,
+      ...(options.multiline ? { customClass: { htmlContainer: 'swal-preline' } } : {}),
     });
 
     return result.isConfirmed;

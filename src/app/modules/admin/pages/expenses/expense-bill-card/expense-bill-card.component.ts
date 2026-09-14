@@ -1,5 +1,13 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import {
   AdminExpensePayeeDto,
   AdminMaintenancePartDto,
@@ -27,6 +35,29 @@ const ITEM_DESCRIPTION_MAX_LENGTH = 255;
 
 // OBRS-1613 (schema.sql expense_items.unit VARCHAR(20)).
 const ITEM_UNIT_MAX_LENGTH = 20;
+
+/**
+ * OBRS-1588 AC3: a whole positive number, and NOTHING about the vehicle's current reading.
+ *
+ * <p>Blank passes — the field is optional (owner, 2026-08-23: some garages do not write one) and
+ * a `required` here would refuse bills the owner is holding in his hand. The rule it deliberately
+ * does NOT carry is "must be higher than last time": bills are keyed in whenever the paper turns
+ * up, so a back-dated slip legitimately reads lower, and the plan is what refuses to move
+ * backwards (server-side AC6), not the keyboard.
+ */
+export const odometerKmValidator: ValidatorFn = (
+  control: AbstractControl
+): ValidationErrors | null => {
+  const raw = String(control.value ?? '').trim();
+  if (raw === '') {
+    return null;
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    return { odometerKm: true };
+  }
+  return null;
+};
 
 /**
  * OBRS-1576: ONE bill inside the envelope — its own header, its own lines, its own total.
@@ -181,6 +212,10 @@ export function buildBillGroup(formBuilder: FormBuilder): FormGroup {
     categoryOtherLabel: [''],
     expenseDate: [null, [Validators.required]],
     paidBy: ['', [Validators.maxLength(255)]],
+    // OBRS-1588 AC2/AC3: optional, and LAST in the header so it never pushes a required field off
+    // the first row. On `buildBillGroup` only — the field variant's header is the driver-cash box,
+    // where the counter is recording money, not reading an odometer off a slip.
+    odometerKm: [null, [odometerKmValidator]],
     // OBRS-1577 AC1 keeps this optional on the general form; here it is REQUIRED, because the field
     // is the reason this screen can answer "how much did I pay this garage" at all and a stack of
     // repair bills always came from someone.
