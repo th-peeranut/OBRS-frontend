@@ -692,7 +692,6 @@
       "DELETE_BTN": "ลบ",
       "UNLOCK_SUCCESS": "ปลดล็อกบัญชีสำเร็จ",
       "UNLOCK_FAILED": "ไม่สามารถปลดล็อกบัญชีได้",
-      "CANCEL_TRIP_CONFIRM_TITLE": "ยืนยันการยกเลิกทริป",
       "CANCEL_TRIP_REFUND_BODY": "การจอง {{count}} รายการจะได้รับเงินคืนอัตโนมัติและได้รับการแจ้งเตือน",
       "CANCEL_TRIP_NO_REFUND_BODY": "ทริปจะถูกยกเลิก ไม่มีการคืนเงิน",
       "CANCEL_TRIP_BTN": "ยกเลิกทริป",

@@ -692,7 +692,6 @@
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
       "UNLOCK_FAILED": "Unable to unlock the account.",
-      "CANCEL_TRIP_CONFIRM_TITLE": "Confirm Cancel Trip",
       "CANCEL_TRIP_REFUND_BODY": "{{count}} booking(s) will be automatically refunded and notified.",
       "CANCEL_TRIP_NO_REFUND_BODY": "The trip will be cancelled. No refund will be issued.",
       "CANCEL_TRIP_BTN": "Cancel Trip",

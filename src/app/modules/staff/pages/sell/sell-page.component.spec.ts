@@ -4,8 +4,9 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SellPageComponent } from './sell-page.component';
+import enI18n from '../../../../../../public/i18n/en.json';
 import { PRIVACY_POLICY_VERSION } from '../../../privacy-policy/privacy-policy.version';
 import {
   StaffApiService,
@@ -2077,5 +2078,67 @@ describe('SellPageComponent — OBRS-1755 canDeactivate', () => {
     setPanel(component, { canDeactivate: () => Promise.resolve(true) });
 
     await expectAsync(Promise.resolve(component.canDeactivate())).toBeResolvedTo(true);
+  });
+});
+
+// OBRS-974: same defect as the staff-schedules page, same ternary - the delete arm
+// pointed at ADMIN.MESSAGES.DELETE_CONFIRM_TITLE, which no locale file defines, so
+// the confirm dialog was headed by the raw key. The OBRS-667 suite above renders this
+// same modal but only ever queries `.modal-footer`, so the title went unread.
+describe('SellPageComponent - OBRS-974 schedule-delete modal title (DOM)', () => {
+  const HARD_DELETE_TRIP = makeTrip({ scheduleId: 10, deletable: true });
+  const CANCEL_TRIP = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 5 });
+
+  function setupFixture(): {
+    fixture: ComponentFixture<SellPageComponent>;
+    component: SellPageComponent;
+  } {
+    TestBed.configureTestingModule({
+      imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
+      declarations: [SellPageComponent],
+      providers: [
+        { provide: StaffApiService, useValue: createStaffApiStub() },
+        { provide: AlertService, useValue: createAlertStub() },
+        { provide: AdminApiService, useValue: createAdminApiStub() },
+        { provide: StaffSchedulesStore, useValue: createScheduleStoreStub() },
+        { provide: Router, useValue: createRouterStub() },
+        { provide: AuthService, useValue: createAuthServiceStub(false, true) },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { ADMIN: (enI18n as any).ADMIN }, true);
+    translate.use('en');
+
+    const fixture = TestBed.createComponent(SellPageComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges(); // ngOnInit
+    return { fixture, component };
+  }
+
+  it('delete mode: the title renders the translation, not the key string itself', () => {
+    const { fixture, component } = setupFixture();
+    (component as any).routeGroups = [makeRouteGroup('r1', [HARD_DELETE_TRIP])];
+    (component as any).onDeleteScheduleClicked({ trip: HARD_DELETE_TRIP, routeSlug: 'r1' });
+    fixture.detectChanges();
+
+    const title: HTMLElement | null = fixture.nativeElement.querySelector('.modal-title');
+    expect(title).withContext('the delete modal must be open').not.toBeNull();
+    expect(title!.textContent!.trim())
+      .withContext('a raw i18n key leaked to the screen')
+      .toBe((enI18n as any).ADMIN.COMMON.DELETE_CONFIRM_TITLE);
+  });
+
+  it('cancel mode: the title renders the translation, not the key string itself', () => {
+    const { fixture, component } = setupFixture();
+    (component as any).routeGroups = [makeRouteGroup('r1', [CANCEL_TRIP])];
+    (component as any).onDeleteScheduleClicked({ trip: CANCEL_TRIP, routeSlug: 'r1' });
+    fixture.detectChanges();
+
+    const title: HTMLElement = fixture.nativeElement.querySelector('.modal-title');
+    expect(title.textContent!.trim())
+      .withContext('a raw i18n key leaked to the screen')
+      .toBe((enI18n as any).ADMIN.COMMON.CANCEL_TRIP_CONFIRM_TITLE);
   });
 });
