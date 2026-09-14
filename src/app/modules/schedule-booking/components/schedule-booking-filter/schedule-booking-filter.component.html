@@ -1,7 +1,63 @@
 <div class="booking-container">
   <div class="booking-section">
     @if (bookingForm) {
-      <div class="booking-card" [formGroup]="bookingForm">
+      <div
+        class="booking-card"
+        [class.is-collapsed]="!isExpanded"
+        [formGroup]="bookingForm"
+      >
+        <!-- SEARCH SUMMARY / DISCLOSURE TOGGLE (OBRS-863). Rendered in BOTH
+        states, not only the collapsed one: it is the single control that opens
+        and closes the form, so hiding it while open would leave a keyboard user
+        no way back, and leaving the summary on screen is what the card asks for
+        over the reference site it was compared against (which shows the trips
+        but never says what was searched).
+
+        A plain `<button>`: `aria-expanded` is the whole accessible contract of a
+        disclosure (AC#7), and it is on the element that is actually pressed.
+        There is no `aria-controls` — the panel it would name does not exist in
+        the DOM while collapsed. -->
+        <button
+          type="button"
+          class="search-summary"
+          [attr.aria-expanded]="isExpanded"
+          data-testid="search-summary-toggle"
+          (click)="toggleExpanded()"
+        >
+          <span class="search-summary__text">
+            @if (summary) {
+              <span class="search-summary__route">{{ summary.route }}</span>
+              <span class="search-summary__meta">{{ summary.dateLabel }}</span>
+              <span class="search-summary__meta">{{
+                "SCHEDULE_BOOKING.SEARCH_SUMMARY_SEATS"
+                  | translate: { count: summary.passengers }
+              }}</span>
+            } @else {
+              <span class="search-summary__route">{{
+                "SCHEDULE_BOOKING.SEARCH_SUMMARY_EMPTY" | translate
+              }}</span>
+            }
+          </span>
+          <span class="search-summary__action">{{
+            (isExpanded
+              ? "SCHEDULE_BOOKING.SEARCH_SUMMARY_COLLAPSE"
+              : "SCHEDULE_BOOKING.SEARCH_SUMMARY_EDIT"
+            ) | translate
+          }}</span>
+        </button>
+        <!-- STATION LOAD FAILURE (OBRS-1222). The twin of the block in
+        home-booking.component.html, and here for a reason the card's ACs do not
+        name but OBRS-642's measurement does: `/` and `/schedule-booking` were
+        BOTH blocked by this one call, and `ProvinceEffect` is the same effect on
+        both. Since that effect now opts out of the global error modal, dropping
+        this element would leave this page failing with no signal whatsoever.
+
+        OBRS-863 moved it OUT of the disclosure below, from between the two
+        halves of the form. Collapsed is now the default state, so left inside it
+        this signal would be hidden from exactly the customer about to open the
+        form and find both dropdowns empty. -->
+        <app-station-load-error></app-station-load-error>
+        @if (isExpanded) {
         <div class="d-flex gap-5">
           <!-- TRIP TYPE PILLS (OBRS-1025) — see the identical block in
           home-booking.component.html. This filter bar is a copy of that form;
@@ -17,13 +73,6 @@
             formControlName="passengerInfo"
           ></app-dropdown-obrs-passenger>
         </div>
-        <!-- STATION LOAD FAILURE (OBRS-1222). The twin of the block in
-        home-booking.component.html, and here for a reason the card's ACs do not
-        name but OBRS-642's measurement does: `/` and `/schedule-booking` were
-        BOTH blocked by this one call, and `ProvinceEffect` is the same effect on
-        both. Since that effect now opts out of the global error modal, dropping
-        this element would leave this page failing with no signal whatsoever. -->
-        <app-station-load-error></app-station-load-error>
         <div class="station-section mt-4">
           @if (rawProvinceStationList | async) {
             <div class="station-group">
@@ -170,6 +219,7 @@
                   <span class="btn-search__label">{{ "HOME.HOME_BOOKING.SEARCH" | translate }}</span>
                 </button>
               </div>
+            }
             </div>
           }
         </div>
