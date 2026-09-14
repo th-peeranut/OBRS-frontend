@@ -554,7 +554,7 @@
       "PROMOTIONS": "促销活动",
       "USABILITY_REPORTS": "可用性报告",
       "REPORTS": "报告",
-      "SETTLEMENTS": "分账结算",
+      "SETTLEMENTS": "结算与审批",
       "EOD_SALES_REPORT": "每日销售报告",
       "REMINDER_CONFIG": "提醒时间设置",
       "JUMP_SEAT_CONFIG": "加座设置",
@@ -1561,7 +1561,7 @@
       }
     },
     "SETTLEMENTS": {
-      "SUBTITLE": "确认每个已发车班次的现金与收入交接。",
+      "SUBTITLE": "审批员工提交的费用，并确认每个已发车班次的现金与收入交接。",
       "TABLE_TITLE": "待结算班次",
       "COL": {
         "ROUTE": "路线",
@@ -2190,7 +2190,7 @@
     },
     "EXPENSES": {
       "SUBTITLE": "记录车辆及中央费用",
-      "PAGE_PURPOSE": "本页是每辆车及中央费用的账本，用于计算每车利润和作为税务凭证。现场支付的费用（燃气/燃油、通行证费、司机工资、维修）由售票员在「我的现金箱」中记录，并在此等待车主审批。",
+      "PAGE_PURPOSE": "本页是每辆车及中央费用的账本，用于计算每车利润和作为税务凭证。现场支付的费用（燃气/燃油、司机工资、维修）由员工在「司机结算」中记录，然后在「结算与审批」页等待车主审批。",
       "TABLE_TITLE": "费用列表",
       "APPROVAL": {
         "TITLE": "待审批",

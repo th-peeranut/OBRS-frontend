@@ -554,7 +554,7 @@
       "PROMOTIONS": "Promotions",
       "USABILITY_REPORTS": "Usability Reports",
       "REPORTS": "Reports",
-      "SETTLEMENTS": "Settlements",
+      "SETTLEMENTS": "Settlements & approvals",
       "EOD_SALES_REPORT": "End-of-day Sales",
       "REMINDER_CONFIG": "Reminder Timing",
       "JUMP_SEAT_CONFIG": "Jump Seat",
@@ -1561,7 +1561,7 @@
       }
     },
     "SETTLEMENTS": {
-      "SUBTITLE": "Confirm cash and revenue handover for each departed round.",
+      "SUBTITLE": "Approve the expenses staff sent in, and confirm cash and revenue handover for each departed round.",
       "TABLE_TITLE": "Rounds Pending Settlement",
       "COL": {
         "ROUTE": "Route",
@@ -2190,7 +2190,7 @@
     },
     "EXPENSES": {
       "SUBTITLE": "Log vehicle and central expenses",
-      "PAGE_PURPOSE": "This is the cost book for each vehicle and for central costs — it feeds the per-vehicle profit report and your tax evidence. Costs paid in the field (fuel/gas, permit fee, driver wage, repairs) are recorded by the salesperson from \"My cash box\" and wait here for the owner to approve.",
+      "PAGE_PURPOSE": "This is the cost book for each vehicle and for central costs — it feeds the per-vehicle profit report and your tax evidence. Costs paid in the field (fuel/gas, driver wage, repairs) are recorded by staff on \"Driver Settlement\" and then wait on \"Settlements & approvals\" for the owner to approve.",
       "TABLE_TITLE": "Expense List",
       "APPROVAL": {
         "TITLE": "Awaiting approval",

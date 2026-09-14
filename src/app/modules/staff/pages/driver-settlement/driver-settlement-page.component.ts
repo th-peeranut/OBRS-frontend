@@ -82,10 +82,11 @@ const MAX_OTHER_ROWS = 15;
 /**
  * OBRS-1756 — the settlement screen's expense rows, in the owner's order.
  *
- * <p>A FIXED SET, deliberately not a category dropdown. The per-round form
- * (`driver-cash-expense-form`) asks "which cost is this?" because it records one cost at a time;
- * this screen settles a whole day, where the question is "how much of each?", and a dropdown would
- * make the salesperson re-open the same control four times to answer it.
+ * <p>A FIXED SET, deliberately not a category dropdown. The per-round form this screen replaced
+ * (`driver-cash-expense-form`, deleted by OBRS-1727 AC-3) asked "which cost is this?" because it
+ * recorded one cost at a time; this screen settles a whole day, where the question is "how much of
+ * each?", and a dropdown would make the salesperson re-open the same control four times to
+ * answer it.
  *
  * <p>Every code here is already in that form's `DRIVER_CASH_EXPENSE_CATEGORIES`, so the backend's
  * `ALLOWED_CATEGORIES` accepts every one of them and the office's
@@ -155,13 +156,14 @@ function yesterday(): Date {
  *
  * <p><b>Nothing here re-implements what already exists.</b> The pill bar is
  * `app-driver-cash-day-summary`, each repair bill is `app-expense-bill-card` in its `field`
- * variant (the same component `driver-cash-repair-form` embeds, with the same
+ * variant (the same component the now-deleted `driver-cash-repair-form` embedded, with the same
  * `buildFieldRepairBillGroup`/`toFieldRepairBillItems` pair), the plate/driver lists come from the
  * root-scoped `StaffSchedulesStore` that already answers exactly that question for a salesperson,
  * and the garage/part registries come from their own shared stores. The multi-row expense table is
- * the one genuinely new piece of form, and the owner acknowledged it as such — the per-round
- * `driver-cash-expense-form` submits one row at a time and stays untouched for
- * `/staff/boarding/:scheduleId`.
+ * the one genuinely new piece of form, and the owner acknowledged it as such. ⚠️ The per-round
+ * `driver-cash-expense-form` this paragraph used to call "untouched" is GONE since OBRS-1727 AC-3
+ * (owner ruling D2): `/staff/boarding/:scheduleId` no longer records anything, so this screen is
+ * now the only way a field cost reaches a box.
  */
 @Component({
   selector: 'app-driver-settlement-page',
@@ -531,7 +533,7 @@ export class DriverSettlementPageComponent implements OnInit, OnDestroy {
    * `^\d+(\.\d{1,2})?$`, so `1,200`, `฿1200`, `12.345` and `-50` all read as null — and
    * `buildPayload` SKIPS a null row. Without this the one submit would settle the day with that
    * cost silently missing, and `alreadySettled` then stands in the way of a clean redo. Said the
-   * same way the per-round `driver-cash-expense-form` has always said it (OBRS-960:
+   * same way the per-round `driver-cash-expense-form` said it while it existed (OBRS-960:
    * `VALIDATION.AMOUNT_INVALID` under the field plus a refused button), reusing that key rather
    * than minting a second wording for the same rule.
    */
