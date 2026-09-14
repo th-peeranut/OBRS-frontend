@@ -4,7 +4,7 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SellPageComponent } from './sell-page.component';
 import enI18n from '../../../../../../public/i18n/en.json';
 import { PRIVACY_POLICY_VERSION } from '../../../privacy-policy/privacy-policy.version';
