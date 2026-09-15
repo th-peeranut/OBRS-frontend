@@ -851,6 +851,26 @@ describe('RouteMapPanelComponent', () => {
       expect(() => component.onTilesLoaded()).not.toThrow();
       expect(component.userMarkerOptions).toBeNull();
     });
+
+    // OBRS-1214 scrutinize self-fix (584de9f0): `tilesloaded` fires on every
+    // tile reload, not just the map's first draw -- pan/zoom included. Without
+    // the `locationFramed` guard, each reload would call `frameUserAndPickups()`
+    // again and snap the camera back to the user+pickups bounds, fighting any
+    // pan/zoom the rider just did. Proven here by spying on the private
+    // re-framing method directly, since the GATE e2e lane's mapsApiKey is
+    // always blank ('' in environment.base.ts) so <google-map> never mounts
+    // and a real tilesloaded/pan/zoom sequence cannot be driven by Playwright
+    // in that lane (see route-map.spec.ts's own AC#2/AC#3 comments).
+    it('a second onTilesLoaded firing for the same location does not re-frame the camera (locationFramed guard)', () => {
+      component.userLocation = { lat: 13.1, lng: 100.1 };
+      component.map = {} as unknown as GoogleMap;
+      const frameSpy = spyOn(component as unknown as { frameUserAndPickups: () => void }, 'frameUserAndPickups');
+
+      component.onTilesLoaded(); // first tile draw
+      component.onTilesLoaded(); // pan/zoom re-fires tilesloaded
+
+      expect(frameSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   // -------------------------------------------------------------------------
