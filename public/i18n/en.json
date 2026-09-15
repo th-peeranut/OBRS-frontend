@@ -1242,7 +1242,15 @@
       "FOCUSED_CLEAR": "Show all schedules",
       "VEHICLE_UNDER_MAINTENANCE": "This vehicle has an open maintenance record covering the selected date. Choose a different vehicle or date.",
       "CARGO_CAPACITY_LABEL": "Cargo Quota Override for This Trip (kg)",
-      "CARGO_CAPACITY_HELPER": "Empty = use the vehicle type's quota."
+      "CARGO_CAPACITY_HELPER": "Empty = use the vehicle type's quota.",
+      "EXTEND_WINDOW": "Extend the timetable by one more period",
+      "EXTEND_WINDOW_CONFIRM_TITLE": "Extend the timetable?",
+      "EXTEND_WINDOW_CONFIRM_TEXT": "This extends every route's timetable by one more period, using the window length already configured. Nothing needs to be typed in.",
+      "EXTEND_WINDOW_CONFIRM_BTN": "Extend",
+      "EXTEND_WINDOW_LOADING": "Extending the timetable — this can take a moment for a large timetable.",
+      "EXTEND_WINDOW_SUCCESS": "Extended {{setsExtended}} schedule set(s) to {{newStartDate}} – {{newEndDate}}, creating {{schedulesCreated}} new trip(s).",
+      "EXTEND_WINDOW_NO_NEW_TRIPS": "Extended {{setsExtended}} schedule set(s) to {{newStartDate}} – {{newEndDate}}. Every trip in the new window already existed, so no new trips were created.",
+      "EXTEND_WINDOW_FAILED": "Unable to extend the timetable."
     },
     "BOOKINGS": {
       "TITLE": "Bookings Management",

@@ -4834,6 +4834,42 @@ relative-luminance formula off `#0772a2`/`#ffffff`: 5.33:1, matching `variables.
 not change the AA verdict either way — text is well clear of 4.5:1 at both figures — so this is a
 documentation-accuracy fix, not a compliance one.
 
+
+## 2026-09-15 — OBRS-1172 QA (local lane): all 14 manual-test items PASSED
+
+`schedule-extend-window-btn` on `SchedulesPageComponent` — verified against a local backend/DB
+(`obrs1172qa`) with AFTER served on `:4517` and BEFORE (a second worktree detached at `origin/dev`
+`dca2e26b`) served on the same port, one at a time. All 14 items in
+`docs/manual-tests/MANUAL-TEST-OBRS-1172-extend-timetable-window.md` passed, DOM-measured (0/1
+counts on `.schedule-extend-window-btn`, never eyeballed):
+- item 1: 0 buttons on `origin/dev`, with a positive control (Add button count 1) on the same
+  selector family so a typo'd selector would have failed loud.
+- item 2: exact text `ขยายตารางเดินรถอีกหนึ่งช่วง` in the same toolbar as Add.
+- item 3: 0 buttons on the Trips tab.
+- item 4: Cancel on the confirm dialog fired 0 `POST /schedule-set/extend` requests (network
+  listener, not just "the alert closed").
+- item 10: mid-flight `disabled` attribute is present (Playwright's `getAttribute` returns `""`,
+  not `null`, for a true boolean attribute) — proved by delaying the response 2s via
+  `page.route()` (test-side interception only, no app change) so the window was actually
+  observable instead of racing a <50ms local response.
+
+Reused `admin-critical-paths.spec.ts`'s own selector conventions (`.admin-page-intro
+.admin-btn-primary`, `app-admin-dropdown` + `.admin-dropdown-option`, `.swal2-*`) for the new
+scratch specs below rather than re-deriving them.
+
+**Did NOT run `admin-critical-paths.spec.ts` itself** — it is a deliberate SIT-LIVE lane
+(`docs/adr/0001-admin-e2e-hits-real-sit-backend.md`; `sit-sweep.ts`'s `SIT_API` is hardcoded, no
+local override), and this pass was scoped local-only with SIT off-limits. Ran
+`ng test --include=**/schedules-page.component.spec.ts` instead: 34 of 34 SUCCESS (real
+`Executed N of N`, not a green tail over 0 specs).
+
+The capture drivers were COMMITTED, renamed to `e2e/capture-obrs-1172-*.mjs` to match the dozens of
+per-card `capture-obrs-NNNN-*.mjs` drivers already in that directory (`before`, `setup`, `resume`,
+`extend1`, `press`, `seed-collision`); only genuine scratch (`dbg-login*.mjs`, `fe-*.log`) was
+deleted. Screenshots/video were captured to `e2e-evidence/` (gitignored),
+uploaded to the Jira card via the REST attachments endpoint, then deleted locally per
+`jira-and-evidence-contract.md`.
+
 ## OBRS-1214 scrutinize self-fix: `onTilesLoaded()` re-firing camera framing forever
 
 Reviewing OBRS-1214 ("use my location" moved from the map overlay to the pickup list),
@@ -4861,3 +4897,4 @@ fire MORE than once over the component's lifetime (a lifecycle event, not just a
 @Input change), the combined handler needs its own once-per-logical-event guard —
 "first ngOnChanges + first onXyz" is not naturally idempotent, because one half is
 naturally repeating.
+
