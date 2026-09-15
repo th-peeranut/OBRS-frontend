@@ -20,7 +20,6 @@
         [attr.aria-label]="(locating ? 'HOME.ROUTE_MAP.LOCATING' : 'HOME.ROUTE_MAP.USE_MY_LOCATION') | translate"
         (click)="locateMeClicked.emit()">
         @if (!locating) { <i class="bi bi-crosshair" aria-hidden="true"></i> }
-        @if (locating) { <i class="bi bi-arrow-repeat locate-spin" aria-hidden="true"></i> }
         <span>{{ (locating ? 'HOME.ROUTE_MAP.LOCATING' : 'HOME.ROUTE_MAP.USE_MY_LOCATION') | translate }}</span>
       </button>
       @if (locationError) {

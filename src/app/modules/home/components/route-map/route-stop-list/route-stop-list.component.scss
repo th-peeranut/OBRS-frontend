@@ -215,19 +215,6 @@
   }
 }
 
-// Copied from route-map-panel.component.scss's `.locate-spin` before it was
-// removed there (OBRS-1214 moved the button here, off the map overlay).
-.locate-spin {
-  display: inline-block;
-  animation: locate-spin 0.8s linear infinite;
-}
-
-@keyframes locate-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 // Per-stop distance from origin/dev, aligned with customer theme color tokens
 .stop-distance {
   font-size: 0.75rem;

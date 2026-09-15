@@ -152,9 +152,6 @@ const DEBT_REGISTER = {
     'vehicle-inspection-spin',
   ],
   'app/modules/business-policy/business-policy.component.scss': ['business-policy-shimmer'],
-  'app/modules/home/components/route-map/route-map-panel/route-map-panel.component.scss': [
-    'locate-spin',
-  ],
   'app/modules/my-bookings/components/change-seat-dialog/change-seat-dialog.component.scss': [
     'change-seat-spin',
   ],
