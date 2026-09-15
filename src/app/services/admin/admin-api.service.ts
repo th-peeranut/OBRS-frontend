@@ -1246,6 +1246,22 @@ export interface AdminExpenseDto {
   receiptFileRef?: string | null;
 }
 
+/**
+ * OBRS-1891: what `GET /private/expenses/pending` returns now — a salesperson's one field
+ * submission (a gas bill: fuel + toll + driver wage + parking, `groupType: 'SETTLE_BILL'`, keyed
+ * by `settleId`) folds every `AdminExpenseDto` row it produced into one group, instead of the
+ * owner seeing five unrelated rows from one bill. `SINGLE` is the pre-OBRS-1891 shape unchanged —
+ * one expense, `settleId: null`, `expenses.length === 1`.
+ */
+export interface PendingExpenseGroupDto {
+  groupType: 'SETTLE_BILL' | 'SINGLE';
+  settleId: number | null;
+  totalAmount: number;
+  expenseDate: string;
+  vehicleId: number | null;
+  expenses: AdminExpenseDto[];
+}
+
 /** OBRS-845: `GET /private/expenses/{id}/receipt/url` 200 body. `url` is a short-lived SIGNED
  * URL into the private receipt bucket — fetch it ON DEMAND at the moment of viewing and never
  * cache/store it (it expires; default `expiresInSeconds` is 300). */
@@ -2967,8 +2983,8 @@ export class AdminApiService {
     );
   }
 
-  getPendingExpenses(): Observable<ResponseAPI<AdminExpenseDto[]>> {
-    return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses/pending`);
+  getPendingExpenses(): Observable<ResponseAPI<PendingExpenseGroupDto[]>> {
+    return this.getRequest<PendingExpenseGroupDto[]>(`${this.baseUrl}/private/expenses/pending`);
   }
 
   approveExpense(id: number): Observable<ResponseAPI<unknown>> {
@@ -2978,6 +2994,19 @@ export class AdminApiService {
   /** The reason is required by the backend — a bounced row must say why. */
   rejectExpense(id: number, rejectionReason: string): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/${id}/reject`, {
+      rejectionReason,
+    });
+  }
+
+  /** OBRS-1891: the whole-bill counterpart to `approveExpense`/`rejectExpense` above — rules on
+   * every `AdminExpenseDto` a `SETTLE_BILL` group folds together, in one call, keyed by `settleId`
+   * rather than an individual expense id. */
+  approveExpenseSettle(settleId: number): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/settles/${settleId}/approve`, {});
+  }
+
+  rejectExpenseSettle(settleId: number, rejectionReason: string): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/settles/${settleId}/reject`, {
       rejectionReason,
     });
   }

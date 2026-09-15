@@ -1092,6 +1092,9 @@
       "RETURN_BOARDING_STOP_NONE": "Not set — let the system pick the nearest stop that can actually sell a ticket back",
       "LATITUDE": "Latitude",
       "LONGITUDE": "Longitude",
+      "MAP_LABEL": "Pin on map",
+      "MAP_HINT": "Drag the pin or click the map to set the location",
+      "MAP_UNAVAILABLE": "Map unavailable - use the latitude/longitude fields above",
       "NAME": "Display name",
       "LANDMARK": "Landmark",
       "LANDMARK_PLACEHOLDER": "e.g. next to the mobile phone shop",
@@ -2200,7 +2203,10 @@
         "REJECT_CONFIRM": "Confirm rejection",
         "REASON_LABEL": "Reason for rejecting",
         "REASON_PLACEHOLDER": "e.g. the receipt is for a different vehicle",
-        "FAILED": "Unable to record this verdict. Please try again."
+        "FAILED": "Unable to record this verdict. Please try again.",
+        "GAS_BILL": "Gas bill",
+        "EXPAND_ARIA": "Show the gas bill's category breakdown",
+        "COLLAPSE_ARIA": "Hide the gas bill's category breakdown"
       },
       "ADD": "Add Expense",
       "ADD_TITLE": "Record New Expense",

@@ -311,6 +311,22 @@ function returnStopLabel(dto: AdminStopSummaryDto, locale: string): string {
   );
 }
 
+/**
+ * Where the picker's map opens for a stop that has no coordinates yet (AC3).
+ *
+ * These are NOT geographic province centres -- they are the arithmetic mean of the
+ * seeded stop coordinates of each province, measured 2026-09-14 from
+ * OBRS-backend/src/main/resources/data.sql:667-695 (coordinates) grouped by the
+ * province blocks at data.sql:625-657 -- chonburi n=19, bangkok n=9, the only two
+ * provinces the system seeds (data.sql:598-602). A province that is not in this map
+ * falls through to the picker's own country-level constant, which is the same
+ * behaviour a brand-new province gets until someone measures it.
+ */
+export const PROVINCE_MAP_CENTERS: Record<string, { lat: number; lng: number }> = {
+  chonburi: { lat: 13.311178, lng: 101.119701 },
+  bangkok: { lat: 13.768595, lng: 100.626939 },
+};
+
 /** Case-insensitive keyword match over the columns the table actually shows. */
 export function filterStopRows(rows: StopRow[], keyword: string): StopRow[] {
   const needle = keyword.trim().toLowerCase();

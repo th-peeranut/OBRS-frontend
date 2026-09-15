@@ -18,43 +18,71 @@
           </tr>
         </thead>
         <tbody>
-          @for (row of rows; track trackById($index, row)) {
+          @for (row of rows; track row.actionKey) {
             <tr>
-              <td>{{ row.expenseDateDisplay }}</td>
+              <td>
+                @if (row.groupType === 'SETTLE_BILL' && row.members.length > 0) {
+                  <button
+                    type="button"
+                    class="admin-icon-btn"
+                    (click)="toggleExpand(row)"
+                    [attr.aria-label]="(isExpanded(row) ? 'ADMIN.EXPENSES.APPROVAL.COLLAPSE_ARIA' : 'ADMIN.EXPENSES.APPROVAL.EXPAND_ARIA') | translate"
+                    [title]="(isExpanded(row) ? 'ADMIN.EXPENSES.APPROVAL.COLLAPSE_ARIA' : 'ADMIN.EXPENSES.APPROVAL.EXPAND_ARIA') | translate"
+                    [attr.data-testid]="'expense-approval-expand-' + row.actionKey"
+                    >
+                    <span class="material-symbols-outlined" [attr.translate]="'no'">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
+                  </button>
+                }
+                {{ row.expenseDateDisplay }}
+              </td>
               <td>{{ row.vehicleLabel }}</td>
               <td>{{ row.categoryDisplay }}</td>
-              <td class="expense-money">{{ formatMoney(row.amount) }}</td>
+              <td class="expense-money">{{ formatMoney(row.totalAmount) }}</td>
               <td>{{ row.note }}</td>
               <td class="text-right">
                 <button
                   type="button"
                   class="admin-btn admin-btn-primary admin-btn-sm"
-                  [disabled]="busyId === row.id"
-                  [appPending]="busyId === row.id"
-                  [attr.data-testid]="'expense-approve-' + row.id"
-                  (click)="approve.emit(row.id)"
+                  [disabled]="busyId === row.actionKey"
+                  [appPending]="busyId === row.actionKey"
+                  [attr.data-testid]="'expense-approve-' + row.actionKey"
+                  (click)="approve.emit(row)"
                   >
                   {{ 'ADMIN.EXPENSES.APPROVAL.APPROVE' | translate }}
                 </button>
                 <button
                   type="button"
                   class="admin-btn admin-btn-sm ms-2"
-                  [disabled]="busyId === row.id"
-                  [attr.data-testid]="'expense-reject-' + row.id"
-                  (click)="startReject(row.id)"
+                  [disabled]="busyId === row.actionKey"
+                  [attr.data-testid]="'expense-reject-' + row.actionKey"
+                  (click)="startReject(row)"
                   >
                   {{ 'ADMIN.EXPENSES.APPROVAL.REJECT' | translate }}
                 </button>
               </td>
             </tr>
-            @if (rejectingId === row.id) {
+            @if (row.groupType === 'SETTLE_BILL' && isExpanded(row)) {
+              <tr class="expense-approval-detail-row">
+                <td colspan="6">
+                  <div class="expense-approval-member-list">
+                    @for (member of row.members; track $index) {
+                      <span class="expense-approval-member-chip">
+                        {{ member.categoryDisplay }}: {{ formatMoney(member.amount) }}
+                        @if (member.note) { ({{ member.note }}) }
+                      </span>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+            @if (rejectingKey === row.actionKey) {
               <tr class="expense-reject-row">
                 <td colspan="6">
-                  <label class="admin-form-label" [attr.for]="'expense-reject-reason-' + row.id">
+                  <label class="admin-form-label" [attr.for]="'expense-reject-reason-' + row.actionKey">
                     {{ 'ADMIN.EXPENSES.APPROVAL.REASON_LABEL' | translate }}
                   </label>
                   <input
-                    [id]="'expense-reject-reason-' + row.id"
+                    [id]="'expense-reject-reason-' + row.actionKey"
                     type="text"
                     class="admin-field"
                     [placeholder]="'ADMIN.EXPENSES.APPROVAL.REASON_PLACEHOLDER' | translate"
@@ -64,10 +92,10 @@
                     <button
                       type="button"
                       class="admin-btn admin-btn-primary admin-btn-sm"
-                      [disabled]="!canConfirmReject || busyId === row.id"
-                      [appPending]="busyId === row.id"
-                      [attr.data-testid]="'expense-reject-confirm-' + row.id"
-                      (click)="confirmReject(row.id)"
+                      [disabled]="!canConfirmReject || busyId === row.actionKey"
+                      [appPending]="busyId === row.actionKey"
+                      [attr.data-testid]="'expense-reject-confirm-' + row.actionKey"
+                      (click)="confirmReject(row)"
                       >
                       {{ 'ADMIN.EXPENSES.APPROVAL.REJECT_CONFIRM' | translate }}
                     </button>

@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { GoogleMap } from '@angular/google-maps';
 import { RouteMeta, RouteStop } from '../../../../../shared/interfaces/route-map.interface';
+import { GoogleWindow, loadGoogleMapsApi } from '../../../../../shared/lib/google-maps-loader';
 
 /** Payload emitted once the user's current location has been resolved. */
 export interface UserLocatedEvent {
@@ -20,12 +21,6 @@ export interface UserLocatedEvent {
   nearestPickupSlug: string | null;
   /** Map of pickup-stop slug -> straight-line distance from the user, in km. */
   distancesKm: Record<string, number>;
-}
-
-interface GoogleWindow {
-  google?: {
-    maps?: unknown;
-  };
 }
 
 /**
@@ -68,49 +63,6 @@ interface MarkerEntry {
  */
 const MAP_PICKUP_COLOR = '#0772A2'; // = $primary-blue; white pin number on it = 5.33:1 (was 2.03:1)
 const MAP_DROPOFF_COLOR = '#3B61A9'; // = $secondary-blue; white pin number on it = 6.05:1
-
-/**
- * Load the Google Maps JS API once per page using Google's recommended
- * `loading=async` bootstrap + a `callback`. Loading the API the legacy
- * (synchronous) way keeps the browser's tab-loading indicator spinning and logs
- * the "loaded directly without loading=async" console warning; the async
- * bootstrap lets the page settle to idle and silences the warning.
- *
- * Shared across every RouteMapPanelComponent instance (the /home page renders a
- * desktop and a mobile panel) via a module-level promise, so the script is
- * injected at most once and both panels resolve off the same load.
- */
-let googleMapsLoad: Promise<void> | null = null;
-
-function loadGoogleMapsApi(apiKey: string): Promise<void> {
-  if (googleMapsLoad) {
-    return googleMapsLoad;
-  }
-
-  const win = window as unknown as GoogleWindow;
-  if (win.google?.maps) {
-    googleMapsLoad = Promise.resolve();
-    return googleMapsLoad;
-  }
-
-  googleMapsLoad = new Promise<void>((resolve, reject) => {
-    const callbackName = '__obrsGoogleMapsReady';
-    (window as unknown as Record<string, () => void>)[callbackName] = () =>
-      resolve();
-
-    const script = document.createElement('script');
-    script.setAttribute('data-maps-api', 'true');
-    script.src =
-      `https://maps.googleapis.com/maps/api/js?key=${apiKey}` +
-      `&loading=async&libraries=marker&callback=${callbackName}`;
-    script.async = true;
-    script.onerror = () =>
-      reject(new Error('Google Maps JS API failed to load'));
-    document.head.appendChild(script);
-  });
-
-  return googleMapsLoad;
-}
 
 /** `slug@lat,lng` identity of a stop, shared by the Directions and camera keys. */
 const stopToken = (s: RouteStop): string =>
