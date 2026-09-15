@@ -304,6 +304,17 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   // "Use my location" state — `userLocation` itself is now the `@Input` above.
   // ---------------------------------------------------------------------------
 
+  /**
+   * OBRS-1214 self-fix. `applyUserLocation` has two triggers precisely
+   * because `onTilesLoaded` fires on EVERY tile reload, not just the first
+   * (pans/zooms/marker updates/direction changes all cause more of them) —
+   * without this flag, each one would re-run `frameUserAndPickups()` and
+   * snap the camera back over the user's own pan/zoom. True once framing has
+   * run for the current `userLocation`; reset in `ngOnChanges` whenever a
+   * fresh value arrives so re-locating still reframes.
+   */
+  private locationFramed = false;
+
   /** Stable marker options for the user pin — only reassigned when userLocation changes. */
   userMarkerOptions: MarkerPin | null = null;
 
@@ -442,11 +453,12 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
    * `this.map` is typically still unset when `userLocation` first arrives.
    */
   private applyUserLocation(): void {
-    if (!this.map || !this.userLocation) {
+    if (!this.map || !this.userLocation || this.locationFramed) {
       return;
     }
     this.userMarkerOptions = this.buildUserMarkerOptions(this.userLocation);
     this.frameUserAndPickups();
+    this.locationFramed = true;
   }
 
   /** Frame the map to include the user and all pickup stops with coordinates. */
@@ -603,7 +615,10 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
 
     // OBRS-1214: `userLocation` arriving (or changing) is the first of the two
     // triggers `applyUserLocation` needs — see its own doc comment for the second.
+    // A fresh value means a fresh "locate me" tap, so it must reframe again —
+    // reset the once-per-location guard (see `locationFramed`'s own comment).
     if ('userLocation' in changes) {
+      this.locationFramed = false;
       this.applyUserLocation();
     }
   }
