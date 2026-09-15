@@ -481,24 +481,134 @@ describe('routes.mappers', () => {
       },
     ];
 
-    it('only includes stop pairs of the same vehicle type as the edited segment', () => {
-      const payload = toSegmentUpdatePayload(segments[0], 'a', 'b2', 12, 40, segments, 'route-1');
+    /** The a->b pair priced for the minibus too - the OBRS-1034 case. */
+    const MINIBUS_A_TO_B: SegmentRow = {
+      id: 4,
+      origin: 'A',
+      destination: 'B',
+      fare: 25,
+      duration: '-',
+      estimatedDurationMinutes: 30,
+      fromStopSlug: 'a',
+      toStopSlug: 'b',
+      vehicleTypeSlug: 'minibus',
+      vehicleTypeName: 'Minibus',
+    };
+
+    it("keeps each block to its own vehicle type's stop pairs", () => {
+      const payload = toSegmentUpdatePayload(
+        'a',
+        'b',
+        'a',
+        'b2',
+        [{ vehicleTypeSlug: 'van', fare: 12 }],
+        40,
+        segments,
+        'route-1'
+      );
 
       expect(payload.route).toBe('route-1');
-      expect(payload.vehicleType).toBe('van');
-      expect(payload.stopPairs.length).toBe(2);
-      expect(payload.stopPairs.map((p) => p.toStop)).toEqual(['b2', 'c']);
+      expect(payload.vehicleTypes.length).toBe(1);
+      expect(payload.vehicleTypes[0].vehicleType).toBe('van');
+      expect(payload.vehicleTypes[0].stopPairs.length).toBe(2);
+      expect(payload.vehicleTypes[0].stopPairs.map((p) => p.toStop)).toEqual(['b2', 'c']);
     });
 
     it('applies normalized fare/duration only to the edited stop pair, leaving others untouched', () => {
-      const payload = toSegmentUpdatePayload(segments[0], 'a', 'b', -5, 0, segments, 'route-1');
+      const payload = toSegmentUpdatePayload(
+        'a',
+        'b',
+        'a',
+        'b',
+        [{ vehicleTypeSlug: 'van', fare: -5 }],
+        0,
+        segments,
+        'route-1'
+      );
 
-      const edited = payload.stopPairs[0];
-      const untouched = payload.stopPairs[1];
+      const edited = payload.vehicleTypes[0].stopPairs[0];
+      const untouched = payload.vehicleTypes[0].stopPairs[1];
       expect(edited.fare).toBe(0.01); // clamped
       expect(edited.estimatedDurationMinutes).toBe(1); // clamped
       expect(untouched.fare).toBe(15);
       expect(untouched.estimatedDurationMinutes).toBeUndefined();
+    });
+
+    // OBRS-1034 AC-2/AC-3: both vehicle types re-priced by ONE payload, and the
+    // pair is found by its stop slugs - the two rows carry different ids.
+    it('re-prices the same pair in one block per vehicle type', () => {
+      const payload = toSegmentUpdatePayload(
+        'a',
+        'b',
+        'a',
+        'b',
+        [
+          { vehicleTypeSlug: 'van', fare: 111 },
+          { vehicleTypeSlug: 'minibus', fare: 222 },
+        ],
+        40,
+        [...segments, MINIBUS_A_TO_B],
+        'route-1'
+      );
+
+      expect(payload.vehicleTypes.map((block) => block.vehicleType)).toEqual([
+        'van',
+        'minibus',
+      ]);
+      expect(payload.vehicleTypes[0].stopPairs[0].fare).toBe(111);
+      // The van's OTHER pair must survive the full replace at its own fare.
+      expect(payload.vehicleTypes[0].stopPairs[1].fare).toBe(15);
+
+      const minibusBlock = payload.vehicleTypes[1];
+      expect(minibusBlock.stopPairs.length).toBe(2);
+      expect(minibusBlock.stopPairs.map((p) => p.toStop)).toEqual(['y', 'b']);
+      expect(minibusBlock.stopPairs[1].fare).toBe(222);
+      // x->y is the minibus's unrelated pair and keeps its own fare.
+      expect(minibusBlock.stopPairs[0].fare).toBe(99);
+    });
+
+    // Card scope 3: the duration is one route-level field, so two blocks both
+    // stating it is a duration conflict the backend answers with a 400.
+    it('states the duration in the first block only', () => {
+      const payload = toSegmentUpdatePayload(
+        'a',
+        'b',
+        'a',
+        'b',
+        [
+          { vehicleTypeSlug: 'van', fare: 111 },
+          { vehicleTypeSlug: 'minibus', fare: 222 },
+        ],
+        40,
+        [...segments, MINIBUS_A_TO_B],
+        'route-1'
+      );
+
+      expect(payload.vehicleTypes[0].stopPairs[0].estimatedDurationMinutes).toBe(40);
+      expect(
+        payload.vehicleTypes[1].stopPairs[1].estimatedDurationMinutes
+      ).toBeUndefined();
+      const carriers = payload.vehicleTypes
+        .flatMap((block) => block.stopPairs)
+        .filter((pair) => pair.estimatedDurationMinutes !== undefined);
+      expect(carriers.length).toBe(1);
+    });
+
+    // AC-6: a vehicle type the pair has no row for is simply not in `fares`, so
+    // it gets no block - its existing rows are left alone, not deleted.
+    it('omits the block of a vehicle type the caller passed no fare for', () => {
+      const payload = toSegmentUpdatePayload(
+        'a',
+        'b',
+        'a',
+        'b',
+        [{ vehicleTypeSlug: 'van', fare: 111 }],
+        40,
+        [...segments, MINIBUS_A_TO_B],
+        'route-1'
+      );
+
+      expect(payload.vehicleTypes.map((block) => block.vehicleType)).toEqual(['van']);
     });
   });
 
