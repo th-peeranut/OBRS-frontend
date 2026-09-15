@@ -3111,7 +3111,8 @@
       "CONTACT_FACEBOOK": "NJ ผู้ใหญ่ปู",
       "CONTACT_INSTAGRAM": "@nj.phuyaipu",
       "CONTACT_PHONE": "09-0562-2019",
-      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026. All rights reserved."
+      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026. All rights reserved.",
+      "BUILD_VERSION": "เวอร์ชัน {{version}} ({{sha}})"
     },
     "ROUTE_MAP": {
       "TAB_PICKUP_LABEL": "จุดรับ",

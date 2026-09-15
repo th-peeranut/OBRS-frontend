@@ -11,6 +11,7 @@ import { CommonModule } from '@angular/common';
 import { UsabilityReportReceipt } from '../../interfaces/usability-report.interface';
 import { PendingButtonDirective } from '../../directives/pending-button.directive';
 import { ReportUsabilityModalService } from '../../services/report-usability-modal.service';
+import { buildInfo } from '../../../../environments/build-info';
 
 describe('ReportUsabilityModalComponent', () => {
   let fixture: ComponentFixture<ReportUsabilityModalComponent>;
@@ -162,6 +163,30 @@ describe('ReportUsabilityModalComponent', () => {
     const sentFormData = usabilityReportServiceSpy.submitReport.calls.mostRecent()
       .args[0] as FormData;
     expect(sentFormData.get('reporterEmail')).toBe('reporter@example.com');
+  });
+
+  // OBRS-1075 AC-3. Values come from the same gitignored, generator-written module the
+  // app reads -- never a literal here (AC-7).
+  it('includes the build appVersion and buildSha in the submit payload', () => {
+    component['isModalOpen'] = true;
+    fixture.detectChanges();
+
+    const receipt: UsabilityReportReceipt = {
+      id: 1,
+      category: 'bug',
+      status: 'new',
+      imageCount: 0,
+      createdAt: '',
+    };
+    usabilityReportServiceSpy.submitReport.and.returnValue(of(receipt));
+
+    component['form'].get('description')?.setValue('Some description');
+    component.onSubmit();
+
+    const sentFormData = usabilityReportServiceSpy.submitReport.calls.mostRecent()
+      .args[0] as FormData;
+    expect(sentFormData.get('appVersion')).toBe(buildInfo.appVersion);
+    expect(sentFormData.get('buildSha')).toBe(buildInfo.buildSha);
   });
 
   it('should block submit on an invalid (non-empty) reporter email and show an inline hint', () => {

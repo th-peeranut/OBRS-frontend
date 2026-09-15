@@ -411,6 +411,16 @@ jobs:
       - name: Money format gate
         run: npm run test:money-format
 
+      # Pure-node gate (OBRS-1075). scripts/inject-build-info.mjs is the only source of
+      # src/environments/build-info.ts, which every customer-facing bundle imports with no
+      # fallback -- a wrong resolve there would not throw where anyone reads it, it would
+      # just write a plausible-looking `'unknown'`/stale value that compiles and ships. The
+      # self-test proves the no-fallback contract (throw + no output file) and the
+      # stale-output cleanup (a leftover build-info.ts from an earlier run must not survive
+      # a failing resolve) on every push, not just the one time someone ran it by hand.
+      - name: build identity generator gate
+        run: npm run test:build-info
+
       - name: Install dependencies
         run: npm ci
 

@@ -146,4 +146,10 @@
   <div class="copyright-text">
     {{ "HOME.FOOTER.COPYRIGHT_TEXT" | translate }}
   </div>
+  <!-- OBRS-1075 AC-5: build identity, reachable so a usability report can be traced back to
+       the build that produced it. Reuses .copyright-text so it carries the same contrast
+       ratio already measured for that class -- no new color decision here. -->
+  <div class="copyright-text build-version-text" data-testid="footer-build-info">
+    {{ "HOME.FOOTER.BUILD_VERSION" | translate: { version: build.appVersion, sha: build.buildSha } }}
+  </div>
 </div>

@@ -4833,3 +4833,60 @@ means those two numbers must be equal, and 5.14 was the wrong one (recomputed fr
 relative-luminance formula off `#0772a2`/`#ffffff`: 5.33:1, matching `variables.scss:25`). Does
 not change the AA verdict either way — text is well clear of 4.5:1 at both figures — so this is a
 documentation-accuracy fix, not a compliance one.
+
+## OBRS-1075 scrutinize self-fix (.github/workflows/ci.yml, 2026-09-15)
+
+AC-6 asked for a "must-catch" test proving `scripts/inject-build-info.mjs` fails loudly (no
+fallback) instead of silently. The dev wrote `scripts/check-inject-build-info.mjs` in the same
+shape as `check-netlify-ignore.mjs`/`check-station-load-surface.mjs` — 4 cases including a
+positive control and a stale-output-must-be-removed case — wired it as `npm run test:build-info`,
+and it passes when run by hand (verified: all 4 cases hold, including a real
+`fatal: not a git repository` failure path).
+
+What was missing: every sibling `check-*.mjs` gate this one is modeled after
+(`test:netlify-ignore`, `test:station-surface`, `test:i18n-cache`, `test:marker-position`,
+`test:money-format`, ...) has a corresponding step in `.github/workflows/ci.yml`; this one did
+not — `grep -rn "build-info" .github/` was 0 hits before the fix. A self-test that only runs when
+someone remembers to run it by hand is not a gate; it is the exact "green because nobody ran it"
+shape DEV-GOTCHAS warns about for zero-assertion tests, just one layer up (zero-*executions*
+instead of zero-assertions). Added a step after "Money format gate" running
+`npm run test:build-info`, same house style (comment explaining why this needs a gate at all).
+Re-ran the script standalone after the CI edit — still green — and re-verified `footer.component.spec.ts`'s
+AC-5 assertion actually goes red by mutating the template's `translate:` params to literal
+`v0.0.0`/`0000000` and running `ng test --include`, then reverted.
+
+## OBRS-1075 QA (obrs-qa, 2026-09-15)
+
+Verdict: PASSED. Full end-to-end proof, not just unit-level: booted BE local
+(`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,local`, private DB `obrs1075qa`) + this
+worktree's FE (`npm run start:local` on port 4207 — 4200 is CORS-hardcoded on BE's `dev` profile,
+had to override with `-Dapp.frontend-url=http://localhost:4207` JVM arg to unblock it), clicked
+"รายงานปัญหาการใช้งาน" for real in the browser, then read the row straight from the DB:
+`app_version='v1.1.0-alpha' build_sha='76fa2ce'` — exact match to this worktree's
+`git rev-parse --short=7 HEAD` / `git describe --tags`. Confirms `formData.append('appVersion', ...)`
+/ `('buildSha', ...)` in `report-usability-modal.component.ts` line up with BE's `@RequestParam`
+names exactly, with no silent drop or BE-side override.
+
+Footer AC-5: `[data-testid="footer-build-info"]` textContent measured via the live DOM
+("เวอร์ชัน v1.1.0-alpha (76fa2ce)"), not eyeballed — matches the same git values. BEFORE/AFTER
+screenshots (separate PNG files, not one combined image) uploaded to the Jira card via REST.
+
+E2E regression: `npm run e2e:gate` is too long for one foreground call (250 tests / 38 files,
+~35-40 min total) — split into `npx playwright test --config=playwright.gate.config.ts
+--shard=N/5` run one at a time in the foreground instead of backgrounding the whole suite (a
+backgrounded verdict-bearing command's completion notification does not reach a QA subagent).
+250/250 accounted for: 249 clean + 1 (`obrs-1224-origin-combobox.spec.ts`) that failed only when
+sharing workers with unrelated specs and passed standalone in 2.7s — a load-flake, not a
+regression, same shape as the `obrs-931-sticky-navbar` timeout the brief already flagged (which
+ran clean this time, 42.9s/41.7s).
+
+Trap hit and worth repeating: the first `--shard=2/5` run threw 2 real-looking failures — a
+CORS-blocked console error against `http://localhost:8080/api/operations-policy` — from
+`confirm-guidance-flow.spec.ts`, a spec documented as fully hermetic (mocks its own API). Root
+cause was **my own leftover BE process from the manual AC-3 verification step still listening on
+8080**, incidentally reached by the gate's page under test and rejected by CORS (BE's CORS
+allowlist was pinned to :4207, not :4230). Stopped that BE process and reran the same spec alone —
+7/7 green. Lesson: a real backend left running from an earlier manual-verification step can leak
+into an unrelated "hermetic" E2E spec and read as a regression; always confirm nothing of your own
+is listening on a port a hermetic lane's app-under-test might accidentally reach before trusting a
+failure there.

@@ -8,6 +8,7 @@ import { AlertService } from '../../services/alert.service';
 import { ReportUsabilityModalService } from '../../services/report-usability-modal.service';
 import { UsabilityReportService } from '../../../services/usability-report/usability-report.service';
 import { mapApiErrorCode } from '../../lib/api-error-code';
+import { buildInfo } from '../../../../environments/build-info';
 
 interface SelectOption {
   label: string;
@@ -177,6 +178,10 @@ export class ReportUsabilityModalComponent implements OnInit, OnDestroy {
     // Optional — empty string is fine and keeps the submission anonymous;
     // the backend treats a blank value as null.
     formData.append('reporterEmail', reporterEmail);
+    // OBRS-1075 AC-3: the build the REPORTER saw, not this server/session's own build --
+    // never backfilled server-side (business rule #4).
+    formData.append('appVersion', buildInfo.appVersion);
+    formData.append('buildSha', buildInfo.buildSha);
     for (const file of this.attachedFiles) {
       formData.append('images', file);
     }
