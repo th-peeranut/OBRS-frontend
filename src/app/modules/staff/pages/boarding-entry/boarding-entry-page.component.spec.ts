@@ -193,6 +193,60 @@ describe('BoardingEntryPageComponent', () => {
     });
   });
 
+  describe('OBRS-1216 the route column reads translations, never the slug', () => {
+    function rowsFor(route: unknown): any[] {
+      const component: any = new BoardingEntryPageComponent(
+        createRouterStub(),
+        createTranslateStub(),
+        createAuthStub(['driver']),
+        createDriverStoreStub([
+          { id: 7, departureDateTime: '2026-08-23T07:00:00+07:00', status: 'scheduled', route },
+        ]),
+        createStaffStoreStub()
+      );
+      component.ngOnInit();
+      return component.rows;
+    }
+
+    it('shows the label of the active locale', () => {
+      const rows = rowsFor({
+        id: 1,
+        slug: 'chonburi_bangkok',
+        translations: {
+          th: { label: 'หนองชาก-บ้านบึง-กรุงเทพฯ' },
+          en: { label: 'Nong Chak - Ban Bueng - Bangkok' },
+        },
+      });
+      expect(rows[0].route).toBe('Nong Chak - Ban Bueng - Bangkok');
+    });
+
+    it('shows "-" when the route carries no translation at all', () => {
+      expect(rowsFor({ id: 1, slug: 'chonburi_bangkok' })[0].route).toBe('-');
+    });
+
+    it('falls back to th when the active locale has no translation', () => {
+      const rows = rowsFor({
+        id: 1,
+        slug: 'chonburi_bangkok',
+        translations: { th: { label: 'หนองชาก-บ้านบึง-กรุงเทพฯ' } },
+      });
+      expect(rows[0].route).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
+    });
+
+    // OBRS-1216: documents the measured behaviour of the shared resolver, which
+    // is what AC-2 buys: a route that has SOME human name always shows it rather
+    // than the slug. `getAdminTranslation` degrades to the first populated locale
+    // when the asked-for one is absent, so a zh-only route shows its zh label.
+    it('borrows a populated locale rather than printing the slug', () => {
+      const rows = rowsFor({
+        id: 1,
+        slug: 'chonburi_bangkok',
+        translations: { zh: { label: '春武里-曼谷' } },
+      });
+      expect(rows[0].route).toBe('春武里-曼谷');
+    });
+  });
+
   it('cleans up subscriptions on destroy', () => {
     const component = new BoardingEntryPageComponent(
       createRouterStub(),
