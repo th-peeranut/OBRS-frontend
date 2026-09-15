@@ -6,7 +6,12 @@ import { formatDisplayDateTime, formatDisplayTime } from './display-date-time';
  * unrecognized future value safely (U6) — this type is documentation, not an
  * enforced runtime guarantee. Key presence is guaranteed by the backend
  * (`CustomerTripPositionRespDto` is deliberately NOT `@JsonInclude(NON_NULL)`)
- * — every field below is always present on the wire, even when `null`. */
+ * — every field below is always present on the wire, even when `null`.
+ *
+ * OBRS-1084 extends this contract (ADR-0092 amendment, held on the backend
+ * side) with four stop-progress fields. Positional only — never convert
+ * these to an ETA in minutes. All four are `null` outside LIVE/STALE, and may
+ * still be `null` inside LIVE/STALE when the resolver can't answer honestly. */
 export interface CustomerTripPositionRespDto {
   state: 'LIVE' | 'STALE' | 'NO_SIGNAL' | 'UNAVAILABLE' | 'NOT_YET_OPEN' | 'CLOSED';
   lat: number | null;
@@ -14,6 +19,15 @@ export interface CustomerTripPositionRespDto {
   recordedAt: string | null;
   stale: boolean;
   windowOpensAt: string | null;
+  /** 1-based sequence order of the customer's own boarding stop. */
+  boardingStopOrder: number | null;
+  /** 1-based sequence order of the stop the vehicle is next heading to, derived from GPS. */
+  nextStopOrder: number | null;
+  /** Total stop count for this trip's run. */
+  totalStops: number | null;
+  /** Signed integer = boardingStopOrder − nextStopOrder. >0 = stops remaining,
+   * 0 = next stop is the customer's, <0 = already passed. */
+  stopsRemaining: number | null;
 }
 
 export type TripTrackMarkerStyle = 'live' | 'stale';
@@ -42,9 +56,56 @@ export interface TripTrackView {
   /** Pre-formatted display string — NEVER a raw ISO value (BR-12/BR-12a).
    * '' when this state carries no timestamp to show. */
   timeText: string;
+  /** OBRS-1084 — the "stops remaining" progress line. Positional only, never
+   * an ETA. `null` outside LIVE/STALE (AC4) and also `null` inside LIVE/STALE
+   * when any required source field is `null`. */
+  progress: TripTrackProgress | null;
+}
+
+export interface TripTrackProgress {
+  /** Which of the three positional messages to show, keyed by sign of
+   * stopsRemaining, and by state (LIVE vs STALE use different wording — AC4:
+   * STALE reads as "last known", never the LIVE present-tense copy). */
+  headlineKey: string;
+  headlineParams: { count: number } | null;
+  /** "Passed N of M stops" — derived from nextStopOrder/totalStops. */
+  passedKey: string;
+  passedParams: { passed: number; total: number };
 }
 
 const NS = 'MY_BOOKINGS.TRIP_TRACK.STATE.';
+const NS_PROGRESS = 'MY_BOOKINGS.TRIP_TRACK.PROGRESS.';
+
+/** L1 helper (OBRS-1084) — computes the progress line for LIVE/STALE only.
+ * Any required field missing ⇒ the whole line is `null` (never a partial
+ * render, never a "0 stops" fallback for the negative case — AC5). */
+function resolveProgress(dto: CustomerTripPositionRespDto, isStale: boolean): TripTrackProgress | null {
+  const { boardingStopOrder, nextStopOrder, totalStops, stopsRemaining } = dto;
+  if (boardingStopOrder == null || nextStopOrder == null || totalStops == null || stopsRemaining == null) {
+    return null;
+  }
+
+  const prefix = isStale ? 'STALE_' : 'LIVE_';
+  let headlineKey: string;
+  let headlineParams: { count: number } | null = null;
+
+  if (stopsRemaining > 0) {
+    headlineKey = NS_PROGRESS + prefix + 'REMAINING';
+    headlineParams = { count: stopsRemaining };
+  } else if (stopsRemaining === 0) {
+    headlineKey = NS_PROGRESS + prefix + 'NEXT_IS_YOURS';
+  } else {
+    // AC5: never "เหลืออีก 0 จุด" — a distinct key/copy for the passed case.
+    headlineKey = NS_PROGRESS + prefix + 'PASSED';
+  }
+
+  return {
+    headlineKey,
+    headlineParams,
+    passedKey: NS_PROGRESS + 'STOPS_PASSED_COUNT',
+    passedParams: { passed: nextStopOrder - 1, total: totalStops },
+  };
+}
 
 /** The neutral "can't show a position" panel — also the fail-closed default
  * for an unrecognized future backend state (U6). */
@@ -59,6 +120,7 @@ function unavailableView(): TripTrackView {
     lat: null,
     lon: null,
     timeText: '',
+    progress: null,
   };
 }
 
@@ -93,6 +155,7 @@ export function resolveTripTrackView(
         lon: dto.lon,
         // BR-12a: recordedAt can only ever be "today" — time-only.
         timeText: formatDisplayTime(dto.recordedAt),
+        progress: resolveProgress(dto, false),
       };
 
     case 'STALE':
@@ -107,6 +170,7 @@ export function resolveTripTrackView(
         lat: dto.lat,
         lon: dto.lon,
         timeText: formatDisplayTime(dto.recordedAt),
+        progress: resolveProgress(dto, true),
       };
 
     case 'NO_SIGNAL':
@@ -121,6 +185,7 @@ export function resolveTripTrackView(
         lat: null,
         lon: null,
         timeText: '',
+        progress: null,
       };
 
     case 'UNAVAILABLE':
@@ -136,6 +201,7 @@ export function resolveTripTrackView(
         lat: null,
         lon: null,
         timeText: '',
+        progress: null,
       };
 
     case 'NOT_YET_OPEN':
@@ -151,6 +217,7 @@ export function resolveTripTrackView(
         lon: null,
         // BR-12a: windowOpensAt is UNBOUNDED (may be days away) — full date+time.
         timeText: formatDisplayDateTime(dto.windowOpensAt, lang),
+        progress: null,
       };
 
     case 'CLOSED':
@@ -166,6 +233,7 @@ export function resolveTripTrackView(
         lat: null,
         lon: null,
         timeText: '',
+        progress: null,
       };
 
     default:

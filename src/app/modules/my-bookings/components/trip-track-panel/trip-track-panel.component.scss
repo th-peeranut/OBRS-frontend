@@ -141,6 +141,23 @@
   color: $text-lightblack;
 }
 
+// OBRS-1084: same token/style as .trip-track-panel__last-update — same
+// muted-caption treatment, no new colours introduced.
+.trip-track-panel__progress {
+  margin: 8px 0 0;
+  color: $text-black;
+}
+
+:host-context(body.is-dark) .trip-track-panel__progress {
+  color: #e7edf1; // same dark-title token as .trip-track-panel__title
+}
+
+.trip-track-panel__progress-count {
+  margin: 2px 0 0;
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
 // OBRS-769. The three muted runs above used to be $text-lightgrey (#989ba4),
 // which was 5.77:1 on this panel's dark #1d2226 and 2.78:1 on its white light
 // surface — legible in exactly the theme nobody filed a bug about. Deleting that
@@ -156,7 +173,8 @@
   .trip-track-panel__loading,
   .trip-track-panel__error,
   .trip-track-panel__map-unavailable,
-  .trip-track-panel__last-update {
+  .trip-track-panel__last-update,
+  .trip-track-panel__progress-count {
     color: #9fb0bb;
   }
 }

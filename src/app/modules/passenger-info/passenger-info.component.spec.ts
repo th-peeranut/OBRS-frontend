@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { PassengerInfoComponent } from './passenger-info.component';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
@@ -392,5 +392,91 @@ describe('PassengerInfoComponent single-flight submit (OBRS-1853)', () => {
     await expectAsync(component.onSubmitPassengerInfo()).toBeRejected();
 
     expect(component.isSubmitting).toBeFalse();
+  });
+});
+
+/**
+ * OBRS-25. `isSubmitting` closes the double TAP; this closes the RETRY. The server now refuses a
+ * repeat of the same `Idempotency-Key`, but only if the client sends the same key twice - a key
+ * minted per call would make the guard unreachable and leave the defect exactly where it was.
+ */
+describe('PassengerInfoComponent idempotency key (OBRS-25)', () => {
+  const stubForms = (c: PassengerInfoComponent) => {
+    (c as any).passengerInfoFormComponent = {
+      validateAndGetPassengerInfo: () => [{ firstName: 'A' } as unknown as PassengerInfo],
+    };
+    (c as any).bookerInfoFormComponent = {
+      validateAndGetBooker: () => ({ firstName: 'A' } as unknown as PassengerInfo),
+    };
+  };
+
+  function componentWith(createBooking: jasmine.Spy): PassengerInfoComponent {
+    const component = new PassengerInfoComponent(
+      createStoreStub(),
+      createRouterStub(),
+      { createBooking, setActiveBookingId: () => undefined } as never,
+      createTranslateStub(),
+      { success: () => undefined, error: () => undefined } as never,
+      createAnalyticsServiceStub()
+    );
+    stubForms(component);
+    spyOn(component as any, 'setBookingStore').and.stub();
+    return component;
+  }
+
+  const keysFrom = (spy: jasmine.Spy): string[] =>
+    spy.calls.allArgs().map((args) => args[2] as string);
+
+  it('reuses the SAME key when the customer retries an unchanged booking', async () => {
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValues(
+        throwError(() => new Error('network')),
+        of({ code: 201, data: { bookingId: 7, bookingNumber: 'BK-7' } })
+      );
+    const component = componentWith(createBooking);
+    spyOn(component as any, 'buildBookingPayload').and.returnValue(
+      Promise.resolve({ scheduleId: 1 })
+    );
+
+    await component.onSubmitPassengerInfo();
+    await component.onSubmitPassengerInfo();
+
+    const [firstKey, retryKey] = keysFrom(createBooking);
+    expect(firstKey).toBeTruthy();
+    expect(retryKey).toBe(firstKey);
+  });
+
+  it('mints a NEW key once the payload changes - a different booking is not a replay', async () => {
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValue(throwError(() => new Error('network')));
+    const component = componentWith(createBooking);
+    spyOn(component as any, 'buildBookingPayload').and.returnValues(
+      Promise.resolve({ scheduleId: 1 }),
+      Promise.resolve({ scheduleId: 2 })
+    );
+
+    await component.onSubmitPassengerInfo();
+    await component.onSubmitPassengerInfo();
+
+    const [firstKey, secondKey] = keysFrom(createBooking);
+    expect(secondKey).not.toBe(firstKey);
+  });
+
+  it('drops the key after a booking is made, so the next booking is its own request', async () => {
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValue(of({ code: 201, data: { bookingId: 7, bookingNumber: 'BK-7' } }));
+    const component = componentWith(createBooking);
+    spyOn(component as any, 'buildBookingPayload').and.returnValue(
+      Promise.resolve({ scheduleId: 1 })
+    );
+
+    await component.onSubmitPassengerInfo();
+    await component.onSubmitPassengerInfo();
+
+    const [firstKey, secondKey] = keysFrom(createBooking);
+    expect(secondKey).not.toBe(firstKey);
   });
 });

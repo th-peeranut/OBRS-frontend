@@ -192,6 +192,15 @@
         "VEHICLE": "Vehicle",
         "BOARDING_STOP": "Your pickup stop"
       },
+      "PROGRESS": {
+        "LIVE_REMAINING": "{{count}} stop(s) to go before your pickup stop",
+        "LIVE_NEXT_IS_YOURS": "Next stop is your pickup stop",
+        "LIVE_PASSED": "The vehicle has passed your pickup stop",
+        "STALE_REMAINING": "Last known: {{count}} stop(s) to go before your pickup stop",
+        "STALE_NEXT_IS_YOURS": "Last known: next stop is your pickup stop",
+        "STALE_PASSED": "Last known: the vehicle has passed your pickup stop",
+        "STOPS_PASSED_COUNT": "Passed {{passed}} of {{total}} stops"
+      },
       "ERROR": {
         "UNAVAILABLE": "We can't show the vehicle position for this ticket."
       }

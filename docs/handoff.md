@@ -211,14 +211,19 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 <!-- contract-request
 card: OBRS-25
-status: open
-absent: Idempotency-Key :: src/main/java/com/example/demo/controller/business/*BookingController.java
+status: resolved
+resolved: 2026-09-14 (backend ao/obrs-25-booking-idempotency - IdempotentRequestGuard on both create doors)
 -->
+
+**RESOLVED 2026-09-14.** Both doors accept an optional `Idempotency-Key` and answer a repeat of the
+same key with the booking already made — `IdempotentRequestGuard`, wired in `BookingController` and
+`PublicBookingController`, proven by `BookingIdempotencyKeyIT` (replay, mismatch and concurrent, on
+each lane). The frontend mints one key per booking attempt and reuses it across a retry
+(`PassengerInfoComponent#idempotencyKeyFor`), which is what makes the server-side guard reachable.
 
 **Raised by**: the production-readiness review of 2026-09-11 (review follow-up: [OBRS-1853](https://nj-phuyaipu.atlassian.net/browse/OBRS-1853), Done).
 The card that owns the backend work is [OBRS-25](https://nj-phuyaipu.atlassian.net/browse/OBRS-25)
-*Idempotency for booking endpoints* — Needs Decision, so this entry stays open until that card is decided
-and shipped (OBRS-1871).
+*Idempotency for booking endpoints*.
 
 **Affected endpoints**: `POST /api/bookings` (guest) **and `POST /api/private/bookings` (signed-in)** —
 `BookingService.createBooking` picks between them on `authService.isAuthenticated()`
@@ -242,8 +247,10 @@ date), which closes the double-tap but not the network-retry case; only the serv
 | Accept `Idempotency-Key: <uuid>` on `POST /api/bookings` **and `POST /api/private/bookings`**; same key within its TTL returns the **same** `201` body (`bookingId`, `bookingNumber`) without creating a second hold | `BookingController` / `BookingService#createBooking` | Retry-safe booking creation; mirrors the payment path's existing `idempotency_keys` mechanism |
 | Document the header in `docs/api/booking.md` (scope: per user or per guest token + path, TTL ≥ the 15-minute hold) | `docs/api/booking.md` | The frontend may only send what the contract documents |
 
-Once documented, the frontend will generate the key with `generateIdempotencyKey()` when the passenger
-form validates and send it on `BookingService.createBooking`, exactly as `payment.service.ts` does today.
+Both are done. The key is generated with `generateIdempotencyKey()` and sent on
+`BookingService.createBooking`, as `payment.service.ts` does — with one difference that matters: it is
+minted ONCE per booking attempt and reused while the payload is unchanged. A key minted per call would
+leave the retry case exactly as open as it was before this entry.
 
 
 ### [Frontend] 2026-08-02 — Driver-cash daily-return close endpoints (OBRS-960): RESOLVED

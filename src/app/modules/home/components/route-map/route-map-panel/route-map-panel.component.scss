@@ -85,60 +85,6 @@
   gap: $space-2xs;
 }
 
-/* "Locate me" control — crosshair icon. Sizing/color measured directly off
-   google.com/maps' own controls (29px buttons, #1f1f1f near-black glyphs) so
-   this matches the reference rather than approximating it. */
-.locate-me-btn {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: $radius-circle;
-  background: #ffffff;
-  color: #1f1f1f;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.05rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-
-  /* OBRS-741: the hover glyph was the brand cyan #3bb0e7 on the #f5f7f9 hover
-     plate -- 2.29:1, i.e. the icon got HARDER to read the moment you pointed at
-     it. Same hue, taken down to the lightest shade that still clears AA. */
-  &:hover:not(:disabled) {
-    background: #f5f7f9;
-    color: #1579a9; /* on #f5f7f9 = 4.51:1 */
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  }
-
-  /* The focus ring is a non-text UI component: WCAG 1.4.11 wants >=3:1 against
-     what it sits on. #3bb0e7 against the white button was 2.46:1, so the ring
-     that exists to be seen was the one thing here that could not be. Not in the
-     card's site list because the gate only measures TEXT pairs -- it is the same
-     colour, in the same block, failing the sibling criterion. */
-  &:focus-visible {
-    outline: 2px solid #1579a9; /* vs the #ffffff button = 4.84:1 */
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    cursor: default;
-  }
-
-  /* Blue crosshair once the user's location is shown, echoing Google Maps. */
-  &--active {
-    color: #3bb0e7;
-  }
-}
-
-.locate-spin {
-  display: inline-block;
-  animation: locate-spin 0.8s linear infinite;
-}
-
 /* ZOOM CONTROL — custom-built pill replacing Google's un-styleable default
    zoomControl (Maps JS API only exposes zoomControlOptions.position, not
    size/theming). Matches Google's own reference look: rounded white pill,
@@ -183,12 +129,6 @@
   height: 1px;
   margin: 0 6px;
   background: #e0e0e0;
-}
-
-@keyframes locate-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .map-legend {
