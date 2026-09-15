@@ -1,6 +1,7 @@
 import {
   Component,
   EventEmitter,
+  NgZone,
   OnDestroy,
   OnInit,
   Output,
@@ -92,6 +93,24 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   pickupDistancesKm: Record<string, number> | null = null;
 
   /**
+   * OBRS-1214. Moved up from `route-map-panel` along with `locating`/
+   * `locationError`: the "use my location" button now lives on the pickup
+   * list (the default tab), which renders before the still-gated map ever
+   * mounts, so the map panel can no longer be the one to own this state.
+   */
+  locating = false;
+
+  /** Last geolocation failure reason, surfaced to the user. Null when none. */
+  locationError: 'denied' | 'unavailable' | null = null;
+
+  /**
+   * The user's resolved position, or null before they tap "Use my location".
+   * Fed into `<app-route-map-panel>` as an `@Input` so it can drop/re-frame
+   * the user marker once (or if) the map mounts.
+   */
+  userLocation: google.maps.LatLngLiteral | null = null;
+
+  /**
    * Every drop-off the route offers, exactly as the API returned it. `dropoffStops` is this list
    * narrowed to what is reachable from the chosen pickup; the empty-state check reads THIS one, so
    * "this route has no drop-offs" stays distinguishable from "the stop you picked is the last one".
@@ -116,7 +135,8 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   constructor(
     private routeMapService: RouteMapService,
     private translateService: TranslateService,
-    private breakpointObserver: BreakpointObserver
+    private breakpointObserver: BreakpointObserver,
+    private zone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -270,8 +290,9 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
     this.pickupStops = [];
     this.dropoffStops = [];
     this.allDropoffStops = [];
-    // Distances belong to the previous route's pickup set — clear them; the
-    // panel re-emits fresh distances if the user has already located.
+    // Distances belong to the previous route's pickup set — clear them;
+    // applyRouteData() re-emits fresh ones (via emitDistances()) once the new
+    // pickup set arrives, if the user has already located.
     this.pickupDistancesKm = null;
     this.loadState = 'loading';
     this.loadPickupDropoff(value);
@@ -354,6 +375,12 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
       this.allDropoffStops.find((s) => s.slug === this.selectedDropoffSlug) ??
       this.selectedDropoffStop;
     this.refreshDropoffOptions();
+    // OBRS-1214: if the user already located, the pickup set just arrived
+    // (initial load, direction toggle, or a language re-fetch) — re-locate
+    // against it so the list badges and nearest-pickup highlight stay
+    // correct. No-op via emitDistances()'s own guard when userLocation is
+    // still null.
+    this.emitDistances();
 
     if (this.pickupStops.length === 0 && this.allDropoffStops.length === 0) {
       this.loadState = 'empty';
@@ -440,9 +467,99 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * The map panel resolved the user's location: store the per-stop distances
-   * for the pickup list badges and auto-select the nearest pickup so the user
-   * immediately sees which one is closest.
+   * OBRS-1214: resolve the user's current position via the browser
+   * Geolocation API. Moved up from `route-map-panel` along with the rest of
+   * this state — the button that triggers it now lives on the pickup list,
+   * which renders before the still-gated map ever mounts.
+   *
+   * Geolocation callbacks may fire outside Angular's zone depending on the
+   * browser, so the handlers are re-entered via NgZone.run to guarantee change
+   * detection picks up the state changes.
+   */
+  onUseMyLocation(): void {
+    if (!('geolocation' in navigator)) {
+      this.locationError = 'unavailable';
+      return;
+    }
+
+    this.locating = true;
+    this.locationError = null;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        this.zone.run(() =>
+          this.onLocationResolved(pos.coords.latitude, pos.coords.longitude)
+        ),
+      (err) =>
+        this.zone.run(() => {
+          this.locating = false;
+          this.locationError =
+            err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable';
+        }),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  private onLocationResolved(lat: number, lng: number): void {
+    this.locating = false;
+    this.userLocation = { lat, lng };
+    this.emitDistances();
+  }
+
+  /**
+   * Compute straight-line (haversine) distances from the user to every pickup
+   * stop with coordinates, find the nearest, and hand both to `onUserLocated`
+   * — the same shape `route-map-panel`'s `(userLocated)` output used to emit.
+   * No-op when the user hasn't located yet, so `applyRouteData()` can call
+   * this unconditionally after every stops refresh.
+   */
+  private emitDistances(): void {
+    if (!this.userLocation) {
+      return;
+    }
+    const distancesKm: Record<string, number> = {};
+    let nearestPickupSlug: string | null = null;
+    let nearestDist = Number.POSITIVE_INFINITY;
+
+    for (const stop of this.pickupStops) {
+      if (stop.latitude === null || stop.longitude === null) {
+        continue;
+      }
+      const km = this.haversineKm(this.userLocation, {
+        lat: stop.latitude,
+        lng: stop.longitude,
+      });
+      distancesKm[stop.slug] = km;
+      if (km < nearestDist) {
+        nearestDist = km;
+        nearestPickupSlug = stop.slug;
+      }
+    }
+
+    this.onUserLocated({ nearestPickupSlug, distancesKm });
+  }
+
+  /** Great-circle distance between two lat/lng points, in kilometres. */
+  private haversineKm(
+    a: google.maps.LatLngLiteral,
+    b: google.maps.LatLngLiteral
+  ): number {
+    const R = 6371; // Earth radius in km
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  /**
+   * The user's location has been resolved (via `emitDistances()` above):
+   * store the per-stop distances for the pickup list badges and auto-select
+   * the nearest pickup so the user immediately sees which one is closest.
    */
   onUserLocated(event: UserLocatedEvent): void {
     this.pickupDistancesKm = event.distancesKm;

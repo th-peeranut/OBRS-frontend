@@ -4834,6 +4834,7 @@ relative-luminance formula off `#0772a2`/`#ffffff`: 5.33:1, matching `variables.
 not change the AA verdict either way — text is well clear of 4.5:1 at both figures — so this is a
 documentation-accuracy fix, not a compliance one.
 
+
 ## 2026-09-15 — OBRS-1172 QA (local lane): all 14 manual-test items PASSED
 
 `schedule-extend-window-btn` on `SchedulesPageComponent` — verified against a local backend/DB
@@ -4862,9 +4863,38 @@ local override), and this pass was scoped local-only with SIT off-limits. Ran
 `ng test --include=**/schedules-page.component.spec.ts` instead: 34 of 34 SUCCESS (real
 `Executed N of N`, not a green tail over 0 specs).
 
-Scratch Playwright scripts left UNCOMMITTED in `e2e/` per policy (not deleted, not staged):
-`obrs-1172-setup.mjs`, `obrs-1172-resume.mjs`, `obrs-1172-extend1.mjs`, `obrs-1172-press.mjs`,
-`obrs-1172-seed-collision.mjs`, `dbg-login*.mjs`; the BEFORE worktree has its own
-`obrs-1172-before-capture.mjs`. Screenshots/video were captured to `e2e-evidence/` (gitignored),
+The capture drivers were COMMITTED, renamed to `e2e/capture-obrs-1172-*.mjs` to match the dozens of
+per-card `capture-obrs-NNNN-*.mjs` drivers already in that directory (`before`, `setup`, `resume`,
+`extend1`, `press`, `seed-collision`); only genuine scratch (`dbg-login*.mjs`, `fe-*.log`) was
+deleted. Screenshots/video were captured to `e2e-evidence/` (gitignored),
 uploaded to the Jira card via the REST attachments endpoint, then deleted locally per
 `jira-and-evidence-contract.md`.
+
+## OBRS-1214 scrutinize self-fix: `onTilesLoaded()` re-firing camera framing forever
+
+Reviewing OBRS-1214 ("use my location" moved from the map overlay to the pickup list),
+found `route-map-panel.component.ts`'s new `applyUserLocation()` was wired into BOTH
+`ngOnChanges` (when `userLocation` @Input changes) AND `onTilesLoaded()` — added so the
+camera still frames correctly when the user locates before the still-gated map ever
+mounts (OBRS-1211). The bug: `(tilesloaded)` from `@angular/google-maps` fires on EVERY
+tile reload, not just the first draw (see FRONTEND-GOTCHAS.md:174 — same gotcha, new
+call site) — including pans, zooms, marker recomputes, and direction toggles. With no
+guard, every one of those re-ran `frameUserAndPickups()` → `this.map.fitBounds(...)`,
+snapping the camera back over the user's own manual pan/zoom, for as long as
+`userLocation` stayed set (forever after the first "locate me" click — nothing resets
+it). The old dev code only ever called the equivalent (`frameUserAndPickups()` from
+`onLocationResolved()`) once per click.
+
+Fix: added a `private locationFramed = false` guard read at the top of
+`applyUserLocation()` (skip if already true) and reset to `false` only in `ngOnChanges`
+when a genuinely new `userLocation` value arrives — so `onTilesLoaded()` still catches
+the case where the map wasn't mounted yet when the location resolved, but stops
+re-framing on every subsequent tile reload once it has. 16 lines, one file
+(`route-map-panel.component.ts`), narrow suite re-verified green (189/189).
+
+Lesson for future two-trigger "whichever fires second" patterns: if either trigger can
+fire MORE than once over the component's lifetime (a lifecycle event, not just an
+@Input change), the combined handler needs its own once-per-logical-event guard —
+"first ngOnChanges + first onXyz" is not naturally idempotent, because one half is
+naturally repeating.
+
