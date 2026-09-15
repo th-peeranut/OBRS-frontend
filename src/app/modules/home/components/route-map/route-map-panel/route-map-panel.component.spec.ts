@@ -2,7 +2,6 @@ import { ElementRef, NgZone, SimpleChange, SimpleChanges } from '@angular/core';
 import { GoogleMap } from '@angular/google-maps';
 import {
   RouteMapPanelComponent,
-  UserLocatedEvent,
   clearDirectionsPathCache,
   MAP_TILES_TIMEOUT_MS,
 } from './route-map-panel.component';
@@ -795,117 +794,62 @@ describe('RouteMapPanelComponent', () => {
   });
 
   // -------------------------------------------------------------------------
-  // "Use my location" → nearest pickup (requires google.maps stub for the
-  // user marker; navigator.geolocation is spied on per test)
+  // userLocation @Input (OBRS-1214) — the "use my location" button and all
+  // of its geolocation/haversine/nearest-pickup logic moved up to
+  // route-map-home; the panel now only reacts to the resolved position via
+  // this input, rebuilding the user marker + camera framing from TWO
+  // triggers (see applyUserLocation's own doc comment): the input changing
+  // (ngOnChanges) and the map finishing its first draw (onTilesLoaded).
   // -------------------------------------------------------------------------
-  describe('Use my location (nearest pickup)', () => {
-    beforeEach(() => {
-      installGoogleMock();
-    });
+  describe('userLocation @Input (OBRS-1214)', () => {
+    it('ngOnChanges builds the user marker when the map is already mounted', () => {
+      component.map = {} as unknown as GoogleMap;
+      component.userLocation = { lat: 13.1, lng: 100.1 };
 
-    afterEach(() => {
-      removeGoogleMock();
-    });
+      component.ngOnChanges(changes('userLocation', component.userLocation, null));
 
-    it('emits the nearest pickup slug and per-stop distances, and drops a user marker', () => {
-      // user sits exactly on stop-1 (lat 13.1, lng 100.1); stop-2 is further away
-      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
-      const userPos = {
-        coords: { latitude: 13.1, longitude: 100.1 },
-      } as GeolocationPosition;
-      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
-        (success: PositionCallback) => success(userPos)
-      );
-
-      let emitted: UserLocatedEvent | undefined;
-      component.userLocated.subscribe((e) => (emitted = e));
-
-      component.useMyLocation();
-
-      expect(emitted).toBeDefined();
-      expect(emitted!.nearestPickupSlug).toBe('stop-1');
-      expect(emitted!.distancesKm['stop-1']).toBeCloseTo(0, 1);
-      expect(emitted!.distancesKm['stop-2']).toBeGreaterThan(
-        emitted!.distancesKm['stop-1']
-      );
       expect(component.userMarkerOptions).not.toBeNull();
-      expect(component.locating).toBeFalse();
-      expect(component.locationError).toBeNull();
     });
 
-    // OBRS-1838. The counterpart of the stop-pin test above, and the half that
-    // actually moves: the legacy icon anchored at (14, 14) -- its CENTRE -- but
-    // AdvancedMarkerElement anchors content by its bottom edge, so the 28px pin
-    // has to be pushed down 14px or it floats a full radius above the user.
+    // OBRS-1838. Same anchor-shift contract as before the move — only the
+    // trigger changed, not buildUserMarkerOptions()/buildMarkerContent().
     it('user pin is shifted back onto its own centre (28px icon, 14px down)', () => {
-      component.pickupStops = [makeStop(1, true)];
-      const userPos = {
-        coords: { latitude: 13.1, longitude: 100.1 },
-      } as GeolocationPosition;
-      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
-        (success: PositionCallback) => success(userPos)
-      );
+      component.map = {} as unknown as GoogleMap;
+      component.userLocation = { lat: 13.1, lng: 100.1 };
 
-      component.useMyLocation();
+      component.ngOnChanges(changes('userLocation', component.userLocation, null));
 
       const img = markerImage({ options: component.userMarkerOptions! });
       expect(img.width).toBe(28);
       expect(img.style.transform).toBe('translateY(14px)');
     });
 
-    it('skips stops without coordinates when finding the nearest', () => {
-      component.pickupStops = [makeStop(1, false), makeStop(2, true)];
-      const userPos = {
-        coords: { latitude: 13.2, longitude: 100.2 },
-      } as GeolocationPosition;
-      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
-        (success: PositionCallback) => success(userPos)
-      );
+    // The real path this card exists for: the button no longer lives on the
+    // map, so `userLocation` typically arrives (via ngOnChanges, above) BEFORE
+    // the map is ever revealed/mounted — this is what catches it up once it is.
+    it('ngOnChanges no-ops (no crash) when the map has not mounted yet', () => {
+      component.userLocation = { lat: 13.1, lng: 100.1 };
 
-      let emitted: UserLocatedEvent | undefined;
-      component.userLocated.subscribe((e) => (emitted = e));
-
-      component.useMyLocation();
-
-      expect(emitted!.nearestPickupSlug).toBe('stop-2');
-      expect(emitted!.distancesKm['stop-1']).toBeUndefined();
+      expect(() =>
+        component.ngOnChanges(changes('userLocation', component.userLocation, null))
+      ).not.toThrow();
+      expect(component.userMarkerOptions).toBeNull();
     });
 
-    it('sets locationError to "denied" when permission is refused', () => {
-      const err = {
-        code: 1,
-        PERMISSION_DENIED: 1,
-      } as GeolocationPositionError;
-      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
-        (_s: PositionCallback, error?: PositionErrorCallback | null) =>
-          error?.(err)
-      );
+    it('onTilesLoaded builds the user marker once the map draws, for a userLocation set before mount', () => {
+      component.userLocation = { lat: 13.1, lng: 100.1 };
+      component.map = {} as unknown as GoogleMap;
 
-      component.useMyLocation();
+      component.onTilesLoaded();
 
-      expect(component.locationError).toBe('denied');
-      expect(component.locating).toBeFalse();
+      expect(component.userMarkerOptions).not.toBeNull();
     });
 
-    it('re-emits distances against the new pickup set on a stops change after locating', () => {
-      const userPos = {
-        coords: { latitude: 13.1, longitude: 100.1 },
-      } as GeolocationPosition;
-      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
-        (success: PositionCallback) => success(userPos)
-      );
-      component.pickupStops = [makeStop(1, true)];
-      component.useMyLocation();
+    it('onTilesLoaded does not crash and builds no marker when userLocation is still null', () => {
+      component.map = {} as unknown as GoogleMap;
 
-      const emissions: UserLocatedEvent[] = [];
-      component.userLocated.subscribe((e) => emissions.push(e));
-
-      // Direction toggle → different pickup set
-      component.pickupStops = [makeStop(5, true)];
-      component.ngOnChanges(changes('pickupStops', component.pickupStops, [makeStop(1, true)]));
-
-      expect(emissions.length).toBe(1);
-      expect(emissions[0].nearestPickupSlug).toBe('stop-5');
+      expect(() => component.onTilesLoaded()).not.toThrow();
+      expect(component.userMarkerOptions).toBeNull();
     });
   });
 

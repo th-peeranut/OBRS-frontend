@@ -11,6 +11,27 @@
     </span>
   </div>
 
+  <!-- USE MY LOCATION (OBRS-1214): only the pickup list opts in via showLocateMe -->
+  @if (showLocateMe) {
+    <div class="mb-2 px-2 d-flex flex-column gap-1">
+      <button type="button" class="locate-me-inline-btn d-inline-flex align-items-center gap-1"
+        [class.locate-me-inline-btn--active]="distancesKm !== null && !locating"
+        [disabled]="locating"
+        [attr.aria-label]="(locating ? 'HOME.ROUTE_MAP.LOCATING' : 'HOME.ROUTE_MAP.USE_MY_LOCATION') | translate"
+        (click)="locateMeClicked.emit()">
+        @if (!locating) { <i class="bi bi-crosshair" aria-hidden="true"></i> }
+        @if (locating) { <i class="bi bi-arrow-repeat locate-spin" aria-hidden="true"></i> }
+        <span>{{ (locating ? 'HOME.ROUTE_MAP.LOCATING' : 'HOME.ROUTE_MAP.USE_MY_LOCATION') | translate }}</span>
+      </button>
+      @if (locationError) {
+        <div class="small text-danger d-flex align-items-center gap-1" role="alert" aria-live="assertive">
+          <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ (locationError === 'denied' ? 'HOME.ROUTE_MAP.LOCATION_DENIED' : 'HOME.ROUTE_MAP.LOCATION_UNAVAILABLE') | translate }}</span>
+        </div>
+      }
+    </div>
+  }
+
   <!-- STOP ROWS -->
   <div class="stop-list-scroll">
     @for (stop of stops; track trackBySlug($index, stop)) {
