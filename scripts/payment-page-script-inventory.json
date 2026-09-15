@@ -19,10 +19,10 @@
       "why": "Google Identity Services - the 'Sign in with Google' button. Loaded from TypeScript rather than index.html specifically so it stays OFF the payment page (OBRS-719 AC 3). The hl locale must be a query param on the script URL; GIS exposes no initialize() option for it (OBRS-90)."
     },
     {
-      "file": "src/app/modules/home/components/route-map/route-map-panel/route-map-panel.component.ts",
+      "file": "src/app/shared/lib/google-maps-loader.ts",
       "origins": ["https://maps.googleapis.com"],
-      "routes": ["/"],
-      "why": "Google Maps JS for the home-page route map. NOT a payment-page script - listed because maps.googleapis.com is in the site-wide script-src and a single CSP header cannot be route-scoped."
+      "routes": ["/", "/admin/stops"],
+      "why": "Google Maps JS. OBRS-1030 lifted this loader verbatim out of route-map-panel.component.ts so a second caller could reuse the one <script> tag and the one in-flight promise: the home-page route map (/) and the admin stop-coordinate picker (/admin/stops). Same origin and same single tag as before - what changed is that the tag now has one owner instead of one per caller, which is also why the old entry had to go rather than be kept alongside this one. NOT a payment-page script - listed because maps.googleapis.com is in the site-wide script-src and a single CSP header cannot be route-scoped."
     },
     {
       "file": "src/app/services/analytics/analytics-tags.service.ts",
