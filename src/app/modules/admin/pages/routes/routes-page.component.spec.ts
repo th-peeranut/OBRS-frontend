@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { RoutesPageComponent } from './routes-page.component';
-import { RouteRow, SegmentRow } from './routes.mappers';
+import { RouteRow, SegmentPivotRow, SegmentRow } from './routes.mappers';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
@@ -20,6 +20,34 @@ const ROUTE_ROW: RouteRow = {
   status: 'ACTIVE',
   statusCode: 'active',
   updatedAt: '-',
+};
+
+/** OBRS-1034: the Edit action now hands over the whole stop pair, both vehicle
+ *  types at once, not one `SegmentRow`. */
+const PIVOT_ROW: SegmentPivotRow = {
+  key: 'a\u0000b',
+  originSlug: 'a',
+  origin: 'A',
+  destination: 'B',
+  duration: '10 mins',
+  fares: [
+    {
+      vehicleTypeSlug: 'van',
+      vehicleTypeName: 'Van',
+      segment: {
+        id: 5,
+        origin: 'A',
+        destination: 'B',
+        fare: 10,
+        duration: '10 mins',
+        estimatedDurationMinutes: 10,
+        fromStopSlug: 'a',
+        toStopSlug: 'b',
+        vehicleTypeSlug: 'van',
+        vehicleTypeName: 'Van',
+      },
+    },
+  ],
 };
 
 function makeStoreStub() {
@@ -78,24 +106,12 @@ describe('RoutesPageComponent delegation to child modals', () => {
 
   it('openSegmentEditModal delegates to the segment edit modal', () => {
     const { component } = makeComponent();
-    const segment = {
-      id: 5,
-      origin: 'A',
-      destination: 'B',
-      fare: 10,
-      duration: '10 mins',
-      estimatedDurationMinutes: 10,
-      fromStopSlug: 'a',
-      toStopSlug: 'b',
-      vehicleTypeSlug: 'van',
-      vehicleTypeName: 'Van',
-    };
     const segmentEditModal = { open: jasmine.createSpy('open') };
     (component as any).segmentEditModal = segmentEditModal;
 
-    (component as any).openSegmentEditModal(segment);
+    (component as any).openSegmentEditModal(PIVOT_ROW);
 
-    expect(segmentEditModal.open).toHaveBeenCalledWith(segment);
+    expect(segmentEditModal.open).toHaveBeenCalledWith(PIVOT_ROW);
   });
 
   it('onRouteSaved sets the selected route slug then refreshes the store', async () => {
@@ -321,24 +337,12 @@ describe('RoutesPageComponent template wiring to child components', () => {
 
   it('delegates (editSegment) from the detail panel to openSegmentEditModal', () => {
     fixture.detectChanges();
-    const segment = {
-      id: 5,
-      origin: 'A',
-      destination: 'B',
-      fare: 10,
-      duration: '10 mins',
-      estimatedDurationMinutes: 10,
-      fromStopSlug: 'a',
-      toStopSlug: 'b',
-      vehicleTypeSlug: 'van',
-      vehicleTypeName: 'Van',
-    };
     spyOn(component as any, 'openSegmentEditModal');
 
     const panel = fixture.debugElement.query(By.css('app-route-detail-panel'));
-    panel.triggerEventHandler('editSegment', segment);
+    panel.triggerEventHandler('editSegment', PIVOT_ROW);
 
-    expect((component as any).openSegmentEditModal).toHaveBeenCalledWith(segment);
+    expect((component as any).openSegmentEditModal).toHaveBeenCalledWith(PIVOT_ROW);
   });
 });
 

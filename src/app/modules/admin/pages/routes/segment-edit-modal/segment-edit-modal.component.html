@@ -2,9 +2,9 @@
   <div class="admin-modal-backdrop" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeModal()">
     <div class="admin-modal">
       <h4 class="admin-modal-title">{{ 'ADMIN.ROUTES.EDIT_SEGMENT_TITLE' | translate }}</h4>
-      @if (selectedSegment) {
+      @if (selectedRow) {
         <p class="admin-modal-subtitle">
-          {{ selectedSegment.origin }} -> {{ selectedSegment.destination }}
+          {{ selectedRow.origin }} -> {{ selectedRow.destination }}
         </p>
       }
       <form [formGroup]="editSegmentForm" class="admin-form-grid" (ngSubmit)="submitSegmentEdit()">
@@ -56,17 +56,52 @@
             </small>
           }
         </div>
-        <div class="admin-form-field">
-          <label class="admin-form-label">
-            {{ 'ADMIN.ROUTES.FARE' | translate }} <span class="admin-required">*</span>
-          </label>
-          <input class="admin-field" formControlName="fare" type="number" min="0.01" step="0.01" />
-          @if (isFieldInvalid('fare')) {
-            <small class="admin-error">
-              {{ 'ADMIN.ROUTES.FARE_VALIDATION' | translate }}
-            </small>
+        <!-- OBRS-1034: one fare input per vehicle type PRICED for this pair, so
+             both prices are re-set in one save. A type with no row for the pair
+             is read-only "not set" - it gets no control and no payload block,
+             because 0.00 would read as "free" rather than "no data". -->
+        @if (selectedRow) {
+          <ng-container formGroupName="fares">
+            @for (cell of selectedRow.fares; track cell.vehicleTypeSlug) {
+              <div class="admin-form-field">
+                <label class="admin-form-label">
+                  {{
+                    'ADMIN.ROUTES.FARE_FOR_VEHICLE_TYPE'
+                      | translate: { vehicleType: cell.vehicleTypeName }
+                  }}
+                  @if (cell.segment) {
+                    <span class="admin-required">*</span>
+                  }
+                </label>
+                @if (cell.segment) {
+                  <input
+                    class="admin-field"
+                    [formControlName]="fareControlName(cell.vehicleTypeSlug)"
+                    [attr.data-testid]="'segment-edit-fare-' + fareControlName(cell.vehicleTypeSlug)"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    />
+                    @if (isFareInvalid(cell.vehicleTypeSlug)) {
+                      <small class="admin-error">
+                        {{ 'ADMIN.ROUTES.FARE_VALIDATION' | translate }}
+                      </small>
+                    }
+                  } @else {
+                    <p
+                      class="admin-muted"
+                      [attr.data-testid]="'segment-edit-fare-unset-' + fareControlName(cell.vehicleTypeSlug)"
+                      >
+                      {{ 'ADMIN.ROUTES.FARE_UNSET' | translate }}
+                    </p>
+                  }
+                </div>
+              }
+            </ng-container>
           }
-        </div>
+        <!-- ONE duration control for the whole pair, never one per vehicle type:
+             the backend derives it from route_stops.offset_minutes_from_origin,
+             which belongs to the route. A per-type field would be fiction. -->
         <div class="admin-form-field">
           <label class="admin-form-label">
             {{ 'ADMIN.ROUTES.EST_DURATION' | translate }} <span class="admin-required">*</span>
@@ -74,6 +109,7 @@
           <input
             class="admin-field"
             formControlName="estimatedDurationMinutes"
+            data-testid="segment-edit-duration"
             type="number"
             min="1"
             step="1"
