@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { GoogleMapsModule } from '@angular/google-maps';
 import { SharedModule } from '../../shared/shared.module';
 import { AdminSharedModule } from './admin-shared.module';
 import { AdminLayoutComponent } from './admin-layout.component';
@@ -28,6 +29,7 @@ import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/rou
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { StopsPageComponent } from './pages/stops/stops-page.component';
 import { StopFormModalComponent } from './pages/stops/stop-form-modal/stop-form-modal.component';
+import { StopMapPickerComponent } from './pages/stops/stop-map-picker/stop-map-picker.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { OverrideCancelModalComponent } from './pages/bookings/override-cancel-modal/override-cancel-modal.component';
@@ -591,6 +593,7 @@ export const adminRoutes: Routes = [
     RoutesPageComponent,
     StopsPageComponent,
     StopFormModalComponent,
+    StopMapPickerComponent,
     RouteFormModalComponent,
     SegmentEditModalComponent,
     AddSegmentModalComponent,
@@ -678,6 +681,7 @@ export const adminRoutes: Routes = [
     ToggleSwitchModule,
     AdminSharedModule,
     PhoneFormatPipe,
+    GoogleMapsModule,
   ],
 })
 export class AdminModule {}
