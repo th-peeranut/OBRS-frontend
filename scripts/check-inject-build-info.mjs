@@ -10,19 +10,32 @@
  * Same shape as scripts/check-netlify-ignore.mjs: import the pure functions from the
  * generator and assert against them directly, in one file, with no test framework.
  *
- * Four cases, per the spec (docs/sessions/SPEC-OBRS-1075-build-identity.md §8):
+ * Six cases, per the spec (docs/sessions/SPEC-OBRS-1075-build-identity.md §8) plus the
+ * shallow-clone self-heal added after CI job 104298772230 went red:
  *   1. No COMMIT_REF + cwd with no reachable .git -> throw, no output file.
- *   2. COMMIT_REF set but no `v*` tag reachable -> throw, no output file.
+ *   2. COMMIT_REF set but no `v*` tag reachable, and no remote to fetch from -> throw, no
+ *      output file.
  *   3. Positive control: everything resolves -> file written, values well-shaped and
  *      non-empty. (DEV-GOTCHAS: zero assertions without a positive control cannot go red.)
  *   4. Stale-output: a fake file already sits at `out` from an earlier successful run, THEN
  *      generate() is run in a failing environment -> the fake file must be GONE, not just an
  *      exit-1. This is what proves a bypass-npm lane (`npx ng serve`/`ng test` direct) hits a
  *      loud TS2307 instead of silently compiling last run's stale values.
+ *   5. Shallow clone (`--depth 1 --no-tags`, actions/checkout@v4's default shape) of a repo
+ *      that has NO `v*` tag anywhere -> the self-heal fetch succeeds (there is a real
+ *      `origin` to fetch from) but still finds nothing -> throw, no output file. Without
+ *      this the self-heal fetch could silently turn into a fallback that hides a genuine
+ *      absence of a tag instead of a merely-not-yet-fetched one.
+ *   6. Positive control for the self-heal itself: same shallow-clone shape, but the origin
+ *      DOES have a `v*` tag on an earlier commit the `--depth 1` clone did not include ->
+ *      `git describe` fails on the first try, the self-heal `git fetch --unshallow --tags`
+ *      brings the tag's commit in, and the retry succeeds with the correct tag. This is CI
+ *      job 104298772230 reproduced locally and proven fixed.
  */
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { generate } from './inject-build-info.mjs';
 
@@ -62,6 +75,50 @@ function gitRepoNoTags() {
 function gitRepoWithTag() {
   const dir = gitRepoNoTags();
   execFileSync('git', ['tag', 'v9.9.9-selftest'], { cwd: dir });
+  return dir;
+}
+
+/**
+ * A throwaway "origin" repo with two commits. `withTag` puts a `v*` tag on the FIRST
+ * commit only, so a `--depth 1` clone of the second commit does not include the tagged
+ * commit at all — the shape that made CI job 104298772230 fail (`fatal: No names found`)
+ * even though the real repo has real `v*` tags.
+ */
+function originRepo(withTag) {
+  const dir = mkdtempSync(join(tmpdir(), 'obrs-build-info-origin-'));
+  cleanupDirs.push(dir);
+  execFileSync('git', ['init', '-q'], { cwd: dir });
+  execFileSync('git', ['config', 'user.email', 'selftest@example.com'], { cwd: dir });
+  execFileSync('git', ['config', 'user.name', 'Self Test'], { cwd: dir });
+  writeFileSync(join(dir, 'a.txt'), 'a');
+  execFileSync('git', ['add', '.'], { cwd: dir });
+  execFileSync('git', ['commit', '-q', '-m', 'c1'], { cwd: dir });
+  if (withTag) execFileSync('git', ['tag', 'v9.9.9-selftest'], { cwd: dir });
+  writeFileSync(join(dir, 'b.txt'), 'b');
+  execFileSync('git', ['add', '.'], { cwd: dir });
+  execFileSync('git', ['commit', '-q', '-m', 'c2'], { cwd: dir });
+  return dir;
+}
+
+/**
+ * A `--depth 1 --no-tags` clone of `origin` — the exact shape `actions/checkout@v4`'s
+ * default produces, and what Netlify's clone is documented (scripts/netlify-ignore.mjs) to
+ * be shaped like too: HEAD's commit only, no tag refs fetched at all. A plain local path
+ * would make git silently IGNORE `--depth` ("--depth is ignored in local clones"), so this
+ * has to go through a real `file://` URL — `pathToFileURL` is what makes that portable
+ * across a Windows drive-letter path without hand-rolling the `file:///C:/...` escaping.
+ */
+function shallowCloneNoTags(origin) {
+  const dir = mkdtempSync(join(tmpdir(), 'obrs-build-info-shallow-'));
+  cleanupDirs.push(dir);
+  execFileSync('git', [
+    'clone',
+    '--depth', '1',
+    '--no-tags',
+    '--quiet',
+    pathToFileURL(origin).href,
+    dir,
+  ]);
   return dir;
 }
 
@@ -153,6 +210,49 @@ function gitRepoWithTag() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 5 - shallow clone of a repo with NO `v*` tag anywhere. The self-heal fetch
+// succeeds (there is a real `origin` remote), but still finds nothing, so this must
+// still throw and write nothing — the self-heal must not become a silent fallback.
+// ---------------------------------------------------------------------------
+{
+  const out = freshOutPath();
+  const origin = originRepo(false);
+  const cwd = shallowCloneNoTags(origin);
+  const env = { ...process.env };
+  delete env.COMMIT_REF;
+
+  let threw = false;
+  try {
+    generate(env, cwd, out);
+  } catch {
+    threw = true;
+  }
+  expect(threw, 'case 5: generate() must throw when a shallow clone has no `v*` tag anywhere, even after the self-heal fetch');
+  expect(!existsSync(out), 'case 5: no output file should exist after a failed resolve');
+}
+
+// ---------------------------------------------------------------------------
+// Case 6 - positive control for the self-heal path itself (CI job 104298772230,
+// reproduced and proven fixed). The shallow clone's `--depth 1` misses the commit the
+// tag lives on, so the FIRST describe fails, but the self-heal
+// `git fetch --unshallow --tags` brings it in and the retry must succeed.
+// ---------------------------------------------------------------------------
+{
+  const out = freshOutPath();
+  const origin = originRepo(true);
+  const cwd = shallowCloneNoTags(origin);
+  const env = { ...process.env };
+  delete env.COMMIT_REF;
+
+  const result = generate(env, cwd, out);
+  expect(
+    result.appVersion === 'v9.9.9-selftest',
+    `case 6: the self-heal fetch should have recovered the tag; got appVersion "${result.appVersion}"`,
+  );
+  expect(existsSync(out), 'case 6: output file must exist once the self-heal fetch recovers the tag');
+}
+
+// ---------------------------------------------------------------------------
 
 for (const dir of cleanupDirs) {
   try {
@@ -168,4 +268,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('build-info generator self-test OK: all 4 must-fail/must-pass cases hold.');
+console.log('build-info generator self-test OK: all 6 must-fail/must-pass cases hold.');

@@ -23,7 +23,8 @@ It is written by `scripts/inject-build-info.mjs`, resolving in this order, **wit
 
 1. `buildSha` — `process.env.COMMIT_REF` (set by Netlify) sliced to 7 chars, else
    `git rev-parse --short=7 HEAD`.
-2. `appVersion` — `git describe --tags --match v* --abbrev=0`.
+2. `appVersion` — `git describe --tags --match v* --abbrev=0`, **self-healing once** if that
+   finds nothing (see "Shallow clones" below) before giving up.
 3. Either step throwing or resolving empty ⇒ `process.exit(1)` and **no file is written**.
    Never `'unknown'`, `''`, `'0.0.0'`, or `'dev'` — a build stamped with a fake identity is worse
    than a build that refuses to ship, because the fake value looks trustworthy on the report.
@@ -49,6 +50,49 @@ Deleting the output before resolving turns that same failure into a loud
 `scripts/check-inject-build-info.mjs` case 4: a fake `build-info.ts` is written first, then
 `generate()` is run in a failing environment, and the fake file must be gone afterwards, not just
 the process exit code being non-zero.
+
+## Shallow clones — measured on CI, self-heal instead of a fallback
+
+**Measured**: PR #505, GitHub Actions job `104298772230` ("Build Smoke Check (AOT + budgets)"),
+red in 20s:
+
+```
+fatal: No names found, cannot describe anything.
+inject-build-info FAILED: Command failed: git describe --tags --match v* --abbrev=0
+```
+
+`actions/checkout@v4` defaults to `fetch-depth: 1` and does **not** fetch tags, so the job's
+checkout had the real `v1.1.0-alpha` tag reachable from `origin` but not from its own one-commit
+history — `git describe` had nothing to walk. Netlify's clone is documented in
+`scripts/netlify-ignore.mjs` to fetch a non-shallow range of *commits* but tags are a **separate**
+fetch on git's wire protocol, so an unpatched generator would fail the SIT deploy the same way —
+worse than a red CI check, because nobody sees it until the deploy itself breaks and `sit` stops
+updating with no build log to explain why.
+
+The two options were: (a) add a fallback version string for this case, or (b) make the generator
+self-heal the clone. **(a) was rejected outright** — it is exactly what AC-6 exists to forbid, and
+"only falls back on CI" is still a silently-wrong value shipping to a report, just gated on an
+environment nobody audits by hand. **(b) is what shipped**: `resolveAppVersion` retries once —
+`git rev-parse --is-shallow-repository`, then `git fetch --unshallow --tags` (shallow) or
+`git fetch --tags` (not shallow), then `git describe` again — logging one line so the remedy is
+visible in the build log. If the retry still finds nothing, it still exits 1 with nothing written;
+self-healing the clone does not weaken the no-fallback contract, it just stops "the checkout
+happened to be shallow" from masquerading as "there is no tag."
+
+Two things were measured locally before this shipped, both reproducible with a `--depth 1
+--no-tags` clone of a throwaway origin repo (`scripts/check-inject-build-info.mjs` cases 5–6, and
+confirmed once more directly against a real shallow clone of this repo's own working tree):
+
+- A **plain** `git fetch --tags` alone does **not** fix it: the tag *ref* arrives, but a shallow
+  clone's history still does not reach the commit it points at, so `describe` fails again with a
+  different message (`fatal: No tags can describe '<sha>'`). Only `git fetch --unshallow --tags`
+  (on an already-shallow repo) was measured to work.
+- `git fetch --unshallow` on a repo that is **not** shallow errors
+  (`fatal: --unshallow on a complete repository does not make sense`), so the self-heal checks
+  `git rev-parse --is-shallow-repository` first and only passes `--unshallow` when that is `true`.
+
+`buildSha` needed no change — `COMMIT_REF` and `git rev-parse --short=7 HEAD` both resolve fine
+from a single commit, shallow or not.
 
 ## Why the npm pre-hook, not `netlify.toml`
 
@@ -83,5 +127,9 @@ that broke, at the moment it broke.
 - `.git` must be present at build time for `git describe`/`git rev-parse` to resolve; this is
   already true for every lane in this repo (local checkouts, Netlify's own clone — see
   `scripts/netlify-ignore.mjs`, which already shells out to `git` with full history).
+- A shallow clone with no reachable `v*` tag now costs one extra `git fetch` (network round-trip
+  to `origin`) before it fails, instead of failing immediately. If `origin` is unreachable at
+  build time the self-heal fetch itself fails and the error says so — this is not a new failure
+  mode, `git describe` alone would already need the same tag data to exist somewhere.
 - `build-info.ts` is regenerated on every build/test/e2e/start invocation; it is never checked in
   and never read from a stale copy left by a different branch.
