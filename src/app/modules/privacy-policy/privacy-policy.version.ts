@@ -162,5 +162,35 @@
 // The re-consent consequence above applies again - one banner on /account for every existing
 // account - and it is the same trade 2.4 made: an untrue notice is what consent would otherwise
 // be recorded against.
-export const PRIVACY_POLICY_VERSION = '2.6';
-export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-08-31';
+// 2.7 (OBRS-1348) adds the collection section 2 never named and the deletion the nightly job
+// enforces from now on.
+//
+// Section 2's "Parcel details" bullet has always covered what the sender types in — names,
+// phone numbers, what is being sent. It never covered a photograph WE take of the parcel: the
+// driver photographs it at the stop where it is left, as proof of delivery. That photo can
+// incidentally show the surroundings of a public place, so it belongs in section 2's list of
+// what we collect, not only in section 6's list of how long we keep it.
+//
+// Section 6 gains the deletion: a nightly job now deletes `parcels.left_at_stop_photo_url` and
+// NULLs the column 395 days after `left_at_stop_at`. That number is not round: the limitation
+// period for suing a carrier is 1 year from delivery (Civil and Commercial Code section 624),
+// `left_at_stop_at` is our delivery date, and +30 days over the year leaves a case filed on day
+// 364 still able to copy the photo out before it is gone. The ceiling is PDPA - the purpose
+// ("evidence in a carriage dispute") expires with the limitation period, so keeping the image
+// past day 395 would have no basis left to stand on. `left_at_stop_at` and `left_at_stop_by` are
+// NOT deleted; the record that the parcel was left, when, and by whom stays in the booking's
+// existing 5-year tier. The authoritative write-up is `docs/prod/DATA-RETENTION.md` §3.5.4 in
+// the backend repo.
+//
+// zh is deliberately NOT touched. `POLICY.PRIVACY.CONTENT_2` is a 179-char stub in zh pointing
+// the reader at the th/en text (owner's decision, 2026-07-23, recorded in
+// `KNOWN_SHORT_TRANSLATIONS` in `scripts/check-i18n-parity.mjs`) and OBRS-1340 already shipped
+// th+en-only on that basis. Bolting two bullets onto a 179-char stub would reproduce the
+// OBRS-623 failure this policy exists to avoid: a reader agreeing to a document whose second
+// half they were never shown.
+//
+// The re-consent consequence above applies again - one banner on /account for every existing
+// account whose recorded pdpaConsentVersion is not '2.7'. That is the same trade every prior
+// bump made: an untrue notice (one that omits a collection we actually do) is the alternative.
+export const PRIVACY_POLICY_VERSION = '2.7';
+export const PRIVACY_POLICY_EFFECTIVE_DATE = '2026-09-16';

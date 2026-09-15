@@ -233,4 +233,35 @@ describe('MyParcelsComponent (DOM rendering)', () => {
     renderWithState({ items: [buildRow({ deliveryStatus: 'collected' })], loaded: true });
     expect(fixture.debugElement.query(By.css('[data-testid="drop-off-proof"]'))).toBeNull();
   });
+
+  // OBRS-1348 AC-4. The backend nightly job deletes `leftAtStopPhotoUrl` (and NULLs
+  // it) 395 days after drop-off, but keeps `leftAtStopAt`/`leftAtStopBy` — so a
+  // `left_at_stop` row with a null photo is a real, expected state, not a bug. The
+  // `@if (row.leftAtStopPhotoUrl)` guard at my-parcels.component.html:105 wraps the
+  // WHOLE drop-off block (photo, link and stamped time together), so this asserts
+  // the block disappears cleanly rather than rendering a broken `<img>`/an empty
+  // link, while the fact that survives the deletion -- that the parcel was left at
+  // a stop at all -- stays visible in the status chip built from `deliveryStatus`,
+  // which is independent of the photo.
+  it('degrades cleanly once the drop-off photo has been deleted', () => {
+    renderWithState({
+      items: [
+        buildRow({
+          deliveryStatus: 'left_at_stop',
+          leftAtStopAt: '2026-08-14T10:00:00+07:00',
+          leftAtStopPhotoUrl: null,
+        }),
+      ],
+      loaded: true,
+    });
+
+    const card = fixture.debugElement.queryAll(By.css('.parcel-card'))[0];
+    expect(fixture.debugElement.query(By.css('[data-testid="drop-off-proof"]'))).toBeNull();
+    // 0-count queries, not just "no throw": a typo'd selector must fail loudly.
+    expect(card.queryAll(By.css('img')).length).toBe(0);
+    expect(card.queryAll(By.css('a')).length).toBe(0);
+    // The drop-off fact that is deliberately kept -- that the parcel was left at
+    // a stop -- still renders, via the status chip rather than the deleted photo.
+    expect(cardText()).toContain('PARCEL_TRACKING.STATUS.LEFT_AT_STOP');
+  });
 });
