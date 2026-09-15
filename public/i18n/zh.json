@@ -2203,7 +2203,10 @@
         "REJECT_CONFIRM": "确认退回",
         "REASON_LABEL": "退回原因",
         "REASON_PLACEHOLDER": "例如：收据不属于这辆车",
-        "FAILED": "无法记录此审批结果，请重试。"
+        "FAILED": "无法记录此审批结果，请重试。",
+        "GAS_BILL": "汽油账单",
+        "EXPAND_ARIA": "查看汽油账单的分类明细",
+        "COLLAPSE_ARIA": "隐藏汽油账单的分类明细"
       },
       "ADD": "添加费用",
       "ADD_TITLE": "记录新费用",
