@@ -1,4 +1,5 @@
 @import "../../../../../../styles/variables.scss";
+@import "../../../../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -179,6 +180,38 @@
   // (see route-stop-list.component.ts distanceLabel()); no new input needed.
   &--active {
     background: rgba($brand-customer, 0.08);
+  }
+}
+
+// Dark mode for the button above (OBRS-1214 gate regression, customer-contrast-gate.spec.ts).
+//
+// `:host-context(body.is-dark)` rather than dark-theme.scss, same reason as
+// route-map-home.component.scss's `.map-placeholder-icon`/`.map-placeholder-text`
+// override (OBRS-767, see _dark-tokens.scss's own header): this component's own
+// `.locate-me-inline-btn` rule already carries the encapsulation attribute, so a
+// global `body.is-dark app-route-map-home .locate-me-inline-btn` rule would only
+// tie its specificity, not beat it.
+//
+// Measured: $brand-customer (#0772a2) on the dark card ($dk-bg-card #1a1d27,
+// the surface the gate actually reported) was 3.15:1 -- under the 4.5:1 AA
+// floor. $dk-accent is the token this exact card ($dk-bg-card) already trusts
+// elsewhere in this module for the same problem (dark-theme.scss's stop-row
+// selection washes, route-map-home's map-placeholder-icon at 8.29:1) -- reused
+// here rather than picking a new value.
+//
+// `:disabled` (the `locating` spinner state) needs no entry here: the contrast
+// gate exempts BOTH a `disabled` attribute and `opacity < 1` (this component's
+// own `&:disabled { opacity: 0.7 }` above is already the second one), same as
+// the CONFIRM button's own disabled state a few rules up (OBRS-915's comment
+// on `.p-button.p-button-info`).
+:host-context(body.is-dark) {
+  .locate-me-inline-btn {
+    border-color: $dk-accent;
+    color: $dk-accent;
+
+    &--active {
+      background: rgba($dk-accent, 0.14);
+    }
   }
 }
 
