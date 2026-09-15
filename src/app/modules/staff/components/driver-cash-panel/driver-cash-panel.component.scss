@@ -59,19 +59,6 @@
   background: var(--admin-surface-card);
 }
 
-.dcp-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-}
-
-.dcp-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 // OBRS-1579 — the box date. Emphasised, not muted: on this strip it is the fact
 // that decides where the money lands, and it used to be the one thing rendered
 // with no weight and no label at all. It wraps onto its own line on a narrow

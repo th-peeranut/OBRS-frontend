@@ -73,6 +73,7 @@ import { InspectionItemsPageComponent } from './pages/inspection-items/inspectio
 import { ExpensesPageComponent } from './pages/expenses/expenses-page.component';
 import { ExpenseListTableComponent } from './pages/expenses/expense-list-table/expense-list-table.component';
 import { ExpenseApprovalLaneComponent } from './pages/expenses/expense-approval-lane/expense-approval-lane.component';
+import { ExpenseApprovalSectionComponent } from './pages/expenses/expense-approval-section/expense-approval-section.component';
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 import { ExpenseBatchPageComponent } from './pages/expenses/expense-batch-page/expense-batch-page.component';
@@ -95,6 +96,7 @@ import { DriverCashRatesPageComponent } from './pages/driver-cash-rates/driver-c
 import { CancelReschedulePolicyConfigPageComponent } from './pages/cancel-reschedule-policy-config/cancel-reschedule-policy-config-page.component';
 import { ConfigSourceBadgeComponent } from './pages/cancel-reschedule-policy-config/config-source-badge/config-source-badge.component';
 import { OperationsConfigPageComponent } from './pages/operations-config/operations-config-page.component';
+import { MaintenanceWindowConfigPageComponent } from './pages/maintenance-window-config/maintenance-window-config-page.component';
 // OBRS-1308 — owner-editable notification message overrides + admin approval.
 import { NotificationMessagesTabPageComponent } from './pages/notification-messages/notification-messages-tab-page.component';
 import { NotificationMessageListPageComponent } from './pages/notification-messages/notification-message-list-page.component';
@@ -636,6 +638,7 @@ export const adminRoutes: Routes = [
     ExpensesPageComponent,
     ExpenseListTableComponent,
     ExpenseApprovalLaneComponent,
+    ExpenseApprovalSectionComponent,
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
     ExpenseBatchPageComponent,
@@ -655,6 +658,7 @@ export const adminRoutes: Routes = [
     CancelReschedulePolicyConfigPageComponent,
     ConfigSourceBadgeComponent,
     OperationsConfigPageComponent,
+    MaintenanceWindowConfigPageComponent,
     NotificationMessagesTabPageComponent,
     NotificationMessageListPageComponent,
     NotificationMessageListTableComponent,

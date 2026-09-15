@@ -20,6 +20,12 @@
     "BODY": "请通过 Facebook 专页联系我们订票：",
     "CHANNEL": "NJ Phuyaipu"
   },
+  "MAINTENANCE_NOTICE": {
+    "ARIA_LABEL": "公告：网站即将进行例行维护",
+    "COUNTDOWN": "系统将在 {{minutes}} 分钟后维护（{{start}} – {{end}}）",
+    "IN_PROGRESS": "系统维护中，预计 {{end}} 恢复。",
+    "PAYMENT_LOCKED": "维护期间暂停付款，以免出现未完成的订单。"
+  },
   "ROLE_PREVIEW": {
     "MENU": "以其他角色查看…",
     "ARIA_LABEL": "您正在以其他角色查看此页面",
@@ -548,7 +554,7 @@
       "PROMOTIONS": "促销活动",
       "USABILITY_REPORTS": "可用性报告",
       "REPORTS": "报告",
-      "SETTLEMENTS": "分账结算",
+      "SETTLEMENTS": "结算与审批",
       "EOD_SALES_REPORT": "每日销售报告",
       "REMINDER_CONFIG": "提醒时间设置",
       "JUMP_SEAT_CONFIG": "加座设置",
@@ -576,7 +582,8 @@
       "CANCEL_RESCHEDULE_POLICY_CONFIG": "取消与改签",
       "NOTIFICATION_MESSAGES": "通知消息",
       "OPERATIONS_CONFIG": "运营",
-      "EXPENSE_BATCH": "批量录入单据"
+      "MAINTENANCE_WINDOW": "维护时间公告",
+      "EXPENSE_BATCH": "录入单据"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1557,7 +1564,7 @@
       }
     },
     "SETTLEMENTS": {
-      "SUBTITLE": "确认每个已发车班次的现金与收入交接。",
+      "SUBTITLE": "审批员工提交的费用，并确认每个已发车班次的现金与收入交接。",
       "TABLE_TITLE": "待结算班次",
       "COL": {
         "ROUTE": "路线",
@@ -1844,6 +1851,27 @@
         "DONE": "已恢复使用平台默认值。",
         "FAILED": "交还政策失败,未做任何更改。"
       }
+    },
+    "MAINTENANCE_WINDOW": {
+      "SUBTITLE": "在系统维护导致订票网站暂停前提前公告，并在倒计时期间暂停新的付款。",
+      "NONE_SCHEDULED": "目前没有公告。访客看不到横幅，付款照常。",
+      "SCHEDULED_NOTE": "已公告：{{start}} - {{end}}；{{lockedFrom}} 起暂停付款。",
+      "START_LABEL": "开始维护",
+      "END_LABEL": "预计恢复",
+      "LOCK_LABEL": "提前多少分钟暂停付款",
+      "LOCK_HELPER": "填 0 表示一直售卖到维护开始；最多 180 分钟。",
+      "MESSAGE_TH_LABEL": "公告内容（泰文）",
+      "MESSAGE_EN_LABEL": "公告内容（英文）",
+      "MESSAGE_HELPER": "两种语言都必填。中文读者会看到英文内容。",
+      "RANGE_VALIDATION": "结束时间必须晚于开始时间。",
+      "CANCEL_ANNOUNCEMENT": "取消本次维护",
+      "CANCEL_CONFIRM_TITLE": "要删除这条公告吗？",
+      "CANCEL_CONFIRM_TEXT": "横幅会立即消失，付款也会立即恢复。",
+      "CANCEL_CONFIRM_BUTTON": "删除",
+      "SAVED": "公告已发布。",
+      "CANCELLED": "公告已删除。",
+      "SAVE_FAILED": "保存维护时间失败。",
+      "LOAD_FAILED": "加载维护时间失败。"
     },
     "OPERATIONS_CONFIG": {
       "SUBTITLE": "设置您自己的运营参数——留座时间、未乘车(no-show)截止时间、以及座位即将订满的提醒阈值。尚未设置的项目将使用平台默认值。",
@@ -2165,7 +2193,7 @@
     },
     "EXPENSES": {
       "SUBTITLE": "记录车辆及中央费用",
-      "PAGE_PURPOSE": "本页是每辆车及中央费用的账本，用于计算每车利润和作为税务凭证。现场支付的费用（燃气/燃油、通行证费、司机工资、维修）由售票员在「我的现金箱」中记录，并在此等待车主审批。",
+      "PAGE_PURPOSE": "本页是每辆车及中央费用的账本，用于计算每车利润和作为税务凭证。现场支付的费用（燃气/燃油、司机工资、维修）由员工在「司机结算」中记录，然后在「结算与审批」页等待车主审批。",
       "TABLE_TITLE": "费用列表",
       "APPROVAL": {
         "TITLE": "待审批",
@@ -2288,9 +2316,9 @@
       "SOURCE_FIELD": "系统自动生成（来自司机）",
       "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。",
       "BATCH": {
-        "OPEN": "批量录入单据",
-        "SUBTITLE": "一次保存整批单据",
-        "PAGE_PURPOSE": "修理厂往往一次交来多张单据。在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
+        "OPEN": "录入单据",
+        "SUBTITLE": "一次保存多张单据",
+        "PAGE_PURPOSE": "同时送来的多张单据，在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
         "BILL_N": "第 {{n}} 张",
         "BILL_TOTAL": "本张合计",
         "BILL_COUNT": "{{n}} 张单据",
@@ -2302,9 +2330,9 @@
         "GARAGE": "修理厂",
         "LINE_DESCRIPTION": "明细（按修理厂所写）",
         "LINE_PART": "配件 / 工时",
-        "SAVE_ENVELOPE": "保存整批",
+        "SAVE_ENVELOPE": "全部保存",
         "SAVED": "已录入 {{n}} 张单据",
-        "OWNER_HINT": "本批单据均计入该运营商。",
+        "OWNER_HINT": "此次保存的单据均计入该运营商。",
         "BILL_DATE": "单据日期",
         "VEHICLE": "车牌",
         "CATEGORY": "类别",
@@ -3317,6 +3345,7 @@
     }
   },
   "PAYMENT": {
+    "MAINTENANCE_LOCKED": "暂停付款 — 系统即将维护",
     "INFO": {
       "TITLE": "选择付款方式"
     },
@@ -4622,7 +4651,10 @@
           "NOTE": "备注"
         },
         "WAGE_BASIS": "按 {{rate}} x {{legs}} 趟计算",
-        "OTHER_INCOMPLETE": "\"其他\"一行需同时填写项目名称和金额"
+        "OTHER_INCOMPLETE": "\"其他\"一行需同时填写项目名称和金额",
+        "ADD_OTHER": "+ 添加其他费用",
+        "REMOVE_OTHER": "删除此项目",
+        "OTHER_FULL": "每天最多 {{max}} 项其他费用"
       },
       "REPAIR": {
         "TITLE": "维修费",

@@ -213,3 +213,13 @@
     justify-content: flex-start;
   }
 }
+
+// OBRS-1902: the one line that explains a pay button which has gone quiet. Without it a disabled
+// button is indistinguishable from a broken one.
+.payment-maintenance-hint {
+  margin: $space-2xs 0 0;
+  font-size: $font-size-xs;
+  line-height: $line-height-base;
+  color: $text-softblack;
+  text-align: right;
+}

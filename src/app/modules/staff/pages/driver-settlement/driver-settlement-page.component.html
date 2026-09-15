@@ -193,34 +193,9 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
           </tr>
         </thead>
         <tbody>
-          @for (row of visibleExpenseRows; track row.category) {
+          @for (row of fixedExpenseRows; track row.category) {
             <tr [attr.data-testid]="'settlement-expense-row-' + row.category">
-              @if (isOtherRow(row)) {
-                <!-- OBRS-1896: the one ITEM cell that is typed. The fixed rows name themselves;
-                this row exists precisely because the cost has no category, so its name IS the
-                input. `maxlength` is the server's own `@Size(max = 100)` said here, before a
-                too-long name can take the whole day's submit down with it. -->
-                <td>
-                  <input
-                    type="text"
-                    class="admin-field"
-                    maxlength="100"
-                    [attr.placeholder]="'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate"
-                    [attr.aria-label]="'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate"
-                    data-testid="settlement-other-label"
-                    [(ngModel)]="row.otherLabelInput"
-                    [name]="'settlementLabel' + row.category"
-                    [disabled]="isContextLoading"
-                  />
-                  @if (isOtherRowIncomplete) {
-                    <small class="admin-error ds-other-error" data-testid="settlement-other-incomplete">
-                      {{ 'STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE' | translate }}
-                    </small>
-                  }
-                </td>
-              } @else {
-                <td>{{ categoryLabel(row.category) }}</td>
-              }
+              <td>{{ categoryLabel(row.category) }}</td>
 
               @if (isWageRow(row)) {
                 <!-- OBRS-1356: the server prices this from the owner's rate per leg and writes one
@@ -280,9 +255,101 @@ overridable — `vehicles.assigned_driver_id` is a default, not a restriction (V
               }
             </tr>
           }
+
+          <!-- OBRS-1903: 0..15 free-text costs, each added by the button under the table. Their own
+          loop and not a sixth entry in the list above: two of them share the category `OTHER`,
+          which is what those rows are keyed and named by, and these three cells differ anyway (a
+          typed name, and the X that takes the row back out). -->
+          @for (row of otherExpenseRows; track row.id) {
+            <tr [attr.data-testid]="'settlement-other-row-' + $index">
+              <!-- The one ITEM cell that is typed. The fixed rows name themselves; this one exists
+              precisely because the cost has no category, so its name IS the input. `maxlength` is
+              the server's own `@Size(max = 100)` said here, before a too-long name can take the
+              whole day's submit down with it. -->
+              <td>
+                <input
+                  #otherLabelInput
+                  type="text"
+                  class="admin-field"
+                  maxlength="100"
+                  [attr.placeholder]="'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate"
+                  [attr.aria-label]="'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate"
+                  [attr.data-testid]="'settlement-other-label-' + $index"
+                  [(ngModel)]="row.otherLabelInput"
+                  [name]="'settlementOtherLabel' + row.id"
+                  [disabled]="isContextLoading"
+                />
+                @if (isOtherRowIncomplete(row)) {
+                  <small
+                    class="admin-error ds-other-error"
+                    [attr.data-testid]="'settlement-other-incomplete-' + $index"
+                  >{{ 'STAFF.SETTLEMENT.EXPENSES.OTHER_INCOMPLETE' | translate }}</small>
+                }
+              </td>
+              <td>
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  class="admin-field"
+                  [attr.aria-label]="'STAFF.SETTLEMENT.EXPENSES.COL.AMOUNT' | translate"
+                  [attr.data-testid]="'settlement-other-amount-' + $index"
+                  [(ngModel)]="row.amountInput"
+                  [name]="'settlementOtherAmount' + row.id"
+                  [disabled]="isContextLoading"
+                />
+                @if (isAmountInvalid(row)) {
+                  <small
+                    class="admin-error"
+                    [attr.data-testid]="'settlement-other-amount-invalid-' + $index"
+                  >{{ 'STAFF.DRIVER_CASH.VALIDATION.AMOUNT_INVALID' | translate }}</small>
+                }
+              </td>
+              <!-- The X shares the NOTE cell rather than taking a fourth column: the rows above
+              have three cells (the wage row two, by colspan), and a fourth header would leave
+              every one of them ragged. -->
+              <td>
+                <div class="ds-other-note">
+                  <input
+                    type="text"
+                    class="admin-field"
+                    maxlength="255"
+                    [attr.aria-label]="'STAFF.SETTLEMENT.EXPENSES.COL.NOTE' | translate"
+                    [attr.data-testid]="'settlement-other-note-' + $index"
+                    [(ngModel)]="row.noteInput"
+                    [name]="'settlementOtherNote' + row.id"
+                    [disabled]="isContextLoading"
+                  />
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    [attr.aria-label]="'STAFF.SETTLEMENT.EXPENSES.REMOVE_OTHER' | translate"
+                    [attr.data-testid]="'settlement-other-remove-' + $index"
+                    (click)="removeOtherRow(row)"
+                  >&#10005;</button>
+                </div>
+              </td>
+            </tr>
+          }
         </tbody>
       </table>
     </div>
+
+    <!-- Owner ruling (1): the screen opens with none of these, so the button is how every one of
+    them arrives. Same "+ / X" pair as the repair box below (OBRS-1630). -->
+    <button
+      type="button"
+      class="admin-btn"
+      data-testid="settlement-add-other"
+      [disabled]="isContextLoading || !canAddOtherRow"
+      (click)="addOtherRow()"
+    >
+      {{ 'STAFF.SETTLEMENT.EXPENSES.ADD_OTHER' | translate }}
+    </button>
+    @if (!canAddOtherRow) {
+      <small class="admin-muted ds-other-full" data-testid="settlement-other-full">
+        {{ 'STAFF.SETTLEMENT.EXPENSES.OTHER_FULL' | translate: { max: maxOtherRows } }}
+      </small>
+    }
   </section>
 
   <!-- ── ค่าซ่อม (0..N bills) ─────────────────────────────────────────────── -->

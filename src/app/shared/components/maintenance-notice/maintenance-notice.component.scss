@@ -1,0 +1,81 @@
+@import '../../../../styles/variables.scss';
+@import '../../../../styles/dark-tokens.scss';
+
+// OBRS-1902 — the "the site is about to go down for an update" strip.
+//
+// Deliberately the SAME amber wash as booking-closed-notice rather than a new
+// colour: the two strips say the same kind of thing ("a channel is about to be
+// unavailable, nothing is broken"), the contrast ratios noted below were
+// measured for exactly these pairs, and inventing a second palette here would
+// mean two unverified numbers instead of zero. Dark mode lives in this file for
+// the reason _dark-tokens.scss gives — an encapsulated component outscores a
+// global `body.is-dark` rule, which would then lose silently.
+//
+// NO `position: fixed` — same reasoning as booking-closed-notice: in normal
+// flow above the router outlet it cannot cover a control and needs no z-index.
+.maintenance-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-xs;
+  padding: $space-xs $space-sm;
+
+  background: #fff4e0;
+  border-bottom: 1px solid #e8b465;
+}
+
+.maintenance-notice__icon {
+  flex: 0 0 auto;
+  font-size: $font-size-md;
+  line-height: $line-height-base;
+}
+
+.maintenance-notice__text {
+  margin: 0;
+  min-width: 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-base;
+}
+
+.maintenance-notice__title {
+  display: block;
+  font-weight: $font-weight-semibold;
+  color: $text-black; // 10.24:1 on #fff4e0
+}
+
+.maintenance-notice__body {
+  display: block;
+  color: $text-softblack; // 6.43:1 on #fff4e0
+}
+
+.maintenance-notice__payment {
+  display: block;
+  font-weight: $font-weight-semibold;
+  color: $text-softblack; // 6.43:1 on #fff4e0
+}
+
+@media (max-width: 575.98px) {
+  .maintenance-notice {
+    padding: $space-2xs $space-xs;
+    gap: $space-2xs;
+  }
+
+  .maintenance-notice__text {
+    font-size: $font-size-xs;
+  }
+}
+
+:host-context(body.is-dark) {
+  .maintenance-notice {
+    background: #2e2312;
+    border-bottom-color: rgba(232, 180, 101, 0.35);
+  }
+
+  .maintenance-notice__title {
+    color: $dk-text;
+  }
+
+  .maintenance-notice__body,
+  .maintenance-notice__payment {
+    color: $dk-text-muted;
+  }
+}
