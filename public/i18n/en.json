@@ -2075,6 +2075,14 @@
       }
     },
     "PAYEE_SPEND_REPORT": {
+      "EXPORT_LABEL": "Export this report",
+      "COL_BILL_DATE": "Bill date",
+      "COL_BILL_NO": "Bill no.",
+      "BILLS_TITLE": "Bills — {{payee}}",
+      "BILLS_CLOSE": "Close",
+      "BILLS_LOADING": "Loading bills…",
+      "BILLS_EMPTY": "No bills for this payee in the selected period",
+      "BILLS_LOAD_FAILED": "Could not load the bills. Please try again.",
       "SUBTITLE": "Spend grouped by who received the money — garages, fuel stations and other payees",
       "FILTER_YEAR": "Year",
       "YEAR_OPTION": "{{year}} · {{count}} bills · {{amount}}",

@@ -2075,6 +2075,14 @@
       }
     },
     "PAYEE_SPEND_REPORT": {
+      "EXPORT_LABEL": "导出本报表",
+      "COL_BILL_DATE": "单据日期",
+      "COL_BILL_NO": "单据编号",
+      "BILLS_TITLE": "单据明细 — {{payee}}",
+      "BILLS_CLOSE": "关闭",
+      "BILLS_LOADING": "正在加载单据…",
+      "BILLS_EMPTY": "所选期间该收款方没有单据",
+      "BILLS_LOAD_FAILED": "加载单据失败，请重试。",
       "SUBTITLE": "按收款方统计的支出——修车厂、加油站及其他收款方",
       "FILTER_YEAR": "年份",
       "YEAR_OPTION": "{{year}} · {{count}} 张单据 · {{amount}}",

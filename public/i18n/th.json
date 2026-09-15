@@ -2075,6 +2075,14 @@
       }
     },
     "PAYEE_SPEND_REPORT": {
+      "EXPORT_LABEL": "ดาวน์โหลดรายงานนี้",
+      "COL_BILL_DATE": "วันที่บิล",
+      "COL_BILL_NO": "เลขที่บิล",
+      "BILLS_TITLE": "บิลรายใบ — {{payee}}",
+      "BILLS_CLOSE": "ปิด",
+      "BILLS_LOADING": "กำลังโหลดรายการบิล…",
+      "BILLS_EMPTY": "ไม่มีบิลของรายนี้ในช่วงที่เลือก",
+      "BILLS_LOAD_FAILED": "โหลดรายการบิลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
       "SUBTITLE": "ยอดค่าใช้จ่ายแยกตามผู้รับเงิน — อู่ ปั๊ม และร้านที่จ่ายเงินไป",
       "FILTER_YEAR": "ปี",
       "YEAR_OPTION": "{{year}} · {{count}} บิล · {{amount}}",

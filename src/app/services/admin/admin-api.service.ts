@@ -26,7 +26,10 @@ import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interfa
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { VehiclePlReportDto } from '../../shared/interfaces/vehicle-pl-report.interface';
-import { PayeeSpendReportDto } from '../../shared/interfaces/payee-spend-report.interface';
+import {
+  PayeeBillListDto,
+  PayeeSpendReportDto,
+} from '../../shared/interfaces/payee-spend-report.interface';
 import { PartUnitPriceReportDto } from '../../shared/interfaces/part-unit-price-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
@@ -2552,6 +2555,39 @@ export class AdminApiService {
     }
     return this.getRequest<PayeeSpendReportDto>(
       `${this.baseUrl}/private/admin/reports/expense-by-payee`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1619 AC1 — the bills behind one line of the report above.
+   *
+   * `payeeId === null` is the "not recorded" bucket and sends NO `payeeId` param: that bucket has
+   * no id, so there is no value to send. The year/month/category passed here are the report's own
+   * filter, unchanged — the backend re-resolves the window from them, which is what keeps the two
+   * screens under the same period.
+   */
+  getPayeeBills(
+    payeeId: number | null,
+    year: number | null,
+    month: number | null,
+    category: string | null
+  ): Observable<ResponseAPI<PayeeBillListDto>> {
+    let params = new HttpParams();
+    if (payeeId !== null) {
+      params = params.set('payeeId', String(payeeId));
+    }
+    if (year !== null) {
+      params = params.set('year', String(year));
+      if (month !== null) {
+        params = params.set('month', String(month));
+      }
+    }
+    if (category !== null) {
+      params = params.set('category', category);
+    }
+    return this.getRequest<PayeeBillListDto>(
+      `${this.baseUrl}/private/admin/reports/expense-by-payee/bills`,
       params
     );
   }

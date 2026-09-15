@@ -2,8 +2,12 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
+import { firstValueFrom } from 'rxjs';
 import { PayeeSpendReportStore } from './payee-spend-report.store';
+import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import {
+  PayeeBillDto,
+  PayeeBillListDto,
   PayeeSpendReportDto,
   PayeeSpendRowDto,
 } from '../../../../shared/interfaces/payee-spend-report.interface';
@@ -59,8 +63,21 @@ export class PayeeSpendReportPageComponent implements OnInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
+  // OBRS-1619 AC1 — the drill-down panel's own state, deliberately NOT a second
+  // AdminCollectionStore. That base class exists to keep a collection warm across navigations
+  // (stale-while-revalidate); this panel is opened, read and closed inside one visit to one screen,
+  // and it must NOT survive a filter change — a cached list under a window the reader has since
+  // moved off is the one thing AC1 is written to prevent.
+  protected drillDown: PayeeBillListDto | null = null;
+  protected drillDownOpen = false;
+  protected drillDownLoading = false;
+  protected drillDownError = '';
+  /** Which row is open: a payee id, or `null` for the unassigned row (which has no id). */
+  protected drillDownPayeeId: number | null = null;
+
   constructor(
     protected readonly store: PayeeSpendReportStore,
+    private readonly adminApiService: AdminApiService,
     private readonly translate: TranslateService
   ) {}
 
@@ -122,14 +139,17 @@ export class PayeeSpendReportPageComponent implements OnInit, OnDestroy {
   }
 
   protected onYearChange(value: string): void {
+    this.closeBills();
     this.store.setYear(value === NO_FILTER ? null : Number(value));
   }
 
   protected onMonthChange(value: string): void {
+    this.closeBills();
     this.store.setMonth(value === NO_FILTER ? null : Number(value));
   }
 
   protected onCategoryChange(value: string): void {
+    this.closeBills();
     this.store.setCategory(value === NO_FILTER ? null : value);
   }
 
@@ -176,6 +196,99 @@ export class PayeeSpendReportPageComponent implements OnInit, OnDestroy {
 
   protected monthLabel(month: number): string {
     return this.translate.instant(`ADMIN.PAYEE_SPEND_REPORT.MONTHS.${month}`);
+  }
+
+  /**
+   * OBRS-1619 AC2 — what the export button sends. Only the filters that are actually SET travel:
+   * the report's default is "every year", and the way to say that to the endpoint is to send no
+   * `year` at all, exactly as the screen's own fetch does.
+   */
+  protected get exportParams(): Record<string, string> {
+    const filter = this.store.filter;
+    const params: Record<string, string> = {};
+    if (filter.year !== null) {
+      params['year'] = String(filter.year);
+      if (filter.month !== null) {
+        params['month'] = String(filter.month);
+      }
+    }
+    if (filter.category !== null) {
+      params['category'] = filter.category;
+    }
+    return params;
+  }
+
+  /** True while this row's bills are the ones on show — the table marks it, so the panel below is
+   * never ambiguous about which line it belongs to. */
+  protected isOpenRow(payeeId: number | null): boolean {
+    return this.drillDownOpen && this.drillDownPayeeId === payeeId;
+  }
+
+  /**
+   * OBRS-1619 AC1. Clicking the row that is already open closes it, so the same control both opens
+   * and dismisses the panel.
+   *
+   * <p>The filter passed to the endpoint is the store's, read at click time — not a copy taken when
+   * the report loaded. That is what makes "the list is under the same window as the report" true by
+   * construction rather than by timing.
+   */
+  protected async openBills(payeeId: number | null): Promise<void> {
+    if (this.isOpenRow(payeeId)) {
+      this.closeBills();
+      return;
+    }
+    const filter = this.store.filter;
+    this.drillDownOpen = true;
+    this.drillDownPayeeId = payeeId;
+    this.drillDown = null;
+    this.drillDownError = '';
+    this.drillDownLoading = true;
+    try {
+      const response = await firstValueFrom(
+        this.adminApiService.getPayeeBills(payeeId, filter.year, filter.month, filter.category)
+      );
+      // A filter change while the request was in flight closed the panel; dropping the answer is
+      // the point — rendering it would put the OLD window's bills under the NEW report.
+      if (this.drillDownOpen && this.drillDownPayeeId === payeeId) {
+        this.drillDown = response.data ?? null;
+      }
+    } catch {
+      if (this.drillDownOpen && this.drillDownPayeeId === payeeId) {
+        this.drillDownError = this.translate.instant('ADMIN.PAYEE_SPEND_REPORT.BILLS_LOAD_FAILED');
+      }
+    } finally {
+      this.drillDownLoading = false;
+    }
+  }
+
+  protected closeBills(): void {
+    this.drillDownOpen = false;
+    this.drillDownPayeeId = null;
+    this.drillDown = null;
+    this.drillDownError = '';
+    this.drillDownLoading = false;
+  }
+
+  protected get drillDownBills(): PayeeBillDto[] {
+    return this.drillDown?.bills ?? [];
+  }
+
+  /** The open panel's heading: the payee's name, or the screen's own word for the bucket with no
+   * payee on record — the API deliberately sends null there rather than inventing a label. */
+  protected get drillDownTitle(): string {
+    if (this.drillDownPayeeId === null) {
+      return this.translate.instant('ADMIN.PAYEE_SPEND_REPORT.UNASSIGNED');
+    }
+    return (
+      this.drillDown?.payeeName ??
+      this.rows.find((row) => row.payeeId === this.drillDownPayeeId)?.payeeName ??
+      ''
+    );
+  }
+
+  /** A bill's own line texts, joined. Empty on a bill that was entered without itemised lines. */
+  protected billWorkText(bill: PayeeBillDto): string {
+    return bill.workDone.join(' · ');
   }
 
   protected yearOptionLabel(year: number, billCount: number, totalAmount: string): string {
