@@ -624,9 +624,17 @@ export function toSegmentAppendPayload(
  * `estimatedDurationMinutes` rides in the FIRST block only. It is not a
  * property of a pair - the backend stores the destination stop's
  * `route_stops.offset_minutes_from_origin` and derives every pair's duration
- * from it - so the same minute arriving in two blocks of one batch is two
- * writes of one route-level field, which the backend rejects as a duration
- * conflict (400). One block states it; the others send `undefined`.
+ * from it - so ONE block stating it is the entire write, and the others send
+ * `undefined`, which `SegmentService.applyEstimatedDuration` returns early on.
+ *
+ * NOT because repeating it would be rejected: `SegmentUpdateReqDtoValidator`
+ * `.validateNoConflictingDurations` keys on the DESTINATION stop and compares
+ * the `(fromStop, duration)` couple, so it refuses only a destination the
+ * blocks DISAGREE about (`A->C 30` beside `B->C 20`); its own javadoc states
+ * that identical repeats stay legal precisely so OBRS-1033's batch may have
+ * "every block restate the same edit". Sending it once is the minimum correct
+ * payload, not an escape from a 400 - so if this ever needs to move, moving it
+ * is safe.
  *
  * The batch shape is used even for a single vehicle type: when the owner edits
  * both fares, the two blocks must land in ONE transaction, or a rejection of

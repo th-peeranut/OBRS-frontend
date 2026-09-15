@@ -567,8 +567,10 @@ describe('routes.mappers', () => {
       expect(minibusBlock.stopPairs[0].fare).toBe(99);
     });
 
-    // Card scope 3: the duration is one route-level field, so two blocks both
-    // stating it is a duration conflict the backend answers with a 400.
+    // Card scope 3: the duration is one route-level field, so one block states
+    // the whole write. This pins the payload we chose, NOT a 400 we avoid - two
+    // blocks restating the SAME minute is legal (SegmentUpdateReqDtoValidator
+    // refuses only a destination the blocks disagree about).
     it('states the duration in the first block only', () => {
       const payload = toSegmentUpdatePayload(
         'a',

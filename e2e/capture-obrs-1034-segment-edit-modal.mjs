@@ -114,16 +114,26 @@ async function describeRow(page) {
   return { headers, cells, editButtons };
 }
 
-async function setTheme(page, mode) {
-  await page.evaluate((m) => {
-    localStorage.setItem('app_admin_theme', m);
-    document.body.classList.toggle('is-dark', m === 'dark');
-  }, mode);
-  await page.waitForTimeout(400);
+/** Both preferences are read once by `ThemeService.init()` / `LanguageService` at
+ *  bootstrap, so they are written BEFORE the reload that follows — toggling the body
+ *  class on a live page looked like it worked and produced a light "dark" screenshot. */
+async function setPreferences(page, lang, theme) {
+  await page.evaluate(
+    ([l, t]) => {
+      localStorage.setItem('app_language', l);
+      localStorage.setItem('app_admin_theme', t);
+    },
+    [lang, theme]
+  );
 }
 
-async function setLanguage(page, lang) {
-  await page.evaluate((l) => localStorage.setItem('app_language', l), lang);
+/** Read back what the page actually rendered with, so a shot cannot be mislabelled. */
+async function readPreferences(page) {
+  return page.evaluate(() => ({
+    lang: localStorage.getItem('app_language'),
+    theme: localStorage.getItem('app_admin_theme'),
+    bodyIsDark: document.body.classList.contains('is-dark'),
+  }));
 }
 
 await mkdir(OUT, { recursive: true });
@@ -191,36 +201,38 @@ async function openModal() {
 const LANGS = (process.env.OBRS_LANGS ?? 'th,en,zh').split(',');
 
 for (const lang of LANGS) {
-  await setLanguage(page, lang);
-  await page.reload({ waitUntil: 'domcontentloaded' });
-
-  let table;
-  try {
-    table = await openModal();
-  } catch (err) {
-    const shot = path.join(OUT, `${LABEL}-${lang}-FAILED.png`);
-    await page.screenshot({ path: shot, fullPage: true });
-    console.log(`\n[${lang}] FAILED to reach the modal — page shot: ${shot}\n  ${err.message.split('\n')[0]}`);
-    continue;
-  }
-  console.log(`\n=== language: ${lang} ===`);
-
   for (const theme of ['light', 'dark']) {
-    await setTheme(page, theme);
+    await setPreferences(page, lang, theme);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    let table;
+    try {
+      table = await openModal();
+    } catch (err) {
+      const shot = path.join(OUT, `${LABEL}-${lang}-${theme}-FAILED.png`);
+      await page.screenshot({ path: shot, fullPage: true });
+      console.log(
+        `\n[${lang}/${theme}] FAILED to reach the modal — page shot: ${shot}\n  ${err.message.split('\n')[0]}`
+      );
+      continue;
+    }
+
+    const prefs = await readPreferences(page);
+    console.log(
+      `\n=== ${lang}/${theme} === (page reports lang=${prefs.lang} theme=${prefs.theme} ` +
+        `body.is-dark=${prefs.bodyIsDark} → ${prefs.bodyIsDark === (theme === 'dark') ? 'MATCHES' : 'MISLABELLED'})`
+    );
+
     const seen = await describeModal(page, `${lang}/${theme}`);
     const file = path.join(OUT, `${LABEL}-${lang}-${theme}.png`);
     await modal(page).screenshot({ path: file });
     console.log(`  shot: ${file}`);
 
-    if (lang === 'th' && theme === 'light') {
-      // AC1: the fares in the modal must be the fares the table shows for that pair.
-      console.log(`  table cells were: ${table.cells.join(' | ')}`);
-      console.log(`  modal fare values: ${seen.fareInputs.map((f) => f.value).join(' | ') || '(none)'}`);
-    }
+    // AC1: the fares in the modal must be the fares the table shows for that pair.
+    console.log(`  table cells were : ${table.cells.join(' | ')}`);
+    console.log(`  modal fare values: ${seen.fareInputs.map((f) => f.value).join(' | ') || '(none)'}`);
   }
 
-  await setTheme(page, 'light');
-  await page.keyboard.press('Escape').catch(() => {});
 }
 
 await browser.close();
