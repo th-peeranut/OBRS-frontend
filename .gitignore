@@ -63,6 +63,12 @@ graphify-out/
 # and src/environments/environment.local.example.ts.
 src/environments/environment.local.ts
 
+# Build identity (git tag + short sha) the app was built from — generated fresh by
+# scripts/inject-build-info.mjs on every build/test/e2e/start lane (see its npm pre-hooks).
+# Never committed: a checked-in value would be the version of whichever commit last ran the
+# generator, not the version of the build that is actually running (OBRS-1075, AC-6).
+src/environments/build-info.ts
+
 # Real PROD values (live Omise public key, prod API URL, PromptPay id) — never commit.
 # The prod host generates this at build time from env vars; see scripts/inject-prod-env.js
 # and src/environments/environment.prod.local.example.ts.

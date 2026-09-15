@@ -3096,7 +3096,8 @@
       "CONTACT_FACEBOOK": "NJ Phuyaipu",
       "CONTACT_INSTAGRAM": "@nj.phuyaipu",
       "CONTACT_PHONE": "09-0562-2019",
-      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026。保留所有权利。"
+      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026。保留所有权利。",
+      "BUILD_VERSION": "版本 {{version}} ({{sha}})"
     },
     "ROUTE_MAP": {
       "TAB_PICKUP_LABEL": "上车",

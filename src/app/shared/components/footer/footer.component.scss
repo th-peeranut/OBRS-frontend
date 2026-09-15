@@ -203,6 +203,11 @@
     color: $text-softblack;
     font-weight: $font-weight-regular;
   }
+
+  // OBRS-1075: same class, same measured contrast ratio -- just stacked below the copyright line.
+  .build-version-text {
+    margin-top: $space-2xs;
+  }
 }
 
 @media (max-width: 1024px) {
