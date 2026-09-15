@@ -1242,7 +1242,15 @@
       "FOCUSED_CLEAR": "显示全部班次",
       "VEHICLE_UNDER_MAINTENANCE": "该车辆在所选日期存在未关闭的维护记录，请更换车辆或日期",
       "CARGO_CAPACITY_LABEL": "本班次货物配额覆盖值（千克）",
-      "CARGO_CAPACITY_HELPER": "留空 = 使用该车型的配额。"
+      "CARGO_CAPACITY_HELPER": "留空 = 使用该车型的配额。",
+      "EXTEND_WINDOW": "延长一个周期",
+      "EXTEND_WINDOW_CONFIRM_TITLE": "要延长时刻表吗？",
+      "EXTEND_WINDOW_CONFIRM_TEXT": "此操作会将所有路线的时刻表一次性延长一个周期，使用当前已设置的窗口长度，无需输入任何内容。",
+      "EXTEND_WINDOW_CONFIRM_BTN": "延长",
+      "EXTEND_WINDOW_LOADING": "正在延长时刻表，如时刻表较多可能需要一些时间。",
+      "EXTEND_WINDOW_SUCCESS": "已延长 {{setsExtended}} 个排班组，至 {{newStartDate}} – {{newEndDate}}，新建了 {{schedulesCreated}} 个班次。",
+      "EXTEND_WINDOW_NO_NEW_TRIPS": "已延长 {{setsExtended}} 个排班组，至 {{newStartDate}} – {{newEndDate}}。该窗口内的所有班次均已存在，因此未创建新班次。",
+      "EXTEND_WINDOW_FAILED": "无法延长时刻表。"
     },
     "BOOKINGS": {
       "TITLE": "预订管理",

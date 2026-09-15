@@ -1242,7 +1242,15 @@
       "FOCUSED_CLEAR": "แสดงเที่ยวรถทั้งหมด",
       "VEHICLE_UNDER_MAINTENANCE": "ยานพาหนะนี้มีรายการซ่อมบำรุงที่ยังไม่ปิดในช่วงวันที่ที่เลือก กรุณาเลือกยานพาหนะหรือวันที่อื่น",
       "CARGO_CAPACITY_LABEL": "โควตาพัสดุเฉพาะเที่ยวนี้ (kg)",
-      "CARGO_CAPACITY_HELPER": "ว่าง = ใช้ค่าตามประเภทรถ"
+      "CARGO_CAPACITY_HELPER": "ว่าง = ใช้ค่าตามประเภทรถ",
+      "EXTEND_WINDOW": "ขยายตารางเดินรถอีกหนึ่งช่วง",
+      "EXTEND_WINDOW_CONFIRM_TITLE": "ขยายตารางเดินรถ?",
+      "EXTEND_WINDOW_CONFIRM_TEXT": "ระบบจะขยายตารางเดินรถของทุกเส้นทางไปอีกหนึ่งช่วง โดยใช้ความยาวของช่วงเวลาที่ตั้งค่าไว้อยู่แล้ว ไม่ต้องพิมพ์อะไรเพิ่มเติม",
+      "EXTEND_WINDOW_CONFIRM_BTN": "ขยายตาราง",
+      "EXTEND_WINDOW_LOADING": "กำลังขยายตารางเดินรถ อาจใช้เวลาสักครู่หากมีตารางจำนวนมาก",
+      "EXTEND_WINDOW_SUCCESS": "ขยายชุดตารางเดินรถ {{setsExtended}} ชุด ไปถึงช่วง {{newStartDate}} – {{newEndDate}} แล้ว สร้างเที่ยววิ่งใหม่ {{schedulesCreated}} เที่ยว",
+      "EXTEND_WINDOW_NO_NEW_TRIPS": "ขยายชุดตารางเดินรถ {{setsExtended}} ชุด ไปถึงช่วง {{newStartDate}} – {{newEndDate}} แล้ว แต่ทุกเที่ยววิ่งในช่วงนี้มีอยู่แล้ว จึงไม่มีการสร้างเที่ยววิ่งใหม่",
+      "EXTEND_WINDOW_FAILED": "ไม่สามารถขยายตารางเดินรถได้"
     },
     "BOOKINGS": {
       "TITLE": "จัดการการจอง",

@@ -570,6 +570,28 @@ export interface AdminScheduleSetDto {
   vehicleType?: AdminVehicleTypeDto;
 }
 
+// OBRS-1172: response of POST /api/private/schedule-set/extend — one
+// extended source→new set pair per active schedule set the operator held.
+export interface ScheduleSetExtendedSetDto {
+  sourceScheduleSetId: number;
+  newScheduleSetId: number;
+  route: string;
+  frequency: string;
+  startDate: string;
+  endDate: string;
+}
+
+// OBRS-1172: response of POST /api/private/schedule-set/extend. `schedulesCreated`
+// can legitimately be 0 (every trip in the new window already existed) — that is
+// not a failure, see SchedulesPageComponent.extendTimetableWindow().
+export interface ScheduleSetExtendRespDto {
+  setsExtended: number;
+  newStartDate: string;
+  newEndDate: string;
+  schedulesCreated: number;
+  extendedSets: ScheduleSetExtendedSetDto[];
+}
+
 export interface AdminDriverInfoDto {
   id?: number;
   fullName?: string;
@@ -2218,6 +2240,16 @@ export class AdminApiService {
   generateSchedulesFromSet(id: number): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(
       `${this.baseUrl}/private/schedule-set/${id}/generate-schedules`,
+      {}
+    );
+  }
+
+  // OBRS-1172: extends every active schedule set by one more period (no
+  // request body) — the "extend the window" button the OBRS-1159 low-timetable
+  // email now points operators at instead of the DB runbook.
+  extendTimetableWindow(): Observable<ResponseAPI<ScheduleSetExtendRespDto>> {
+    return this.postRequest<ScheduleSetExtendRespDto>(
+      `${this.baseUrl}/private/schedule-set/extend`,
       {}
     );
   }

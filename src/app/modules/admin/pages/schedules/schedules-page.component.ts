@@ -12,10 +12,12 @@ import {
   AdminVehicleTypeDto,
   CreateScheduleSetPayload,
   ScheduleCapacityCarryForward,
+  ScheduleSetExtendRespDto,
   toScheduleCapacityCarryForward,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { extractApiErrorCode } from '../../../../shared/lib/api-error-code';
 import {
   ScheduleDeleteModalMode,
   resolveScheduleDeleteModalMode,
@@ -88,6 +90,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isGenerating = false;
+  // OBRS-1172: guards the "extend the timetable" button. The call is slow by
+  // design (creates ~9 sets x ~91 days of trips synchronously), so this both
+  // disables the button and gates the blocking overlay below.
+  protected isExtendingWindow = false;
   protected isEditMode = false;
   protected isScheduleItemEditMode = false;
   protected isEditDetailLoading = false;
@@ -720,6 +726,72 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       await this.alertService.error(message);
     } finally {
       this.isGenerating = false;
+    }
+  }
+
+  // OBRS-1172: one-press "extend the window" — every route at once, no body,
+  // no fields to fill in. The email OBRS-1159 sends operators at 06:00 now
+  // names this exact button, so EXTEND_WINDOW's translated text is pinned.
+  protected async extendTimetableWindow(): Promise<void> {
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('ADMIN.SCHEDULES.EXTEND_WINDOW_CONFIRM_TITLE'),
+      text: this.translate.instant('ADMIN.SCHEDULES.EXTEND_WINDOW_CONFIRM_TEXT'),
+      confirmButtonText: this.translate.instant('ADMIN.SCHEDULES.EXTEND_WINDOW_CONFIRM_BTN'),
+      cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.isExtendingWindow = true;
+    // OBRS-1172 AC: this request creates on the order of a thousand rows
+    // synchronously — the blocking overlay (not just the disabled button)
+    // keeps the operator from re-pressing or walking away mid-flight. No
+    // client timeout is set: it's a mutation, so error.interceptor's 30s
+    // idempotent-request ceiling never applies to it (GET/HEAD only).
+    this.alertService.showLoading(
+      this.translate.instant('ADMIN.SCHEDULES.EXTEND_WINDOW_LOADING')
+    );
+    try {
+      const response = await firstValueFrom(this.adminApiService.extendTimetableWindow());
+      this.alertService.hideLoading();
+      const result: ScheduleSetExtendRespDto | null = response?.data ?? null;
+      if (result) {
+        const params = {
+          setsExtended: result.setsExtended,
+          newStartDate: result.newStartDate,
+          newEndDate: result.newEndDate,
+          schedulesCreated: result.schedulesCreated,
+        };
+        // schedulesCreated===0 is a legitimate, informative answer (the window
+        // moved but every trip in it already existed) — its own message, not
+        // dressed up as a plain success and not hidden.
+        if (result.schedulesCreated === 0) {
+          await this.alertService.info(
+            this.translate.instant('ADMIN.SCHEDULES.EXTEND_WINDOW_NO_NEW_TRIPS', params)
+          );
+        } else {
+          await this.alertService.success(
+            this.translate.instant('ADMIN.SCHEDULES.EXTEND_WINDOW_SUCCESS', params)
+          );
+        }
+      }
+      await this.store.refresh();
+    } catch (error) {
+      this.alertService.hideLoading();
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.SCHEDULES.EXTEND_WINDOW_FAILED');
+      // SCHEDULE_SET_EXTEND_ALREADY_COVERED is the common, expected refusal
+      // (timetable already reaches past the booking window) — informative,
+      // not a scary failure, so it renders via info() rather than error().
+      if (extractApiErrorCode(error, null) === 'SCHEDULE_SET_EXTEND_ALREADY_COVERED') {
+        await this.alertService.info(message);
+      } else {
+        await this.alertService.error(message);
+      }
+    } finally {
+      this.isExtendingWindow = false;
     }
   }
 
