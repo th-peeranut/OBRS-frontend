@@ -127,11 +127,19 @@ test.describe('OBRS-1619 payee drill-down and CSV', () => {
     const dir = save(EVIDENCE_DIR);
     await page.screenshot({ path: path.join(dir, 'after-04-export-button.png'), fullPage: true });
 
-    const downloadPromise = page.waitForEvent('download', { timeout: 60_000 });
-    await page.locator('app-export-button button').first().click();
-    // The button opens a CSV / Excel menu; CSV is what AC2 is about.
-    await page.locator('.p-menuitem-link', { hasText: 'CSV' }).first().click();
-    const download = await downloadPromise;
+    // The selectors and the ordering below are OBRS-884's, verbatim, because this is the same
+    // control. A first draft of this test guessed `.p-menuitem-link` — the PrimeNG 17 class — and
+    // waited 60 s for a download that was never requested, because the menu item it was going to
+    // click does not exist under that name in PrimeNG 21.
+    await page.locator('app-export-button .export-button-trigger').first().click();
+    const csvItem = page.locator('.p-menu-item-label', { hasText: 'CSV' }).first();
+    await expect(csvItem).toBeVisible();
+
+    // Viewport-only, NOT fullPage: a fullPage screenshot scrolls the document and a PrimeNG popup
+    // menu closes on scroll, so the click below would land on a menu that is no longer there.
+    await page.screenshot({ path: path.join(dir, 'after-05-export-menu.png') });
+
+    const [download] = await Promise.all([page.waitForEvent('download'), csvItem.click()]);
 
     const saved = path.join(dir, 'obrs-1619-payee-spend.csv');
     await download.saveAs(saved);
