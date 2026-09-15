@@ -49,6 +49,16 @@
           {{ "MY_BOOKINGS.TRIP_TRACK.LAST_UPDATE" | translate: { time: v.timeText } }}
         </p>
       }
+      <!-- OBRS-1084: positional stops-remaining progress — LIVE/STALE only,
+      and only when the resolver could answer every field honestly. -->
+      @if (v.progress; as progress) {
+        <p class="trip-track-panel__progress">
+          {{ progress.headlineKey | translate: (progress.headlineParams || {}) }}
+        </p>
+        <p class="trip-track-panel__progress-count">
+          {{ progress.passedKey | translate: progress.passedParams }}
+        </p>
+      }
     } @else {
       <div class="trip-track-panel__state-body">
         @switch (v.state) {
