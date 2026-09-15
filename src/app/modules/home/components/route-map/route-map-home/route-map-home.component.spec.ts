@@ -1,6 +1,6 @@
 import { of, Subject, throwError } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NgZone, NO_ERRORS_SCHEMA } from '@angular/core';
 import { RouteMapHomeComponent } from './route-map-home.component';
 import {
   RouteListItem,
@@ -78,6 +78,9 @@ const mockActiveRoutes: RouteListItem[] = [
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyStub = any;
 
+/** NgZone stub that runs callbacks synchronously (tests don't need real zones). */
+const zoneStub = { run: <T>(fn: () => T): T => fn() } as unknown as NgZone;
+
 function createRouteMapServiceStub(overrides?: {
   getActiveRoutes?: () => unknown;
   getPickupDropoff?: (slug: string) => unknown;
@@ -114,12 +117,14 @@ function createBreakpointObserverStub(): AnyStub {
 function makeComponent(
   serviceStub: AnyStub,
   translateStub: AnyStub,
-  breakpointStub: AnyStub
+  breakpointStub: AnyStub,
+  zoneOverride: AnyStub = zoneStub
 ): RouteMapHomeComponent {
   return new RouteMapHomeComponent(
     serviceStub as RouteMapService,
     translateStub as TranslateService,
-    breakpointStub as BreakpointObserver
+    breakpointStub as BreakpointObserver,
+    zoneOverride as NgZone
   );
 }
 
@@ -612,6 +617,133 @@ function stopAt(order: number, slug: string): RouteStop {
     googleMapsUrl: null,
   };
 }
+
+function stopAtCoords(
+  order: number,
+  slug: string,
+  latitude: number,
+  longitude: number
+): RouteStop {
+  return { ...stopAt(order, slug), latitude, longitude };
+}
+
+// ── OBRS-1214: "use my location" moved up from route-map-panel ──────────────
+//
+// The button (and all of the geolocation/haversine/nearest-pickup logic behind
+// it) used to live on route-map-panel and reach the parent through its
+// `(userLocated)` output. It moved here so it can render on the pickup list —
+// which is the default tab, ahead of the still-gated map (OBRS-1211) — instead
+// of floating on a map that has not mounted yet.
+describe('RouteMapHomeComponent — use my location (OBRS-1214)', () => {
+  /**
+   * Two pickups far enough apart that a geolocation fix near one is
+   * unambiguously "nearest": `pickup-far` sits ~780km away (lat 20 vs 13.1),
+   * `pickup-near` sits exactly on the stubbed position. `dropoff-between` sits
+   * at an order the new (nearer) pickup invalidates — order 3 vs pickup-near's
+   * order 5 — so it exercises the AC#2 refreshDropoffOptions() cascade;
+   * `dropoff-after` (order 9) must survive that same narrowing.
+   */
+  const geoResponse: RoutePickupDropoffResponse = {
+    status: 'success',
+    message: 'ok',
+    data: {
+      route: mockPickupDropoffResponse.data.route,
+      pickup: [
+        stopAtCoords(1, 'pickup-far', 20.0, 100.0),
+        stopAtCoords(5, 'pickup-near', 13.1, 100.1),
+      ],
+      dropoff: [
+        stopAt(3, 'dropoff-between'),
+        stopAt(9, 'dropoff-after'),
+      ],
+    },
+  };
+
+  function componentOnGeoRoute(): RouteMapHomeComponent {
+    const serviceStub = createRouteMapServiceStub({
+      getPickupDropoff: () => of(geoResponse),
+    });
+    const comp = makeComponent(
+      serviceStub,
+      createTranslateServiceStub(),
+      createBreakpointObserverStub()
+    );
+    comp.ngOnInit();
+    return comp;
+  }
+
+  function stubGeolocationSuccess(lat: number, lng: number): void {
+    const pos = { coords: { latitude: lat, longitude: lng } } as GeolocationPosition;
+    spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
+      (success: PositionCallback) => success(pos)
+    );
+  }
+
+  it('(a) sets pickupDistancesKm for every pickup with coordinates', () => {
+    const comp = componentOnGeoRoute();
+    stubGeolocationSuccess(13.1, 100.1);
+
+    comp.onUseMyLocation();
+
+    expect(comp.pickupDistancesKm).not.toBeNull();
+    expect(comp.pickupDistancesKm!['pickup-near']).toBeCloseTo(0, 1);
+    expect(comp.pickupDistancesKm!['pickup-far']).toBeGreaterThan(
+      comp.pickupDistancesKm!['pickup-near']
+    );
+  });
+
+  it('(b) auto-selects the nearest pickup', () => {
+    const comp = componentOnGeoRoute();
+    stubGeolocationSuccess(13.1, 100.1);
+
+    comp.onUseMyLocation();
+
+    expect(comp.selectedPickupSlug).toBe('pickup-near');
+    expect(comp.selectedPickupStop?.slug).toBe('pickup-near');
+  });
+
+  // AC#2: auto-selecting the nearer pickup must run the SAME drop-off
+  // narrowing a tapped pickup would (refreshDropoffOptions), including
+  // dropping an already-selected drop-off the move just invalidated.
+  it('(c) refreshDropoffOptions runs: an upstream drop-off is removed from the list and, if selected, cleared', () => {
+    const comp = componentOnGeoRoute();
+    comp.onDropoffStopSelected(
+      comp.dropoffStops.find((s) => s.slug === 'dropoff-between')!
+    );
+    expect(comp.selectedDropoffSlug).toBe('dropoff-between');
+
+    stubGeolocationSuccess(13.1, 100.1);
+    comp.onUseMyLocation();
+
+    expect(comp.dropoffStops.map((s) => s.slug)).toEqual(['dropoff-after']);
+    expect(comp.selectedDropoffSlug).toBeNull();
+    expect(comp.selectedDropoffStop).toBeNull();
+  });
+
+  it('(d) a PERMISSION_DENIED error sets locationError to "denied" and clears locating', () => {
+    const comp = componentOnGeoRoute();
+    const err = { code: 1, PERMISSION_DENIED: 1 } as GeolocationPositionError;
+    spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
+      (_s: PositionCallback, error?: PositionErrorCallback | null) => error?.(err)
+    );
+
+    comp.onUseMyLocation();
+
+    expect(comp.locationError).toBe('denied');
+    expect(comp.locating).toBeFalse();
+  });
+
+  // AC#3 at the unit level: this is the whole point of moving the button off
+  // the map — using it must never mount `<app-route-map-panel>`.
+  it('(e) mapRevealed stays false after locating', () => {
+    const comp = componentOnGeoRoute();
+    stubGeolocationSuccess(13.1, 100.1);
+
+    comp.onUseMyLocation();
+
+    expect(comp.mapRevealed).toBeFalse();
+  });
+});
 
 // ── OBRS-1211: gate the paid Google Maps JS load behind an explicit request ──
 //

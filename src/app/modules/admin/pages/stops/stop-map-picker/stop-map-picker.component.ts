@@ -91,8 +91,8 @@ export class StopMapPickerComponent implements OnInit, OnChanges, OnDestroy {
     this.authFailureUnsubscribe = onGoogleMapsAuthFailure(() => {
       // Fired from Google's externally loaded script, not from inside an Angular-zone-patched
       // API (unlike the script's own onload/callback) -- explicit zone.run so the flip is
-      // actually change-detected, same reasoning as useMyLocation()'s geolocation callbacks
-      // in route-map-panel.component.ts.
+      // actually change-detected, same reasoning as onUseMyLocation()'s geolocation callbacks
+      // in route-map-home.component.ts (OBRS-1214 moved it there from route-map-panel).
       this.zone.run(() => {
         this.mapsError = true;
       });

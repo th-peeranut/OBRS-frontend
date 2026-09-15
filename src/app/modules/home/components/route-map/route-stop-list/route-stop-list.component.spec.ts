@@ -75,6 +75,13 @@ describe('RouteStopListComponent', () => {
     const stop = makeStop(1, 'abc');
     expect(component.trackBySlug(0, stop)).toBe('abc');
   });
+
+  it('emits locateMeClicked when the locate-me button is clicked', () => {
+    let called = false;
+    component.locateMeClicked.subscribe(() => (called = true));
+    component.locateMeClicked.emit();
+    expect(called).toBeTrue();
+  });
 });
 
 /**
@@ -150,5 +157,89 @@ describe('RouteStopListComponent rendering', () => {
     fixture.detectChanges();
 
     expect(addressElements().length).toBe(2);
+  });
+});
+
+/**
+ * OBRS-1214. `showLocateMe` defaults to `false` so the "use my location"
+ * button stays off the dropoff list and the change-stop dialog
+ * (`confirmMode="per-side"`, neither of which binds this input) — that
+ * default is the whole of their protection, so a count-0 assertion pins it
+ * the same way the confirm-button test above pins "exactly one".
+ */
+describe('RouteStopListComponent — use my location (OBRS-1214)', () => {
+  let fixture: ComponentFixture<RouteStopListComponent>;
+
+  function locateBtn(): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('.locate-me-inline-btn');
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [RouteStopListComponent],
+      imports: [TranslateModule.forRoot()],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RouteStopListComponent);
+  });
+
+  it('showLocateMe=false (default) renders no locate-me button', () => {
+    fixture.detectChanges();
+    expect(locateBtn()).toBeNull();
+  });
+
+  it('showLocateMe=true renders the locate-me button', () => {
+    fixture.componentInstance.showLocateMe = true;
+    fixture.detectChanges();
+    expect(locateBtn()).not.toBeNull();
+  });
+
+  it('clicking the locate-me button emits locateMeClicked', () => {
+    fixture.componentInstance.showLocateMe = true;
+    fixture.detectChanges();
+    const spy = jasmine.createSpy('locateMeClicked');
+    fixture.componentInstance.locateMeClicked.subscribe(spy);
+
+    locateBtn()!.click();
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('locating=true disables the button and swaps the label to LOCATING', () => {
+    fixture.componentInstance.showLocateMe = true;
+    fixture.detectChanges();
+    expect(locateBtn()!.textContent).toContain('USE_MY_LOCATION');
+
+    fixture.componentInstance.locating = true;
+    fixture.detectChanges();
+
+    expect(locateBtn()!.disabled).toBeTrue();
+    expect(locateBtn()!.textContent).toContain('LOCATING');
+  });
+
+  it('locationError renders a different message for "denied" vs "unavailable"', () => {
+    fixture.componentInstance.showLocateMe = true;
+
+    fixture.componentInstance.locationError = 'denied';
+    fixture.detectChanges();
+    const deniedText = (fixture.nativeElement as HTMLElement).querySelector('.text-danger')!.textContent;
+    expect(deniedText).toContain('LOCATION_DENIED');
+
+    fixture.componentInstance.locationError = 'unavailable';
+    fixture.detectChanges();
+    const unavailableText = (fixture.nativeElement as HTMLElement).querySelector('.text-danger')!.textContent;
+    expect(unavailableText).toContain('LOCATION_UNAVAILABLE');
+
+    expect(deniedText).not.toEqual(unavailableText);
+  });
+
+  it('no locationError renders no error message', () => {
+    fixture.componentInstance.showLocateMe = true;
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.text-danger')
+    ).toBeNull();
   });
 });
