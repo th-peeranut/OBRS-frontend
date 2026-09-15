@@ -382,7 +382,6 @@ export interface InspectionItemReorderReqDto {
 export interface AdminRouteDto {
   id: number;
   slug: string;
-  code?: string;
   status?: string | AdminStatusDto;
   createdAt?: string;
   updatedAt?: string;
