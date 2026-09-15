@@ -1,3 +1,10 @@
+<!-- OBRS-1727 AC-1 (owner ruling A, 2026-09-14): FIRST on the page, above the
+per-round settlements. This is the queue waiting on the owner's decision; the
+rounds and the cash boxes below it are history being read back. It renders
+nothing at all when there is nothing pending, so a page with an empty queue
+looks exactly as it did before. -->
+<app-expense-approval-section></app-expense-approval-section>
+
 @if (isRefreshing && !isLoading) {
   <section class="admin-page-intro">
     <div>

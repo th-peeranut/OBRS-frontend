@@ -563,7 +563,7 @@
       "PROMOTIONS": "促销活动",
       "USABILITY_REPORTS": "可用性报告",
       "REPORTS": "报告",
-      "SETTLEMENTS": "分账结算",
+      "SETTLEMENTS": "结算与审批",
       "EOD_SALES_REPORT": "每日销售报告",
       "REMINDER_CONFIG": "提醒时间设置",
       "JUMP_SEAT_CONFIG": "加座设置",
@@ -592,7 +592,7 @@
       "NOTIFICATION_MESSAGES": "通知消息",
       "OPERATIONS_CONFIG": "运营",
       "MAINTENANCE_WINDOW": "维护时间公告",
-      "EXPENSE_BATCH": "批量录入单据"
+      "EXPENSE_BATCH": "录入单据"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1101,6 +1101,9 @@
       "RETURN_BOARDING_STOP_NONE": "未设置 — 由系统选择最近且确实可售回程票的站点",
       "LATITUDE": "纬度",
       "LONGITUDE": "经度",
+      "MAP_LABEL": "在地图上标记",
+      "MAP_HINT": "拖动图钉或点击地图以设置位置",
+      "MAP_UNAVAILABLE": "地图暂不可用 - 请使用上方的纬度/经度字段",
       "NAME": "显示名称",
       "LANDMARK": "标志物",
       "LANDMARK_PLACEHOLDER": "例如：在手机店旁边",
@@ -1570,7 +1573,7 @@
       }
     },
     "SETTLEMENTS": {
-      "SUBTITLE": "确认每个已发车班次的现金与收入交接。",
+      "SUBTITLE": "审批员工提交的费用，并确认每个已发车班次的现金与收入交接。",
       "TABLE_TITLE": "待结算班次",
       "COL": {
         "ROUTE": "路线",
@@ -2199,7 +2202,7 @@
     },
     "EXPENSES": {
       "SUBTITLE": "记录车辆及中央费用",
-      "PAGE_PURPOSE": "本页是每辆车及中央费用的账本，用于计算每车利润和作为税务凭证。现场支付的费用（燃气/燃油、通行证费、司机工资、维修）由售票员在「我的现金箱」中记录，并在此等待车主审批。",
+      "PAGE_PURPOSE": "本页是每辆车及中央费用的账本，用于计算每车利润和作为税务凭证。现场支付的费用（燃气/燃油、司机工资、维修）由员工在「司机结算」中记录，然后在「结算与审批」页等待车主审批。",
       "TABLE_TITLE": "费用列表",
       "APPROVAL": {
         "TITLE": "待审批",
@@ -2209,7 +2212,10 @@
         "REJECT_CONFIRM": "确认退回",
         "REASON_LABEL": "退回原因",
         "REASON_PLACEHOLDER": "例如：收据不属于这辆车",
-        "FAILED": "无法记录此审批结果，请重试。"
+        "FAILED": "无法记录此审批结果，请重试。",
+        "GAS_BILL": "汽油账单",
+        "EXPAND_ARIA": "查看汽油账单的分类明细",
+        "COLLAPSE_ARIA": "隐藏汽油账单的分类明细"
       },
       "ADD": "添加费用",
       "ADD_TITLE": "记录新费用",
@@ -2322,9 +2328,9 @@
       "SOURCE_FIELD": "系统自动生成（来自司机）",
       "FIELD_ROW_IMMUTABLE": "此条目由系统根据司机的现金记录自动生成，无法在此编辑或删除。",
       "BATCH": {
-        "OPEN": "批量录入单据",
-        "SUBTITLE": "一次保存整批单据",
-        "PAGE_PURPOSE": "修理厂往往一次交来多张单据。在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
+        "OPEN": "录入单据",
+        "SUBTITLE": "一次保存多张单据",
+        "PAGE_PURPOSE": "同时送来的多张单据，在这里全部录入后只需保存一次 —— 要么全部入账，要么一张也不入，不会只存一半。",
         "BILL_N": "第 {{n}} 张",
         "BILL_TOTAL": "本张合计",
         "BILL_COUNT": "{{n}} 张单据",
@@ -2336,9 +2342,9 @@
         "GARAGE": "修理厂",
         "LINE_DESCRIPTION": "明细（按修理厂所写）",
         "LINE_PART": "配件 / 工时",
-        "SAVE_ENVELOPE": "保存整批",
+        "SAVE_ENVELOPE": "全部保存",
         "SAVED": "已录入 {{n}} 张单据",
-        "OWNER_HINT": "本批单据均计入该运营商。",
+        "OWNER_HINT": "此次保存的单据均计入该运营商。",
         "BILL_DATE": "单据日期",
         "VEHICLE": "车牌",
         "CATEGORY": "类别",

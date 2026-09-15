@@ -421,46 +421,18 @@ describe('StaffApiService', () => {
   // instead of `/driver-cash/schedules/{id}/...`) and no spec caught it
   // because none asserted the literal URL — every existing driver-cash spec
   // mocked `StaffApiService` itself rather than exercising the real HTTP
-  // call. These lock the CORRECTED paths (verified against
-  // `DriverCashController.java:30,36,45,55`) so a future regression fails
-  // here, at the HTTP layer, not just in a jasmine-spy fixture.
+  // call. These lock the CORRECTED paths so a future regression fails here, at
+  // the HTTP layer, not just in a jasmine-spy fixture.
+  //
+  // OBRS-1727 AC-3: the four per-schedule POSTs this block also locked
+  // (advance / per-head / expense-paid / repair-bill) went with the panel that
+  // called them and with the backend endpoints behind them.
   describe('OBRS-960 driver cash ledger — correct URL segment order', () => {
     it('getDriverCashDay() GETs /private/driver-cash/schedules/{id}/day', () => {
       service.getDriverCashDay(42).subscribe((res) => expect(res).toBeTruthy());
 
       const req = httpMock.expectOne(`${environment.apiUrl}/api/private/driver-cash/schedules/42/day`);
       expect(req.request.method).toBe('GET');
-      req.flush({ code: 200, message: 'OK', data: null });
-    });
-
-    it('postDriverCashAdvance() POSTs to /private/driver-cash/schedules/{id}/advance', () => {
-      service.postDriverCashAdvance(42, { amount: '100.00' }).subscribe((res) => expect(res).toBeTruthy());
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/driver-cash/schedules/42/advance`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ amount: '100.00' });
-      req.flush({ code: 200, message: 'OK', data: null });
-    });
-
-    it('postDriverCashPerHead() POSTs to /private/driver-cash/schedules/{id}/per-head', () => {
-      service
-        .postDriverCashPerHead(42, { stopId: 1, headCount: 3 })
-        .subscribe((res) => expect(res).toBeTruthy());
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/driver-cash/schedules/42/per-head`);
-      expect(req.request.method).toBe('POST');
-      req.flush({ code: 200, message: 'OK', data: null });
-    });
-
-    it('postDriverCashExpense() POSTs to /private/driver-cash/schedules/{id}/expense-paid (NOT /expense)', () => {
-      service
-        .postDriverCashExpense(42, { category: 'FUEL', amount: '50.00' })
-        .subscribe((res) => expect(res).toBeTruthy());
-
-      const req = httpMock.expectOne(
-        `${environment.apiUrl}/api/private/driver-cash/schedules/42/expense-paid`
-      );
-      expect(req.request.method).toBe('POST');
       req.flush({ code: 200, message: 'OK', data: null });
     });
 

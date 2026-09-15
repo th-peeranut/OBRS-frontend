@@ -563,7 +563,7 @@
       "PROMOTIONS": "Promotions",
       "USABILITY_REPORTS": "Usability Reports",
       "REPORTS": "Reports",
-      "SETTLEMENTS": "Settlements",
+      "SETTLEMENTS": "Settlements & approvals",
       "EOD_SALES_REPORT": "End-of-day Sales",
       "REMINDER_CONFIG": "Reminder Timing",
       "JUMP_SEAT_CONFIG": "Jump Seat",
@@ -592,7 +592,7 @@
       "NOTIFICATION_MESSAGES": "Notification Messages",
       "OPERATIONS_CONFIG": "Operations",
       "MAINTENANCE_WINDOW": "Maintenance window",
-      "EXPENSE_BATCH": "Envelope of bills"
+      "EXPENSE_BATCH": "Record bills"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -1101,6 +1101,9 @@
       "RETURN_BOARDING_STOP_NONE": "Not set — let the system pick the nearest stop that can actually sell a ticket back",
       "LATITUDE": "Latitude",
       "LONGITUDE": "Longitude",
+      "MAP_LABEL": "Pin on map",
+      "MAP_HINT": "Drag the pin or click the map to set the location",
+      "MAP_UNAVAILABLE": "Map unavailable - use the latitude/longitude fields above",
       "NAME": "Display name",
       "LANDMARK": "Landmark",
       "LANDMARK_PLACEHOLDER": "e.g. next to the mobile phone shop",
@@ -1570,7 +1573,7 @@
       }
     },
     "SETTLEMENTS": {
-      "SUBTITLE": "Confirm cash and revenue handover for each departed round.",
+      "SUBTITLE": "Approve the expenses staff sent in, and confirm cash and revenue handover for each departed round.",
       "TABLE_TITLE": "Rounds Pending Settlement",
       "COL": {
         "ROUTE": "Route",
@@ -2199,7 +2202,7 @@
     },
     "EXPENSES": {
       "SUBTITLE": "Log vehicle and central expenses",
-      "PAGE_PURPOSE": "This is the cost book for each vehicle and for central costs — it feeds the per-vehicle profit report and your tax evidence. Costs paid in the field (fuel/gas, permit fee, driver wage, repairs) are recorded by the salesperson from \"My cash box\" and wait here for the owner to approve.",
+      "PAGE_PURPOSE": "This is the cost book for each vehicle and for central costs — it feeds the per-vehicle profit report and your tax evidence. Costs paid in the field (fuel/gas, driver wage, repairs) are recorded by staff on \"Driver Settlement\" and then wait on \"Settlements & approvals\" for the owner to approve.",
       "TABLE_TITLE": "Expense List",
       "APPROVAL": {
         "TITLE": "Awaiting approval",
@@ -2209,7 +2212,10 @@
         "REJECT_CONFIRM": "Confirm rejection",
         "REASON_LABEL": "Reason for rejecting",
         "REASON_PLACEHOLDER": "e.g. the receipt is for a different vehicle",
-        "FAILED": "Unable to record this verdict. Please try again."
+        "FAILED": "Unable to record this verdict. Please try again.",
+        "GAS_BILL": "Gas bill",
+        "EXPAND_ARIA": "Show the gas bill's category breakdown",
+        "COLLAPSE_ARIA": "Hide the gas bill's category breakdown"
       },
       "ADD": "Add Expense",
       "ADD_TITLE": "Record New Expense",
@@ -2322,9 +2328,9 @@
       "SOURCE_FIELD": "Auto-generated (from driver)",
       "FIELD_ROW_IMMUTABLE": "This row was recorded automatically from a driver’s cash entry. It cannot be edited or deleted here.",
       "BATCH": {
-        "OPEN": "Take an envelope of bills",
-        "SUBTITLE": "Record a whole stack of bills in one save",
-        "PAGE_PURPOSE": "A garage hands over several bills at once. Enter them all here and press save once — either every bill is recorded or none of them is, never half a stack.",
+        "OPEN": "Record bills",
+        "SUBTITLE": "Record several bills in one save",
+        "PAGE_PURPOSE": "Bills that arrive together. Enter them all here and press save once — either every bill is recorded or none of them is, never half of them.",
         "BILL_N": "Bill {{n}}",
         "BILL_TOTAL": "This bill",
         "BILL_COUNT": "{{n}} bills",
@@ -2336,9 +2342,9 @@
         "GARAGE": "Garage",
         "LINE_DESCRIPTION": "Line (as the garage wrote it)",
         "LINE_PART": "Part / labour",
-        "SAVE_ENVELOPE": "Save the whole envelope",
+        "SAVE_ENVELOPE": "Save them all",
         "SAVED": "{{n}} bills recorded",
-        "OWNER_HINT": "Every bill in this envelope is filed against this operator.",
+        "OWNER_HINT": "Every bill saved here is filed against this operator.",
         "BILL_DATE": "Bill date",
         "VEHICLE": "Plate",
         "CATEGORY": "Category",

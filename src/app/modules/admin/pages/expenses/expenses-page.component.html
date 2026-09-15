@@ -72,8 +72,10 @@
 
   @if (canWrite) {
     <!-- OBRS-1576: two ways in, because there are two things to record. This one is one loose bill;
-    `รับซองบิล` beside it is the stack a garage hands over at once. Neither replaces the other — a
-    single slip through the envelope page is more clicks, not fewer. -->
+    `บันทึกบิล` beside it takes several that arrived together in one save. Neither replaces the
+    other — a single slip through the multi-bill page is more clicks, not fewer.
+    OBRS-1728 renamed that button from `รับซองบิล`, on the owner's reasoning that a bill need not
+    come from a garage and the name need not say how many there are. -->
     <button
       type="button"
       class="admin-btn admin-btn-primary ms-auto"
@@ -93,13 +95,6 @@
     </button>
   }
 </section>
-
-<app-expense-approval-lane
-  [rows]="pendingExpenses"
-  [busyId]="approvalBusyId"
-  (approve)="onApproveExpense($event)"
-  (reject)="onRejectExpense($event)"
-></app-expense-approval-lane>
 
 <app-expense-list-table
   [rows]="filteredExpenses"

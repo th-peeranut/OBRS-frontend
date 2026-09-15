@@ -151,6 +151,22 @@
                      [disabled]="!canEditPhysical" />
             </div>
 
+            <!-- OBRS-1030: pin-drop picker, mirroring the two number boxes above rather than
+                 replacing them (AC2). Placed as its own full-width field so it is never
+                 cramped between the two narrow lat/lng boxes. -->
+            <div class="admin-form-field full">
+              <label class="admin-form-label">{{ 'ADMIN.STOPS.MAP_LABEL' | translate }}</label>
+              <app-stop-map-picker
+                [latitude]="selected.latitude"
+                [longitude]="selected.longitude"
+                [apiKey]="mapsApiKey"
+                [mapId]="mapsMapId"
+                [fallbackCenter]="mapFallbackCenter"
+                [disabled]="!canEditPhysical"
+                (coordinatesPicked)="selected.latitude = $event.latitude; selected.longitude = $event.longitude"
+              ></app-stop-map-picker>
+            </div>
+
             <!-- PER-LOCALE CONTENT — all three locales always rendered, including the ones
                  with nothing in them yet. A form that showed only the locales already filled
                  would hide exactly the boxes an owner opened this screen to fill. -->

@@ -116,7 +116,8 @@ const STAFF_UNLISTED: string[] = ['boarding'];
 
 /** Admin has no detail-page routes today; kept for symmetry and future ones. */
 const ADMIN_LINKED_FROM: Record<string, string> = {
-  // OBRS-1576: expenses-page.component.html — the `รับซองบิล` button beside `เพิ่มค่าใช้จ่าย`.
+  // OBRS-1576: expenses-page.component.html — the `บันทึกบิล` button beside `เพิ่มค่าใช้จ่าย`
+  // (OBRS-1728 renamed it from `รับซองบิล`).
   // Deliberately NOT a nav entry: it is one of two ways to record the same thing, and a second
   // top-level "expenses" item in the sidebar would read as a second cost book.
   'expenses/batch': 'expenses',

@@ -13,16 +13,11 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { StaffApiService } from '../../../../services/staff/staff-api.service';
-import { AlertService } from '../../../../shared/services/alert.service';
-import { extractApiErrorCode, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { DriverCashDayStore } from './driver-cash-day.store';
 import { DriverCashDayRespDto } from '../../../../shared/interfaces/driver-cash.interface';
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
 import { bangkokInstantMs } from '../../../../shared/lib/api-date-time';
-import { DriverCashRepairBillItemReqDto } from '../../../../shared/interfaces/driver-cash.interface';
-
-type DriverCashAction = 'advance' | 'perHead' | 'expense' | 'repair' | null;
 
 /** Local calendar date as `yyyy-MM-dd`, the same hand-rolled shape
  * `SettlementsPageComponent#toDateInputValue` and `BookingTrendStore` use — a
@@ -61,61 +56,23 @@ function toBangkokBusinessDate(value: string | null | undefined): string | null 
   return year && month && day ? `${year}-${month}-${day}` : null;
 }
 
-// OBRS-1389 — OBRS-1368 put the sales-point 403 behind these two forms as well,
-// and both were still `{}`, so the refusal read as GENERIC's "please try again".
-// They do NOT share the expense sentence: the backend runs a DIFFERENT gate per
-// form (`DriverCashService#assertCallerSalesPointOrThrow` weighs the round's
-// ORIGIN, `#assertCallerSalesPointCoversStopOrThrow` weighs the STOP the request
-// names) behind one wire code, so per-head gets its own key — telling a
-// salesperson the round is not theirs, when what is not theirs is the stop they
-// picked, is the same unfollowable advice this card exists to remove.
-// OBRS-1579 — all three forms resolve their box through
-// `DriverCashService#getOpenDayOrThrow`, so all three can be refused with
-// DRIVER_CASH_DAY_ALREADY_RETURNED. GENERIC's "please try again" is advice
-// that cannot work here: the box is signed off and no retry will re-open it.
-// This is the one message that names who has to do what next.
-const ADVANCE_ERROR_KEYS: Record<string, string> = {
-  DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN',
-  DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
-};
-const PER_HEAD_ERROR_KEYS: Record<string, string> = {
-  DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.PER_HEAD_SALES_POINT_FORBIDDEN',
-  DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
-};
-// OBRS-1356 — the ONE expense code worth naming: the generic message would
-// leave a salesperson retrying a wage entry that cannot succeed until the
-// owner sets the rate, and only this text says who has to do what.
-// OBRS-1361 — the same argument, one refusal later. The sales-point 403 is
-// PERMANENT for this round, and GENERIC's "please try again" is advice that
-// cannot work: measured in the AFTER capture before this line existed, the
-// backend's own Thai message never reached the screen.
-const EXPENSE_ERROR_KEYS: Record<string, string> = {
-  DRIVER_WAGE_RATE_NOT_CONFIGURED: 'STAFF.DRIVER_CASH.ERROR.WAGE_RATE_NOT_CONFIGURED',
-  DRIVER_CASH_SALES_POINT_FORBIDDEN: 'STAFF.DRIVER_CASH.ERROR.SALES_POINT_FORBIDDEN',
-  DRIVER_CASH_DAY_ALREADY_RETURNED: 'STAFF.DRIVER_CASH.ERROR.DAY_ALREADY_RETURNED',
-};
-
-/** OBRS-1630 — the repair bill shares every gate `expense-paid` has, so it shares those messages,
- * and adds the one refusal only it can make. */
-const REPAIR_ERROR_KEYS: Record<string, string> = {
-  ...EXPENSE_ERROR_KEYS,
-  DRIVER_CASH_REPAIR_BILL_ZERO_TOTAL: 'STAFF.DRIVER_CASH.ERROR.REPAIR_BILL_ZERO_TOTAL',
-};
-
 /**
  * OBRS-960 — smart: `/staff/boarding/:scheduleId`'s per-round cash panel.
  * Owns `DriverCashDayStore` (component-scoped, `providers: []` below — see
- * that store's doc comment) and the 3 POSTs. Rendered by
+ * that store's doc comment). Rendered by
  * `BoardingListPageComponent` ONLY when the viewer is a salesperson —
  * drivers reach the same route but never handle cash (view-selection, not
  * authorization, mirroring `BoardingEntryPageComponent`'s
  * `isDriver`/`isSalesperson` idiom).
  *
- * No stop-list fetch of its own: `perHeadRates[]` on the day response
- * already carries every stop the per-head form needs (id/name/rate/
- * configured) — `shared/components/boarding-list/boarding-list.store.ts`
- * exposes only the flat boarding manifest (no stops), and the card is
- * explicit that this response covers it, so nothing was added.
+ * OBRS-1727 AC-3 (owner ruling D2, 2026-09-14) — READ-ONLY since that card.
+ * The four entry forms it used to host (advance · per-head · expense · repair)
+ * were removed together, not one at a time: each had already gained a second
+ * home (advance + per-head on the round's "ส่งยอด" tab, OBRS-1755; expense +
+ * repair on `/staff/settlement`, OBRS-1756), and every amount that can be typed
+ * in two places can be typed twice — OBRS-1880 is that bug, already on the
+ * board. What stays is the pair of totals the salesperson has to read at the
+ * vehicle: the driver's box and their own.
  *
  * Sticky context strip: reuses the OBRS-312/ADR-0023 pattern EXACTLY —
  * measures `.admin-topbar`'s live rendered height at runtime and binds this
@@ -152,13 +109,6 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
    */
   protected scheduleBusinessDate: string | null = null;
 
-  protected activeAction: DriverCashAction = null;
-  protected isSubmitting = false;
-  protected advanceError: string | null = null;
-  protected perHeadError: string | null = null;
-  protected expenseError: string | null = null;
-  protected repairError: string | null = null;
-
   protected topOffsetPx = 0;
 
   private resizeDebounceHandle: ReturnType<typeof setTimeout> | null = null;
@@ -167,7 +117,6 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
   constructor(
     private readonly store: DriverCashDayStore,
     private readonly staffApiService: StaffApiService,
-    private readonly alertService: AlertService,
     private readonly translate: TranslateService,
     private readonly elementRef: ElementRef<HTMLElement>
   ) {}
@@ -196,7 +145,6 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
     if (changes['scheduleId'] && !changes['scheduleId'].firstChange && this.scheduleId) {
       this.store.setScheduleId(this.scheduleId);
       void this.store.refresh();
-      this.activeAction = null;
       this.scheduleBusinessDate = null;
       this.loadScheduleBusinessDate();
     }
@@ -227,31 +175,6 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
   private measureTopOffset(): void {
     const topbar = document.querySelector('.admin-topbar');
     this.topOffsetPx = topbar instanceof HTMLElement ? topbar.getBoundingClientRect().height : 0;
-  }
-
-  // ── Accordion — one open at a time, no modal/navigation (card) ───────────
-
-  protected toggleAction(action: Exclude<DriverCashAction, null>): void {
-    this.activeAction = this.activeAction === action ? null : action;
-  }
-
-  protected isActionOpen(action: Exclude<DriverCashAction, null>): boolean {
-    return this.activeAction === action;
-  }
-
-  /**
-   * The per-head form's stop list comes off a day response's `perHeadRates`.
-   * `day` (the driver's) stays the primary source so nothing changes for a
-   * round that already has an advance on it; `myDay` is the fallback for the
-   * case OBRS-1073 created, where the salesperson has recorded heads but this
-   * round has no driver-side entry yet.
-   *
-   * ⚠️ Pre-existing and untouched by this card: when NEITHER day exists yet
-   * the list is empty, because the only source of stops on this screen is a
-   * day response that does not exist until the first entry.
-   */
-  protected get perHeadRates() {
-    return this.day?.perHeadRates ?? this.myDay?.perHeadRates ?? [];
   }
 
   /**
@@ -303,101 +226,6 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
       });
   }
 
-  // ── Submit handlers — never reset the form on failure (card) ─────────────
-
-  protected onSubmitAdvance(payload: { amount: string }): void {
-    if (this.isSubmitting) return;
-    this.isSubmitting = true;
-    this.advanceError = null;
-    this.staffApiService
-      .postDriverCashAdvance(this.scheduleId, payload)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (resp) => this.onActionSuccess(resp?.data ?? null),
-        error: (err: unknown) => {
-          this.isSubmitting = false;
-          this.advanceError = this.mapError(err, ADVANCE_ERROR_KEYS);
-        },
-      });
-  }
-
-  protected onSubmitPerHead(payload: { stopId: number; headCount: number }): void {
-    if (this.isSubmitting) return;
-    this.isSubmitting = true;
-    this.perHeadError = null;
-    this.staffApiService
-      .postDriverCashPerHead(this.scheduleId, payload)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        // NOT onActionSuccess: this response is the CALLER's day, not the
-        // driver's, so it must not overwrite `day`. See `myDay`.
-        next: (resp) => this.onPerHeadSuccess(resp?.data ?? null),
-        error: (err: unknown) => {
-          this.isSubmitting = false;
-          this.perHeadError = this.mapError(err, PER_HEAD_ERROR_KEYS);
-        },
-      });
-  }
-
-  protected onSubmitExpense(payload: {
-    category: string;
-    amount?: string;
-    note?: string;
-    categoryOtherLabel?: string;
-  }): void {
-    if (this.isSubmitting) return;
-    this.isSubmitting = true;
-    this.expenseError = null;
-    this.staffApiService
-      .postDriverCashExpense(this.scheduleId, payload)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (resp) => this.onActionSuccess(resp?.data ?? null),
-        error: (err: unknown) => {
-          this.isSubmitting = false;
-          this.expenseError = this.mapError(err, EXPENSE_ERROR_KEYS);
-        },
-      });
-  }
-
-  /**
-   * OBRS-1630 — the repair bill. Lands on the SAME box as `onSubmitExpense`, through the same
-   * `EXPENSE_PAID` entry, so the response refreshes `day` exactly as the other field costs do and
-   * `เงินสดสุทธิ` moves by the bill's total with no change to the formula.
-   */
-  protected onSubmitRepairBill(payload: {
-    payeeId: number;
-    items: DriverCashRepairBillItemReqDto[];
-  }): void {
-    if (this.isSubmitting) return;
-    this.isSubmitting = true;
-    this.repairError = null;
-    this.staffApiService
-      .postDriverCashRepairBill(this.scheduleId, payload)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (resp) => this.onActionSuccess(resp?.data ?? null),
-        error: (err: unknown) => {
-          this.isSubmitting = false;
-          this.repairError = this.mapError(err, REPAIR_ERROR_KEYS);
-        },
-      });
-  }
-
-  /**
-   * OBRS-1073 — the per-head POST answers about the caller's OWN day. The
-   * driver's day is genuinely unchanged by it (his ledger no longer carries
-   * this fee at all), so there is nothing to refetch — the panel simply gains
-   * a second, clearly-labelled figure.
-   */
-  private onPerHeadSuccess(data: DriverCashDayRespDto | null): void {
-    this.isSubmitting = false;
-    if (data) {
-      this.myDay = data;
-    }
-    this.activeAction = null;
-  }
-
   /**
    * OBRS-1073 — without this the salesperson's own box existed ONLY inside the
    * browser tab that recorded a head: `myDay` was set from the per-head POST
@@ -420,26 +248,6 @@ export class DriverCashPanelComponent implements OnInit, OnChanges, AfterViewIni
       });
   }
 
-  private onActionSuccess(data: DriverCashDayRespDto | null): void {
-    this.isSubmitting = false;
-    if (data) {
-      // OBRS-1639: `set`, not `mutate` — this store's `T` includes null, so
-      // on the round's first entry the cache holds a loaded `null` and
-      // `mutate` would no-op, leaving the totals strip blank until a reload.
-      this.store.set(data);
-    }
-    // Collapse back to the totals view — the whole point of the accordion
-    // is one tap in, one tap done, at the vehicle.
-    this.activeAction = null;
-  }
-
-  private mapError(error: unknown, knownCodes: Record<string, string>): string {
-    const code = extractApiErrorCode(error, null);
-    const key = mapApiErrorCode(code, knownCodes, 'STAFF.DRIVER_CASH.ERROR.GENERIC');
-    const message = this.translate.instant(key);
-    this.alertService.error(message);
-    return message;
-  }
   /** OBRS-1592: driver-cash printed these decimal strings raw — no unit, no
    * thousand separator, `.00` on every whole amount. Staff money is money. */
   protected formatMoney(value: number | string | null | undefined): string {
