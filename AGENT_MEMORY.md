@@ -4833,3 +4833,24 @@ means those two numbers must be equal, and 5.14 was the wrong one (recomputed fr
 relative-luminance formula off `#0772a2`/`#ffffff`: 5.33:1, matching `variables.scss:25`). Does
 not change the AA verdict either way — text is well clear of 4.5:1 at both figures — so this is a
 documentation-accuracy fix, not a compliance one.
+
+## OBRS-1075 scrutinize self-fix (.github/workflows/ci.yml, 2026-09-15)
+
+AC-6 asked for a "must-catch" test proving `scripts/inject-build-info.mjs` fails loudly (no
+fallback) instead of silently. The dev wrote `scripts/check-inject-build-info.mjs` in the same
+shape as `check-netlify-ignore.mjs`/`check-station-load-surface.mjs` — 4 cases including a
+positive control and a stale-output-must-be-removed case — wired it as `npm run test:build-info`,
+and it passes when run by hand (verified: all 4 cases hold, including a real
+`fatal: not a git repository` failure path).
+
+What was missing: every sibling `check-*.mjs` gate this one is modeled after
+(`test:netlify-ignore`, `test:station-surface`, `test:i18n-cache`, `test:marker-position`,
+`test:money-format`, ...) has a corresponding step in `.github/workflows/ci.yml`; this one did
+not — `grep -rn "build-info" .github/` was 0 hits before the fix. A self-test that only runs when
+someone remembers to run it by hand is not a gate; it is the exact "green because nobody ran it"
+shape DEV-GOTCHAS warns about for zero-assertion tests, just one layer up (zero-*executions*
+instead of zero-assertions). Added a step after "Money format gate" running
+`npm run test:build-info`, same house style (comment explaining why this needs a gate at all).
+Re-ran the script standalone after the CI edit — still green — and re-verified `footer.component.spec.ts`'s
+AC-5 assertion actually goes red by mutating the template's `translate:` params to literal
+`v0.0.0`/`0000000` and running `ng test --include`, then reverted.
