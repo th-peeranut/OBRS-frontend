@@ -46,13 +46,9 @@ import {
   ParcelClaimRespDto,
 } from '../../shared/interfaces/parcel-claim.interface';
 import {
-  DriverCashAdvanceReqDto,
   DriverCashDayContextRespDto,
   DriverCashDayRespDto,
   DriverCashDaySettleReqDto,
-  DriverCashExpenseReqDto,
-  DriverCashRepairBillReqDto,
-  DriverCashPerHeadReqDto,
   PerHeadEarningsGranularity,
   PerHeadEarningsRespDto,
 } from '../../shared/interfaces/driver-cash.interface';
@@ -1227,60 +1223,10 @@ export class StaffApiService {
     );
   }
 
-  postDriverCashAdvance(
-    scheduleId: number,
-    payload: DriverCashAdvanceReqDto
-  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
-    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
-      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/advance`,
-      payload,
-      { context: this.driverCashActionContext }
-    );
-  }
-
-  postDriverCashPerHead(
-    scheduleId: number,
-    payload: DriverCashPerHeadReqDto
-  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
-    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
-      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/per-head`,
-      payload,
-      { context: this.driverCashActionContext }
-    );
-  }
-
-  /** ⚠️ CORRECTED — the segment is `expense-paid`, not `expense`. */
-  postDriverCashExpense(
-    scheduleId: number,
-    payload: DriverCashExpenseReqDto
-  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
-    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
-      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/expense-paid`,
-      payload,
-      { context: this.driverCashActionContext }
-    );
-  }
-
-  /**
-   * OBRS-1630 — the repair bill, the one field cost that does not fit `expense-paid`'s single
-   * amount. Same `driverCashActionContext` as its sibling: this is a money write at the vehicle and
-   * it must not be swallowed by a generic interceptor banner.
-   */
-  postDriverCashRepairBill(
-    scheduleId: number,
-    payload: DriverCashRepairBillReqDto
-  ): Observable<ResponseAPI<DriverCashDayRespDto>> {
-    return this.http.post<ResponseAPI<DriverCashDayRespDto>>(
-      `${environment.apiUrl}/api/private/driver-cash/schedules/${scheduleId}/repair-bill`,
-      payload,
-      { context: this.driverCashActionContext }
-    );
-  }
-
   // ── OBRS-1756: the day-level settlement screen (/staff/settlement) ──
-  // The two per-schedule POSTs above STAY — /staff/boarding/:scheduleId still
-  // uses them, and this pair is a second entry point onto the same box, not a
-  // replacement for them.
+  // OBRS-1727 AC-3: the four per-schedule POSTs that used to sit above this
+  // line are gone with the panel that called them — this pair, plus the round's
+  // "ส่งยอด" tab (OBRS-1755), is now the ONLY way onto the box.
 
   /**
    * OBRS-1756 — one round trip for the whole screen: the rounds that (vehicle,

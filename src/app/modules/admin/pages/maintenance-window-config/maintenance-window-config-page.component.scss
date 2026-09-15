@@ -1,0 +1,14 @@
+@import "../../../../../styles/variables.scss";
+
+:host {
+  display: block;
+}
+
+// design-system.md §5, same one-line override reminder-config carries and for the
+// same reason: new/touched inputs use the single pill shape, scoped to this
+// template so existing pages keep the shared default. Everything else
+// (.admin-card / .admin-field / .admin-error / .admin-btn-*) is themed globally
+// in admin-theme.scss, dark mode included.
+.admin-field {
+  border-radius: $radius-pill;
+}

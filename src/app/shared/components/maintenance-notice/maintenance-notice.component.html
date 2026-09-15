@@ -1,0 +1,30 @@
+<!-- OBRS-1902: rendered only while an announced maintenance window has not yet ended. No window
+(the ordinary case) means no element at all, not `display: none` - see the component, and
+booking-closed-notice before it, for why that distinction is the one the spec asserts. -->
+@if (notice$ | async; as vm) {
+  <div
+    class="maintenance-notice"
+    role="region"
+    [attr.aria-label]="'MAINTENANCE_NOTICE.ARIA_LABEL' | translate"
+    >
+    <!-- Decorative only: the sentence beside it already says the site is going down. -->
+    <span class="maintenance-notice__icon" aria-hidden="true">🛠️</span>
+    <p class="maintenance-notice__text">
+      <span class="maintenance-notice__title">
+        @if (vm.started) {
+          {{ 'MAINTENANCE_NOTICE.IN_PROGRESS' | translate: { end: (vm.window.endAt | date: 'HH:mm') } }}
+        } @else {
+          {{ 'MAINTENANCE_NOTICE.COUNTDOWN' | translate: {
+              minutes: vm.minutesUntilStart,
+              start: (vm.window.startAt | date: 'HH:mm'),
+              end: (vm.window.endAt | date: 'HH:mm')
+            } }}
+        }
+      </span>
+      <span class="maintenance-notice__body">{{ message(vm) }}</span>
+      @if (paymentLocked$ | async) {
+        <span class="maintenance-notice__payment">{{ 'MAINTENANCE_NOTICE.PAYMENT_LOCKED' | translate }}</span>
+      }
+    </p>
+  </div>
+}

@@ -1,0 +1,20 @@
+@import "../../../../../../styles/variables.scss";
+
+// OBRS-1030: same host-display fix route-map-panel.component.scss carries (OBRS-775) — an
+// undeclared `:host` renders `display: inline`, which cannot correctly contain the block-level
+// map/placeholder below it.
+:host {
+  display: block;
+}
+
+.stop-map-picker-map {
+  border-radius: $radius-lg;
+  overflow: hidden;
+}
+
+.stop-map-picker-placeholder {
+  height: 280px;
+  background: $secondary-lightgrey;
+  border: 1px solid $secondary-light-blue;
+  border-radius: $radius-lg;
+}

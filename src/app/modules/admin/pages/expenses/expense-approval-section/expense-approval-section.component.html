@@ -1,0 +1,6 @@
+<app-expense-approval-lane
+  [rows]="pendingExpenses"
+  [busyId]="approvalBusyId"
+  (approve)="onApproveExpense($event)"
+  (reject)="onRejectExpense($event)"
+></app-expense-approval-lane>

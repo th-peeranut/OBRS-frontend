@@ -14,3 +14,22 @@
 .expense-reject-row > td {
   background: var(--admin-surface-soft);
 }
+
+// OBRS-1891: SETTLE_BILL member breakdown — the same "Expandable per-row
+// detail" recipe as EodSalesReportPageComponent's .eod-report-detail-row /
+// .eod-report-method-list (design-system.md), reused rather than re-derived.
+.expense-approval-detail-row > td {
+  background: var(--admin-surface-soft);
+  padding: 10px 14px;
+}
+
+.expense-approval-member-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.expense-approval-member-chip {
+  color: var(--admin-muted);
+  font-size: 0.85rem;
+}

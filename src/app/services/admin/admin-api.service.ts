@@ -1246,6 +1246,22 @@ export interface AdminExpenseDto {
   receiptFileRef?: string | null;
 }
 
+/**
+ * OBRS-1891: what `GET /private/expenses/pending` returns now — a salesperson's one field
+ * submission (a gas bill: fuel + toll + driver wage + parking, `groupType: 'SETTLE_BILL'`, keyed
+ * by `settleId`) folds every `AdminExpenseDto` row it produced into one group, instead of the
+ * owner seeing five unrelated rows from one bill. `SINGLE` is the pre-OBRS-1891 shape unchanged —
+ * one expense, `settleId: null`, `expenses.length === 1`.
+ */
+export interface PendingExpenseGroupDto {
+  groupType: 'SETTLE_BILL' | 'SINGLE';
+  settleId: number | null;
+  totalAmount: number;
+  expenseDate: string;
+  vehicleId: number | null;
+  expenses: AdminExpenseDto[];
+}
+
 /** OBRS-845: `GET /private/expenses/{id}/receipt/url` 200 body. `url` is a short-lived SIGNED
  * URL into the private receipt bucket — fetch it ON DEMAND at the moment of viewing and never
  * cache/store it (it expires; default `expiresInSeconds` is 300). */
@@ -1300,6 +1316,13 @@ export interface CreateExpensePayload {
    * payee is not on record, which every row written before this card is. */
   payeeId: number | null;
   note: string | null;
+  /**
+   * OBRS-1588: the odometer the garage wrote on the bill, or `null` when it wrote none — which the
+   * owner ruled on 2026-08-23 is the normal case, not an omission. On a REPAIR bill whose lines name
+   * parts, this is what moves the vehicle's maintenance plans; see `updatedPlans` on the batch
+   * response for what came of it.
+   */
+  odometerKm?: number | null;
   /** OBRS-1374: the bill's lines. `[]` means "this bill has no breakdown", which is the
    * normal case and is accepted unchanged. When lines ARE sent their amounts must sum to
    * `amount`, or the server answers 400 `EXPENSE_ITEMS_TOTAL_MISMATCH` - the modal blocks that
@@ -1321,10 +1344,30 @@ export interface CreateExpenseBatchPayload {
   bills: CreateExpensePayload[];
 }
 
+/**
+ * OBRS-1588: one maintenance plan a just-saved bill moved.
+ *
+ * <p>The owner ruled on 2026-09-13 that the plan write is silent — no confirm box per bill, which
+ * would undo the very clicking OBRS-1576's envelope screen removed — but that it must not be
+ * invisible. This is what the ONE post-save summary is built from.
+ */
+export interface MaintenancePlanTouchDto {
+  planId: number;
+  vehicleId: number;
+  /** The registry name, e.g. `ยางหน้า` — what the owner recognises. `null` only for a plan whose
+   * registry row has gone, which the summary renders as the plan id rather than as a blank. */
+  partName: string | null;
+  lastDoneKm: number;
+  /** ISO date, taken from the BILL, not from today. */
+  lastDoneDate: string;
+}
+
 /** OBRS-1576: `POST /api/private/expenses/batch` 201 body — the ids it created, in the order the
- * bills were sent. */
+ * bills were sent. OBRS-1588 added `updatedPlans`, which is always present and `[]` when nothing
+ * moved: an absent key would make the screen unable to tell "nothing moved" from "older server". */
 export interface CreateExpenseBatchRespDto {
   expenseIds: number[];
+  updatedPlans: MaintenancePlanTouchDto[];
 }
 
 /**
@@ -2940,8 +2983,8 @@ export class AdminApiService {
     );
   }
 
-  getPendingExpenses(): Observable<ResponseAPI<AdminExpenseDto[]>> {
-    return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses/pending`);
+  getPendingExpenses(): Observable<ResponseAPI<PendingExpenseGroupDto[]>> {
+    return this.getRequest<PendingExpenseGroupDto[]>(`${this.baseUrl}/private/expenses/pending`);
   }
 
   approveExpense(id: number): Observable<ResponseAPI<unknown>> {
@@ -2951,6 +2994,19 @@ export class AdminApiService {
   /** The reason is required by the backend — a bounced row must say why. */
   rejectExpense(id: number, rejectionReason: string): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/${id}/reject`, {
+      rejectionReason,
+    });
+  }
+
+  /** OBRS-1891: the whole-bill counterpart to `approveExpense`/`rejectExpense` above — rules on
+   * every `AdminExpenseDto` a `SETTLE_BILL` group folds together, in one call, keyed by `settleId`
+   * rather than an individual expense id. */
+  approveExpenseSettle(settleId: number): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/settles/${settleId}/approve`, {});
+  }
+
+  rejectExpenseSettle(settleId: number, rejectionReason: string): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/settles/${settleId}/reject`, {
       rejectionReason,
     });
   }
@@ -3236,6 +3292,32 @@ export class AdminApiService {
     );
   }
 
+  // ── OBRS-1902: owner settings — scheduled maintenance window ──────────────
+
+  /** `null` data is the ordinary answer: it means nothing is scheduled. */
+  getMaintenanceWindow(): Observable<ResponseAPI<MaintenanceWindowConfigDto | null>> {
+    return this.getRequest<MaintenanceWindowConfigDto | null>(
+      `${this.baseUrl}/private/admin/configs/maintenance-window`
+    );
+  }
+
+  updateMaintenanceWindow(
+    payload: MaintenanceWindowConfigReqDto
+  ): Observable<ResponseAPI<MaintenanceWindowConfigDto | null>> {
+    return this.putRequest<MaintenanceWindowConfigDto | null>(
+      `${this.baseUrl}/private/admin/configs/maintenance-window`,
+      payload
+    );
+  }
+
+  /** Cancels an announcement that has not happened yet. A window that simply
+   * ended needs no call at all — the public read stops serving it on its own. */
+  cancelMaintenanceWindow(): Observable<ResponseAPI<MaintenanceWindowConfigDto | null>> {
+    return this.deleteRequest<MaintenanceWindowConfigDto | null>(
+      `${this.baseUrl}/private/admin/configs/maintenance-window`
+    );
+  }
+
   // ── OBRS-960: parcel-share monthly totals (/admin/reports) ───────────────
 
   getParcelShareMonthly(
@@ -3465,6 +3547,32 @@ export interface OwnerOperationsConfigDto {
 export type OperationsConfigReqDto = Omit<
   OwnerOperationsConfigDto,
   `${string}Overridden`
+>;
+
+/** `GET`/`PUT`/`DELETE /api/private/admin/configs/maintenance-window` — OBRS-1902.
+ *
+ * One document, not five dials: the backend stores it as a single json config
+ * row because a start with no message, or an end with no start, is a broken
+ * announcement rather than a partial one (MaintenanceWindowDto on that side). */
+export interface MaintenanceWindowConfigDto {
+  /** ISO-8601 instant the site is expected to go down. */
+  startAt: string;
+  /** ISO-8601 instant it is expected back. Past this, the public endpoint stops
+   * serving the announcement without anyone clearing the row. */
+  endAt: string;
+  /** Minutes before `startAt` that the pay button stops accepting payments —
+   * the owner's ruling of 2026-09-14. */
+  paymentLockMinutesBefore: number;
+  messageTh: string;
+  messageEn: string;
+  /** Derived by the backend: `startAt` minus the lock lead. Read-only here. */
+  paymentLockedFrom: string;
+}
+
+/** The PUT body — everything but the derived lock instant. */
+export type MaintenanceWindowConfigReqDto = Omit<
+  MaintenanceWindowConfigDto,
+  'paymentLockedFrom'
 >;
 
 /** One row of `GET /api/private/owner/parcel-share/monthly` — OBRS-960. */

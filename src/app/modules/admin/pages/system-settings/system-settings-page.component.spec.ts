@@ -101,6 +101,11 @@ const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   // controller's getCurrentOwnerId() (/private/owner/configs/operations) no
   // longer refuses ADMIN outright.
   operations: ['admin', 'owner'],
+  // OBRS-1902: another NEW tab, never a standalone route - same frozen-literal
+  // discipline. ['admin','owner'] because the backend guard is hasRole('OWNER')
+  // (ROLE_GRANTS admits ADMIN); there is nothing here to owner-scope later
+  // either - one deployment serves every operator.
+  'maintenance-window': ['admin', 'owner'],
 };
 
 describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {

@@ -82,11 +82,8 @@ import { CounterCancelModalComponent } from './pages/counter-cancel/counter-canc
 
 // OBRS-960 — driver cash ledger panel (/staff/boarding/:scheduleId).
 import { DriverCashPanelComponent } from './components/driver-cash-panel/driver-cash-panel.component';
-import { DriverCashRepairFormComponent } from './components/driver-cash-panel/driver-cash-repair-form/driver-cash-repair-form.component';
 import { DriverCashDaySummaryComponent } from './components/driver-cash-panel/driver-cash-day-summary/driver-cash-day-summary.component';
 import { DriverCashAdvanceFormComponent } from './components/driver-cash-panel/driver-cash-advance-form/driver-cash-advance-form.component';
-import { DriverCashPerHeadFormComponent } from './components/driver-cash-panel/driver-cash-per-head-form/driver-cash-per-head-form.component';
-import { DriverCashExpenseFormComponent } from './components/driver-cash-panel/driver-cash-expense-form/driver-cash-expense-form.component';
 
 // OBRS-1755 — the 4th tab of /staff/sell (ส่งยอด).
 import { StaffRemittanceTabComponent } from './components/staff-remittance-tab/staff-remittance-tab.component';
@@ -324,11 +321,8 @@ export const staffRoutes: Routes = [
     CounterCancelResultListComponent,
     CounterCancelModalComponent,
     DriverCashPanelComponent,
-    DriverCashRepairFormComponent,
     DriverCashDaySummaryComponent,
     DriverCashAdvanceFormComponent,
-    DriverCashPerHeadFormComponent,
-    DriverCashExpenseFormComponent,
     StaffRemittanceTabComponent,
     MyEarningsPageComponent,
     DriverSettlementPageComponent,

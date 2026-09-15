@@ -2,6 +2,7 @@ import {
   AdminExpenseDto,
   AdminOwnerDto,
   AdminVehicleDto,
+  PendingExpenseGroupDto,
 } from '../../../../services/admin/admin-api.service';
 import {
   EXPENSE_CATEGORY_CODES,
@@ -13,6 +14,7 @@ import {
   vehicleIdentifier,
   vehiclePlateIdentifier,
   toDateControlValue,
+  toExpenseApprovalGroupRow,
   toExpenseCategoryDisplay,
   toExpenseCategoryOptions,
   toExpensePayload,
@@ -264,6 +266,84 @@ describe('expenses-page.mappers', () => {
     it('maps a null/absent receiptFileRef to hasReceipt: false', () => {
       expect(toExpenseRow({ ...dto, receiptFileRef: null }, [VAN], categoryOptions(), 'Central', 'th').hasReceipt).toBeFalse();
       expect(toExpenseRow(dto, [VAN], categoryOptions(), 'Central', 'th').hasReceipt).toBeFalse();
+    });
+  });
+
+  // OBRS-1891
+  describe('toExpenseApprovalGroupRow', () => {
+    const single: PendingExpenseGroupDto = {
+      groupType: 'SINGLE',
+      settleId: null,
+      totalAmount: 300,
+      expenseDate: '2026-09-14',
+      vehicleId: 1,
+      expenses: [
+        {
+          id: 42,
+          vehicleId: 1,
+          category: 'FUEL',
+          categoryOtherLabel: null,
+          amount: 300,
+          expenseDate: '2026-09-14',
+          note: 'เติมน้ำมัน',
+        },
+      ],
+    };
+
+    const bill: PendingExpenseGroupDto = {
+      groupType: 'SETTLE_BILL',
+      settleId: 9,
+      totalAmount: 900,
+      expenseDate: '2026-09-14',
+      vehicleId: 1,
+      expenses: [
+        { id: 101, vehicleId: 1, category: 'FUEL', categoryOtherLabel: null, amount: 500, expenseDate: '2026-09-14', note: '' },
+        {
+          id: 102,
+          vehicleId: 1,
+          category: 'DRIVER_WAGE',
+          categoryOtherLabel: null,
+          amount: 400,
+          expenseDate: '2026-09-14',
+          note: 'รอบเช้า',
+        },
+      ],
+    };
+
+    it('maps a SINGLE group to a row keyed by the expense id, unchanged from the pre-OBRS-1891 shape', () => {
+      const row = toExpenseApprovalGroupRow(single, [VAN], categoryOptions(), 'Central', 'Gas bill', 'th');
+      expect(row.groupType).toBe('SINGLE');
+      expect(row.actionKey).toBe('exp:42');
+      expect(row.settleId).toBeNull();
+      expect(row.expenseId).toBe(42);
+      expect(row.categoryDisplay).toBe('Fuel');
+      expect(row.totalAmount).toBe(300);
+      expect(row.note).toBe('เติมน้ำมัน');
+      expect(row.members).toEqual([]);
+    });
+
+    it('maps a SETTLE_BILL group to one row keyed by settleId, category fixed to the gas-bill label, and its members broken out for the expand detail', () => {
+      const row = toExpenseApprovalGroupRow(bill, [VAN], categoryOptions(), 'Central', 'Gas bill', 'th');
+      expect(row.groupType).toBe('SETTLE_BILL');
+      expect(row.actionKey).toBe('bill:9');
+      expect(row.settleId).toBe(9);
+      expect(row.expenseId).toBeNull();
+      expect(row.categoryDisplay).toBe('Gas bill');
+      expect(row.totalAmount).toBe(900);
+      expect(row.members).toEqual([
+        { categoryDisplay: 'Fuel', amount: 500, note: '' },
+        { categoryDisplay: 'Driver Wage', amount: 400, note: 'รอบเช้า' },
+      ]);
+    });
+
+    // A settleId and an expense id are different tables' primary keys and can share a number —
+    // the composite actionKey is what keeps a bill's busy/track state from aliasing an
+    // unrelated single expense with the same numeric id.
+    it('never lets a settleId collide with a same-numbered expense id', () => {
+      const collidingSingle: PendingExpenseGroupDto = { ...single, expenses: [{ ...single.expenses[0], id: 9 }] };
+      const billRow = toExpenseApprovalGroupRow(bill, [VAN], categoryOptions(), 'Central', 'Gas bill', 'th');
+      const singleRow = toExpenseApprovalGroupRow(collidingSingle, [VAN], categoryOptions(), 'Central', 'Gas bill', 'th');
+      expect(billRow.actionKey).not.toBe(singleRow.actionKey);
     });
   });
 

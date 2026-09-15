@@ -145,6 +145,28 @@
         <label class="admin-form-label">{{ 'ADMIN.EXPENSES.BATCH.PAID_BY' | translate }}</label>
         <input class="admin-field" formControlName="paidBy" maxlength="255" />
       </div>
+
+      <!-- AC2: LAST, and with no `*`. The garage writes the odometer in the middle of the item
+      table on the paper bill and nothing in the web form could hold it, so it was typed and lost.
+      It sits after every required field on purpose: an optional number must not stand between the
+      owner and the fields that decide whether the bill saves at all. -->
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.BATCH.ODOMETER' | translate }}</label>
+        <input
+          class="admin-field"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          step="1"
+          formControlName="odometerKm"
+          [attr.data-testid]="'bill-card-odometer-' + index"
+        />
+        @if (isControlInvalid('odometerKm')) {
+          <small class="admin-error">{{ 'ADMIN.EXPENSES.BATCH.ODOMETER_INVALID' | translate }}</small>
+        } @else {
+          <small class="admin-hint">{{ 'ADMIN.EXPENSES.BATCH.ODOMETER_HINT' | translate }}</small>
+        }
+      </div>
       }
     </div>
 
