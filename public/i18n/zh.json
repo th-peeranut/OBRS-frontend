@@ -1714,7 +1714,12 @@
           "SUCCESS": "司机现金日已标记为已归还。",
           "ALREADY_RETURNED": "该日已完成归还。",
           "PARCEL_CLAWBACK": "包裹分成追回（已含在上方金额中）",
-          "PER_HEAD_PAY": "今日所得人头费（已在班次结算中扣除，不计入上方金额）"
+          "PER_HEAD_PAY": "今日所得人头费（已在班次结算中扣除，不计入上方金额）",
+          "RETURNED_AMOUNT": "实际归还金额",
+          "RETURNED_BY": "接收人",
+          "RETURNED_AT": "接收时间",
+          "DISCREPANCY_SHORT": "短缺",
+          "DISCREPANCY_OVER": "超出"
         },
         "REOPEN": {
           "ACTION_LABEL": "重新打开此现金盒",
