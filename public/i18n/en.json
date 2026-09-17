@@ -3238,7 +3238,11 @@
     "PICKUP_STOP": "Pickup",
     "DROPOFF_STOP": "Drop-off",
     "OPEN_IN_MAPS": "Open in Maps",
-    "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one."
+    "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one.",
+    "OPEN_SEATING_BANNER": {
+      "TITLE": "Every trip on this route boards by open seating",
+      "BODY": "No seat to pick when you book — just take any free seat once you are on board."
+    }
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
