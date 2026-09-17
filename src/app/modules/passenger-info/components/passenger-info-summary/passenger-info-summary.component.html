@@ -380,9 +380,11 @@
           <!-- Promo code (OBRS-109 / #37): instant preview against the client-side
           subtotal above; only a confirmed-applied code is ever sent to the
           booking-submit call (see PassengerInfoComponent). -->
+          <!-- OBRS-1955: the disabled state is NOT isNextDisabled any more - see isFormIncomplete
+          on this component. -->
           <app-promo-code-field
             [amount]="sumFare(scheduleBooking?.schedule, (passengerInfo$ | async))"
-            [disabled]="isNextDisabled"
+            [disabled]="isFormIncomplete || isNextDisabled"
             (applied)="onPromoApplied($event)"
             (removed)="onPromoRemoved()"
           ></app-promo-code-field>

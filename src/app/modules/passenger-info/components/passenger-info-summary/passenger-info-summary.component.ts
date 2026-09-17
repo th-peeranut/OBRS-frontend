@@ -44,6 +44,14 @@ import {
 })
 export class PassengerInfoSummaryComponent {
   @Input() isNextDisabled = true;
+  /**
+   * OBRS-1955: the promo field used to hang off `isNextDisabled`, and that input stopped meaning
+   * "the form is incomplete" when the owner's decision made the Next button live. Without this
+   * second input, enabling Next would silently have enabled the promo field too — a change nobody
+   * asked for, and the one the customer-contrast gate caught: an ENABLED promo input exposes a
+   * border that has always been 1.35:1 on white, below the AA floor of 3.
+   */
+  @Input() isFormIncomplete = true;
   @Output() next = new EventEmitter<void>();
   @Output() back = new EventEmitter<void>();
   // OBRS-109 (#37): bubble the confirmed/removed promo code up to the page,

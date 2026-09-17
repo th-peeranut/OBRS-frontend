@@ -83,6 +83,7 @@
     different question from whether the form is complete. -->
     <app-passenger-info-summary
       [isNextDisabled]="isSubmitting"
+      [isFormIncomplete]="!isPassengerFormValid || !isBookerFormValid"
       (next)="onSubmitPassengerInfo()"
       (back)="onBack()"
       (promoApplied)="onPromoApplied($event)"

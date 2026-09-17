@@ -78,14 +78,13 @@ export class PassengerInfoComponent {
   @ViewChild(PassengerInfoSummaryComponent)
   passengerInfoSummaryComponent?: PassengerInfoSummaryComponent;
   /**
-   * OBRS-1955: these two no longer gate anything. `[isNextDisabled]` used to read them; the
-   * owner's decision this card was to stop letting the form's validity grey out the button and
-   * to explain the refusal on click instead.
-   *
-   * Kept rather than deleted, deliberately: removing them orphans `@Output() validityChange` and
-   * the `emitValidity()` plumbing behind it in BOTH child forms — a much larger removal, with its
-   * own specs, than the four lines it saves here. Whether that whole chain goes is the owner's
-   * call, not a side effect of this card. Nothing on this page reads them today.
+   * OBRS-1955: these no longer gate the Next button — the owner's decision this card was to stop
+   * letting the form's validity grey it out and to explain the refusal on click instead. They
+   * still gate the PROMO field, which `isNextDisabled` used to carry by accident: the summary's
+   * `[disabled]="isNextDisabled"` on `<app-promo-code-field>` meant that making Next live would
+   * have made the promo field live too. That is a change nobody asked for, and the
+   * customer-contrast gate caught it — an enabled promo input exposes a 1.35:1 border, under the
+   * AA floor of 3. `isFormIncomplete` keeps the two questions apart.
    */
   isPassengerFormValid = false;
   isBookerFormValid = false;
