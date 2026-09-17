@@ -16,6 +16,8 @@ import { takeUntil } from 'rxjs/operators';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { TITLE_OPTIONS } from '../../../../shared/constants/title-options';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
+import { trimmedRequiredValidator } from '../../../../shared/validators/trimmed-required.validator';
+import { trimmedLengthValidator } from '../../../../shared/validators/trimmed-length.validator';
 import {
   formatThaiMobile,
   separatorTolerantPattern,
@@ -56,28 +58,25 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
   createForm() {
     this.bookerForm = this.fb.group({
       title: [null],
-      firstName: ['', Validators.required],
-      middleName: [''],
-      lastName: ['', Validators.required],
+      // OBRS-1952: the rule the server has always enforced. `ContactReqDto` carries
+      // `@NotBlank @Size(min = 2, max = 50)` on these three, so a one-character surname
+      // passed `Validators.required` here and came back as a 400 whose only visible trace
+      // was the generic "ข้อมูลไม่ผ่านการตรวจสอบ" modal — no field named, nothing to fix.
+      // Trim-aware on both halves because the payload builder trims before sending.
+      // Same triple `account-page.component.ts` already uses for the profile's name fields.
+      firstName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
+      middleName: ['', [trimmedLengthValidator(2, 50)]],
+      lastName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
       // OBRS-455: the booking's SMS destination (it becomes contact_phone_snapshot), so it must be
       // a real Thai mobile — a landline here is a reminder/confirmation we pay for and the
       // customer never gets. Was /^0\d{9}$/, which accepted 02...; ContactReqDto now agrees.
       phoneNumber: ['', [Validators.required, separatorTolerantPattern(THAI_MOBILE_PATTERN)]],
-      // NOT a display-only field, despite the name. `gender` is this form's local
-      // name for the wire's `passengerType`: PassengerInfoComponent renames it at
-      // the payload boundary (normalizePassengerType) and the backend persists it
-      // on ticket.passenger_type_id + passenger_type_snapshot, whence it reaches
-      // the e-ticket and the confirmation email. An OBRS-628 audit grepped the
-      // backend for "gender", found nothing, and concluded the radios were dead
-      // and should be deleted under PDPA data minimisation - they are not.
+      // OBRS-1944: there is deliberately no `gender`/passengerType control on the BOOKER.
+      // The booker's value reached no consumer - buildContactPayload sends 7 fields and
+      // ContactReqDto has no column for it - so asking for it (monk/nun included, with no
+      // consent box beside it) breached data minimisation. The PASSENGER radios are a
+      // different field and are live; see passenger-info-form.component.ts.
       //
-      // OBRS-1357: still not dead, but no longer REQUIRED. What the OBRS-628 audit got wrong was
-      // that the field is unused; what it got right is that nothing in the system reads the value
-      // to decide anything - measured again on the shipped code, it drives no price, no seat
-      // allocation, no manifest, no report. A value that is only ever printed back at the person
-      // who typed it cannot carry a compulsory `*` under PDPA section 22, so leaving it blank is
-      // a legitimate answer and travels to the wire as null (see normalizePassengerType).
-      gender: [''],
       // OBRS-858 (ADR-0123 Decision 5): OPTIONAL, but still format-checked when filled.
       // OBRS-238 made it required because emailing the e-ticket was the only way a
       // customer ever saw it again — no address meant no ticket. OBRS-857 made the ticket
@@ -152,7 +151,10 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       // OBRS-691: the control may carry display dashes (regrouped on blur) —
       // every downstream consumer of this payload needs bare digits.
       phoneNumber: stripPhoneSeparators(raw.phoneNumber),
-      gender: raw.gender,
+      // OBRS-1944: the booker has no gender/status field any more. The shared
+      // PassengerInfo shape still declares one for the passenger rows, so this
+      // is a constant placeholder, not a value anyone reads.
+      gender: '',
       isSelectSeat: false,
       passengerSeat: '',
       email: raw.email,

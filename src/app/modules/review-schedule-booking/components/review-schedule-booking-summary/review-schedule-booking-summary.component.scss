@@ -106,13 +106,20 @@
   overflow-wrap: anywhere;
 }
 
+// OBRS-1948: the duration and the distance estimate now share one line, so the rank
+// between them has to be visible, not read. The duration is the deciding datum and keeps
+// the darker text token; the distance drops to $font-size-xs and stays $text-lightblack.
+// The step is made by DARKENING the duration, not by lightening the distance:
+// $text-lightblack is 4.60:1 on white, the lightest text token this palette has that
+// still clears AA, and customer-contrast-gate.spec.ts measures this page in a real
+// browser -- anything lighter is a new contrast defect, not a design choice.
 .body-subheader-text {
   font-size: $font-size-sm;
-  color: $text-lightblack;
+  color: $text-black;
 }
 
 .body-estimate-text {
-  font-size: $font-size-sm;
+  font-size: $font-size-xs;
   color: $text-lightblack;
 }
 
@@ -226,8 +233,15 @@
   }
 
   .subheader-text,
-  .body-subheader-text,
-  .body-estimate-text {
+  .body-subheader-text {
     font-size: 13px;
+  }
+
+  // OBRS-1948: NOT part of the 13px group -- at 13px it would sit level with the duration
+  // it qualifies and the rank would disappear at exactly the width where the card is
+  // tightest. 12px is $font-size-xs, the floor obrs-640-mobile-tap-typography.spec.ts
+  // enforces, so it can go no lower.
+  .body-estimate-text {
+    font-size: $font-size-xs;
   }
 }

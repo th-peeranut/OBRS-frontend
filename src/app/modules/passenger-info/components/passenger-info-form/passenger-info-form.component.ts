@@ -10,7 +10,6 @@ import {
   FormBuilder,
   FormControl,
   FormGroup,
-  Validators,
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -43,6 +42,8 @@ import { selectScheduleBooking } from '../../../../shared/stores/schedule-bookin
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { shareReplay } from 'rxjs/operators';
 import { MAX_PASSENGERS_PER_BOOKING, LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
+import { trimmedRequiredValidator } from '../../../../shared/validators/trimmed-required.validator';
+import { trimmedLengthValidator } from '../../../../shared/validators/trimmed-length.validator';
 import { isLowSeatCount } from '../../../../shared/lib/trip-format';
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
 import { ScheduleService } from '../../../../services/schedule/schedule.service';
@@ -642,12 +643,10 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       lastName: booker.lastName ?? '',
       // OBRS-691: display grouped, same as every other phone field at rest.
       phoneNumber: formatThaiMobile(booker.phoneNumber ?? ''),
-      gender: booker.gender ?? '',
-      // OBRS-1666: this overwrites the type, so it withdraws the consent given for the old one
-      // - exactly what onPassengerTypeChanged does on a radio click. patchValue leaves omitted
-      // controls alone, so without this line a tick given for MONK survives onto the booker's
-      // NUN and the box renders already ticked, which is not explicit consent.
-      passengerTypeConsent: false,
+      // OBRS-1944: `gender` is deliberately NOT copied - the booker form no longer has that
+      // field. patchValue leaves omitted controls alone, so the passenger keeps whatever type
+      // they chose in their own block, and `passengerTypeConsent` stays with it: this no longer
+      // overwrites the type, so there is nothing for it to withdraw (cf. onPassengerTypeChanged).
     });
     group.markAllAsTouched();
     this.emitValidity();
@@ -889,18 +888,29 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       useBookerInfo: [false],
       isAdult: [isAdult],
       title: [null],
-      firstName: ['', Validators.required],
-      middleName: [''],
-      lastName: ['', Validators.required],
+      // OBRS-1952: mirrors `PassengerReqDto`'s `@NotBlank @Size(min = 2, max = 50)`, the same
+      // way booker-info-form now mirrors `ContactReqDto`. Unlike the booker's,
+      // `buildPassengersPayload()` sends these RAW — it does not trim — so here the trim-aware
+      // rule is the stricter of the two rather than the matching one. Same rule on both forms on
+      // purpose: `applyBookerToPassenger()` copies the booker's values straight into this group,
+      // and a passenger rule looser than the booker's would make that copy the way past it.
+      firstName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
+      middleName: ['', [trimmedLengthValidator(2, 50)]],
+      lastName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
       // OBRS-455: NOT an SMS destination — every booking message goes to the booker's contact
       // phone, never to a per-passenger number — so this keeps the wider local rule while the
       // booker's field above was narrowed. Same regex as before, now named.
       phoneNumber: ['', [separatorTolerantPattern(THAI_LOCAL_PHONE_PATTERN)]],
-      // See booker-info-form: `gender` is the local name for the wire's
-      // `passengerType`, renamed at the payload boundary and persisted on the
-      // ticket. It also drives the seat-map colouring here. Not a dead field.
-      // OBRS-1357: optional now - see booker-info-form for why. The seat-map colouring is the only
-      // live consumer and it degrades to an uncoloured seat, which is what an unstated type is.
+      // `gender` is the local name for the wire's `passengerType`: buildPassengersPayload
+      // renames it at the payload boundary (normalizePassengerType) and the backend persists
+      // it on ticket.passenger_type_id + passenger_type_snapshot, whence it reaches the
+      // e-ticket and the confirmation email. It also drives the seat-map colouring here.
+      // NOT a dead field - an OBRS-628 audit grepped the backend for "gender", found nothing
+      // and nearly deleted these radios. OBRS-1944 removed the BOOKER's copy of them, which
+      // really did reach no consumer; this one is not that field.
+      // OBRS-1357: optional, not required. Nothing reads the value to decide anything (no price,
+      // no seat allocation, no manifest, no report), so it cannot carry a compulsory `*` under
+      // PDPA section 22; blank is a legitimate answer and travels to the wire as null.
       gender: [''],
       // OBRS-1666: explicit consent to hold this passenger's monk/nun status. Starts false and
       // is reset to false on every gender change (onPassengerTypeChanged) - a box that arrives

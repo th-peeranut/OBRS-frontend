@@ -50,8 +50,11 @@
   }
 }
 
+// OBRS-1948: the total outranks its own line items (.card-body) and the CTA. Its mobile
+// step at the bottom of this file is part of the same rule -- at <=768px .card-body and
+// .btn-confirm are both $font-size-base, so the total needs a step there too.
 .card-footer {
-  font-size: $font-size-md;
+  font-size: $font-size-xl;
   font-weight: bold;
 
   display: flex;
@@ -118,7 +121,7 @@ hr {
   }
 
   .card-footer {
-    font-size: $font-size-base;
+    font-size: $font-size-lg;
   }
 
   .btn-confirm {
