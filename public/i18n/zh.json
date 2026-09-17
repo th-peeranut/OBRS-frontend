@@ -3348,8 +3348,9 @@
       "EMAIL_HIDE": "隐藏邮箱",
       "MIDDLE_NAME_ADD": "添加中间名",
       "MIDDLE_NAME_HIDE": "隐藏中间名",
-      "PASSENGER_PHONE_ADD": "为该乘客添加电话号码",
-      "PASSENGER_PHONE_HIDE": "隐藏该乘客的电话号码"
+      "PASSENGER_PHONE_ADD": "添加乘客电话号码",
+      "PASSENGER_PHONE_HIDE": "隐藏乘客电话号码",
+      "PASSENGER_PHONE_HINT": "可不填 — 我们会联系订票人的号码。"
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "轮椅无障碍座位",

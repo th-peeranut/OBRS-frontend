@@ -128,18 +128,6 @@
                           </div>
                         }
                       </div>
-                      <!-- Middle name, when present -->
-                      <div class="col-12 col-md-6">
-                        <label for="middleName-{{ i }}">
-                          {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
-                        </label>
-                        <input
-                          class="form-control mt-1"
-                          id="middleName-{{ i }}"
-                          formControlName="middleName"
-                          autocomplete="section-passenger-{{ i }} additional-name"
-                          />
-                        </div>
                         <!-- Last name -->
                         <div class="col-12 col-md-6">
                           <label
@@ -176,6 +164,46 @@
                               </div>
                             }
                           </div>
+                          <!-- OBRS-1953: ชื่อกลาง carries no validator at all and is the same
+                          field the BOOKER hides behind `+ เพิ่มชื่อกลาง`, so it gets the same
+                          treatment here — one field, one rule, and a passenger row stops
+                          spending a half-row on it. Owner's call, 17 Sep 2026. -->
+                          <div class="col-12 optional-disclosure">
+                            <button
+                              type="button"
+                              class="btn btn-link p-0 optional-disclosure-toggle"
+                              id="middleName-disclosure-{{ i }}"
+                              [attr.aria-expanded]="isPassengerMiddleNameShown(i)"
+                              attr.aria-controls="middleName-field-{{ i }}"
+                              (click)="togglePassengerMiddleName(i)"
+                              >
+                              <i
+                                class="bi me-1"
+                                [class.bi-plus]="!isPassengerMiddleNameShown(i)"
+                                [class.bi-dash]="isPassengerMiddleNameShown(i)"
+                                aria-hidden="true"
+                              ></i>
+                              {{
+                              (isPassengerMiddleNameShown(i)
+                              ? "PASSENGER_INFO.FORM.MIDDLE_NAME_HIDE"
+                              : "PASSENGER_INFO.FORM.MIDDLE_NAME_ADD"
+                              ) | translate
+                              }}
+                            </button>
+                          </div>
+                          @if (isPassengerMiddleNameShown(i)) {
+                            <div class="col-12 col-md-6" id="middleName-field-{{ i }}">
+                              <label for="middleName-{{ i }}">
+                                {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
+                              </label>
+                              <input
+                                class="form-control mt-1"
+                                id="middleName-{{ i }}"
+                                formControlName="middleName"
+                                autocomplete="section-passenger-{{ i }} additional-name"
+                                />
+                            </div>
+                          }
                           <!-- OBRS-1953: this phone is OPTIONAL (the SMS destination is the
                           booker's number, not this one), so it sits behind a disclosure
                           link instead of carrying the same visual weight as the required
@@ -248,6 +276,13 @@
                                   }}
                                 </div>
                               }
+                              <!-- OBRS-1953: says what the field is actually for. Measured in
+                              BookingService.buildTicket — this number is never written to any
+                              ticket column, it only links the ticket to an existing member
+                              account, and every message goes to the BOOKER's number. -->
+                              <small class="text-muted d-block mt-1">
+                                {{ "PASSENGER_INFO.FORM.PASSENGER_PHONE_HINT" | translate }}
+                              </small>
                             </div>
                           }
                             <!-- Gender/status — OBRS-1357: optional, so no `*`, no error state and

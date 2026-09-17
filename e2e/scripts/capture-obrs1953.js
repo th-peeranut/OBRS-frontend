@@ -248,8 +248,13 @@ async function measureLink(page, selector) {
   });
 }
 
-const LINKS = ['#booker-email-disclosure', '#booker-middleName-disclosure', '#phoneNumber-disclosure-0'];
-const FIELDS = ['#booker-email', '#booker-middleName', '#phoneNumber-0'];
+const LINKS = [
+  '#booker-email-disclosure',
+  '#booker-middleName-disclosure',
+  '#middleName-disclosure-0',
+  '#phoneNumber-disclosure-0',
+];
+const FIELDS = ['#booker-email', '#booker-middleName', '#middleName-0', '#phoneNumber-0'];
 const REQUIRED = ['#booker-firstName', '#booker-lastName', '#booker-phoneNumber', '#firstName-0', '#lastName-0'];
 
 async function captureAfter(browser, viewport, name) {
@@ -301,11 +306,19 @@ async function captureAfter(browser, viewport, name) {
 
   // --- expanded ------------------------------------------------------------
   await page.locator('#booker-middleName-disclosure').click();
+  await page.locator('#middleName-disclosure-0').click();
   await page.locator('#phoneNumber-disclosure-0').click();
   await sleep(500);
   for (const sel of FIELDS) {
     if (!(await visible(page, sel))) throw new Error(`${TAG} ${name}: ${sel} still hidden after expanding`);
   }
+  // The hint is the whole point of the reworded link: the number is never stored on a
+  // ticket and nobody calls it, so the screen has to say who we DO contact.
+  const phoneHint = await page.locator('#phoneNumber-field-0 small').innerText().catch(() => '');
+  if (!phoneHint.includes('ผู้จอง')) {
+    throw new Error(`${TAG} ${name}: the passenger-phone hint does not name the booker — got ${JSON.stringify(phoneHint)}`);
+  }
+  report.passengerPhoneHint = phoneHint.trim();
   report.expandedAria = {};
   for (const sel of LINKS) {
     const m = await measureLink(page, sel);
@@ -344,11 +357,14 @@ async function captureAfter(browser, viewport, name) {
  */
 async function captureRestored(browser, viewport, name) {
   const { context, page } = await openPage(browser, viewport, [
-    passenger({ firstName: 'สมชาย', lastName: 'ใจดี', phoneNumber: '0898765432' }),
+    passenger({ firstName: 'สมชาย', middleName: 'กลาง', lastName: 'ใจดี', phoneNumber: '0898765432' }),
   ]);
 
   if (!(await visible(page, '#phoneNumber-0'))) {
     throw new Error(`${TAG} ${name}: a row restored WITH a number did not open its own section`);
+  }
+  if (!(await visible(page, '#middleName-0'))) {
+    throw new Error(`${TAG} ${name}: a row restored WITH a middle name did not open its own section`);
   }
   const shown = await page.inputValue('#phoneNumber-0');
   if (!shown.replace(/\D/g, '').includes('0898765432')) {

@@ -203,6 +203,10 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   // patches rows in place and so cannot shift these.
   private phoneDisclosure: OptionalFieldDisclosure[] = [];
 
+  /** Same, for the OPTIONAL middle name. Kept in its own array so a row can have one
+   *  section open and the other closed. */
+  private middleNameDisclosure: OptionalFieldDisclosure[] = [];
+
   scheduleFilter: Observable<ScheduleFilter>;
 
   constructor(
@@ -511,6 +515,23 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     this.phoneDisclosure[index] = !this.isPassengerPhoneShown(index);
   }
 
+  /**
+   * OBRS-1953: the passenger's middle name has no validator and never had one, exactly
+   * like the booker's — so it sits behind the same `+ เพิ่มชื่อกลาง` link rather than
+   * taking a half-row of its own on every passenger card. Same tri-state rule: a row
+   * that comes back from the store with a middle name in it opens itself.
+   */
+  isPassengerMiddleNameShown(index: number): boolean {
+    return isOptionalFieldShown(
+      this.middleNameDisclosure[index],
+      this.passengerData.at(index)?.get('middleName')?.value
+    );
+  }
+
+  togglePassengerMiddleName(index: number): void {
+    this.middleNameDisclosure[index] = !this.isPassengerMiddleNameShown(index);
+  }
+
   // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts,
   // scoped to ONE row of the passenger FormArray. buildPassengerInfoPayload()
   // below strips the dashes back out before the value reaches the store
@@ -539,6 +560,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     // OBRS-1953: removing a row from the MIDDLE shifts every later row's index, so the
     // disclosure flags have to move with them or row N+1 would inherit row N's state.
     this.phoneDisclosure.splice(index, 1);
+    this.middleNameDisclosure.splice(index, 1);
     this.clampActiveIndices();
     this.emitValidity();
   }
@@ -988,6 +1010,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     // keep their index; this just drops flags for rows that no longer exist. A row
     // added back later has no flag and derives its state from its value again.
     this.phoneDisclosure.length = passengers.length;
+    this.middleNameDisclosure.length = passengers.length;
 
     passengers.forEach((passenger, index) => {
       this.passengerData.at(index).patchValue({

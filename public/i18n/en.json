@@ -3348,8 +3348,9 @@
       "EMAIL_HIDE": "Hide email",
       "MIDDLE_NAME_ADD": "Add a middle name",
       "MIDDLE_NAME_HIDE": "Hide middle name",
-      "PASSENGER_PHONE_ADD": "Add a phone number for this passenger",
-      "PASSENGER_PHONE_HIDE": "Hide this passenger's phone number"
+      "PASSENGER_PHONE_ADD": "Add a passenger phone number",
+      "PASSENGER_PHONE_HIDE": "Hide passenger phone number",
+      "PASSENGER_PHONE_HINT": "Optional — we contact the booker's number instead."
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "Wheelchair accessible seat",
