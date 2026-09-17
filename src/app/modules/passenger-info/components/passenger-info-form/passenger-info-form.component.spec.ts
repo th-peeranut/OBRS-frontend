@@ -1036,3 +1036,69 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
     });
   });
 });
+
+// OBRS-1952: PassengerReqDto carries `@NotBlank @Size(min = 2, max = 50)` on the three name
+// fields; this form carried only `Validators.required`, so a one-character name submitted
+// cleanly and came back as a 400 the funnel could only show as a generic modal.
+describe('PassengerInfoFormComponent — name length parity with PassengerReqDto (OBRS-1952)', () => {
+  let component: PassengerInfoFormComponent;
+
+  beforeEach(() => {
+    component = new PassengerInfoFormComponent(
+      createStoreStub(),
+      createRouterStub(),
+      new FormBuilder(),
+      createTranslateStub(),
+      createScheduleServiceStub()
+    );
+    component.ngOnInit();
+    if (component.passengerData.length === 0) {
+      component.insertPassenger(true);
+    }
+    component.passengerData.at(0).patchValue({
+      firstName: 'Somchai',
+      lastName: 'Jaidee',
+    });
+  });
+
+  it('rejects a one-character surname instead of letting the server reject it', () => {
+    component.passengerData.at(0).get('lastName')?.setValue('T');
+
+    expect(component.passengerData.at(0).get('lastName')?.hasError('minlength')).toBeTrue();
+    expect(component.validateAndGetPassengerInfo()).toBeNull();
+  });
+
+  it('measures the TRIMMED value, because passenger-info.component trims before sending', () => {
+    component.passengerData.at(0).get('firstName')?.setValue(' T ');
+
+    expect(component.passengerData.at(0).get('firstName')?.hasError('minlength')).toBeTrue();
+  });
+
+  it('rejects a whitespace-only name, which `Validators.required` accepted', () => {
+    component.passengerData.at(0).get('firstName')?.setValue('   ');
+
+    expect(component.passengerData.at(0).get('firstName')?.hasError('required')).toBeTrue();
+  });
+
+  it('rejects a name longer than the 50 the column holds', () => {
+    component.passengerData.at(0).get('lastName')?.setValue('J'.repeat(51));
+
+    expect(component.passengerData.at(0).get('lastName')?.hasError('maxlength')).toBeTrue();
+  });
+
+  it('leaves the middle name optional, but length-checks it once it has a value', () => {
+    const middleName = component.passengerData.at(0).get('middleName');
+
+    middleName?.setValue('');
+    expect(middleName?.valid).toBeTrue();
+
+    middleName?.setValue('T');
+    expect(middleName?.hasError('minlength')).toBeTrue();
+  });
+
+  it('accepts the two-character name the server has always accepted', () => {
+    component.passengerData.at(0).get('lastName')?.setValue('Na');
+
+    expect(component.passengerData.at(0).get('lastName')?.valid).toBeTrue();
+  });
+});

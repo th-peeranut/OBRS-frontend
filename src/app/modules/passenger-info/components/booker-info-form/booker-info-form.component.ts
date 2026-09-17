@@ -16,6 +16,8 @@ import { takeUntil } from 'rxjs/operators';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { TITLE_OPTIONS } from '../../../../shared/constants/title-options';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
+import { trimmedRequiredValidator } from '../../../../shared/validators/trimmed-required.validator';
+import { trimmedLengthValidator } from '../../../../shared/validators/trimmed-length.validator';
 import {
   formatThaiMobile,
   separatorTolerantPattern,
@@ -56,9 +58,15 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
   createForm() {
     this.bookerForm = this.fb.group({
       title: [null],
-      firstName: ['', Validators.required],
-      middleName: [''],
-      lastName: ['', Validators.required],
+      // OBRS-1952: the rule the server has always enforced. `ContactReqDto` carries
+      // `@NotBlank @Size(min = 2, max = 50)` on these three, so a one-character surname
+      // passed `Validators.required` here and came back as a 400 whose only visible trace
+      // was the generic "ข้อมูลไม่ผ่านการตรวจสอบ" modal — no field named, nothing to fix.
+      // Trim-aware on both halves because the payload builder trims before sending.
+      // Same triple `account-page.component.ts` already uses for the profile's name fields.
+      firstName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
+      middleName: ['', [trimmedLengthValidator(2, 50)]],
+      lastName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
       // OBRS-455: the booking's SMS destination (it becomes contact_phone_snapshot), so it must be
       // a real Thai mobile — a landline here is a reminder/confirmation we pay for and the
       // customer never gets. Was /^0\d{9}$/, which accepted 02...; ContactReqDto now agrees.

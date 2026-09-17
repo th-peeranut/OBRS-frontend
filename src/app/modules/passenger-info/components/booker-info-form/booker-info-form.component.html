@@ -60,8 +60,11 @@
                   bookerForm.get('firstName')?.dirty)
               "
               />
+              <!-- OBRS-1952: one branch per rule. The single catch-all branch that used to sit
+              here printed "กรุณากรอกชื่อจริง" at a field that HAD a name in it, because the
+              length errors below did not exist yet and only `required` could fire. -->
               @if (
-                bookerForm.get('firstName')?.errors &&
+                bookerForm.get('firstName')?.hasError('required') &&
                 (bookerForm.get('firstName')?.touched ||
                 bookerForm.get('firstName')?.dirty)
                 ) {
@@ -71,10 +74,39 @@
                   {{ "PASSENGER_INFO.FORM.FIRST_NAME_REQUIRED" | translate }}
                 </div>
               }
+              @if (
+                bookerForm.get('firstName')?.hasError('minlength') &&
+                (bookerForm.get('firstName')?.touched ||
+                bookerForm.get('firstName')?.dirty)
+                ) {
+                <div
+                  class="text-error"
+                  >
+                  {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                </div>
+              }
+              @if (
+                bookerForm.get('firstName')?.hasError('maxlength') &&
+                (bookerForm.get('firstName')?.touched ||
+                bookerForm.get('firstName')?.dirty)
+                ) {
+                <div
+                  class="text-error"
+                  >
+                  {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                </div>
+              }
             </div>
             <!-- Middle name, when present -->
             <div class="col-12 col-md-6">
-              <label for="booker-middleName">
+              <label
+                for="booker-middleName"
+                [class.label-error]="
+                  bookerForm.get('middleName')?.errors &&
+                  (bookerForm.get('middleName')?.touched ||
+                    bookerForm.get('middleName')?.dirty)
+                "
+                >
                 {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
               </label>
               <input
@@ -82,7 +114,36 @@
                 id="booker-middleName"
                 formControlName="middleName"
                 autocomplete="additional-name"
+                [class.form-error]="
+                  bookerForm.get('middleName')?.errors &&
+                  (bookerForm.get('middleName')?.touched ||
+                    bookerForm.get('middleName')?.dirty)
+                "
                 />
+                <!-- OBRS-1952: still optional — blank stays valid and reaches the wire as null.
+                But once it HAS a value, `@Size(min = 2, max = 50)` applies to it too. -->
+                @if (
+                  bookerForm.get('middleName')?.hasError('minlength') &&
+                  (bookerForm.get('middleName')?.touched ||
+                  bookerForm.get('middleName')?.dirty)
+                  ) {
+                  <div
+                    class="text-error"
+                    >
+                    {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                  </div>
+                }
+                @if (
+                  bookerForm.get('middleName')?.hasError('maxlength') &&
+                  (bookerForm.get('middleName')?.touched ||
+                  bookerForm.get('middleName')?.dirty)
+                  ) {
+                  <div
+                    class="text-error"
+                    >
+                    {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                  </div>
+                }
               </div>
               <!-- Last name -->
               <div class="col-12 col-md-6">
@@ -109,7 +170,7 @@
               "
                   />
                   @if (
-                    bookerForm.get('lastName')?.errors &&
+                    bookerForm.get('lastName')?.hasError('required') &&
                     (bookerForm.get('lastName')?.touched ||
                     bookerForm.get('lastName')?.dirty)
                     ) {
@@ -117,6 +178,28 @@
                       class="text-error"
                       >
                       {{ "PASSENGER_INFO.FORM.LAST_NAME_REQUIRED" | translate }}
+                    </div>
+                  }
+                  @if (
+                    bookerForm.get('lastName')?.hasError('minlength') &&
+                    (bookerForm.get('lastName')?.touched ||
+                    bookerForm.get('lastName')?.dirty)
+                    ) {
+                    <div
+                      class="text-error"
+                      >
+                      {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                    </div>
+                  }
+                  @if (
+                    bookerForm.get('lastName')?.hasError('maxlength') &&
+                    (bookerForm.get('lastName')?.touched ||
+                    bookerForm.get('lastName')?.dirty)
+                    ) {
+                    <div
+                      class="text-error"
+                      >
+                      {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
                     </div>
                   }
                 </div>

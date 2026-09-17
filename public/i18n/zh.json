@@ -3313,6 +3313,8 @@
       "MIDDLE_NAME_OPTIONAL": "中间名（可选）",
       "LAST_NAME": "姓",
       "LAST_NAME_REQUIRED": "请输入您的姓",
+      "NAME_TOO_SHORT": "请至少输入 2 个字符",
+      "NAME_TOO_LONG": "请输入不超过 50 个字符",
       "PHONE_NUMBER": "手机号码",
       "PHONE_NUMBER_PLACEHOLDER": "请输入您的手机号码",
       "PHONE_NUMBER_REQUIRED": "请输入您的手机号码",
