@@ -44,7 +44,7 @@
     margin: $space-2xs 0;
     padding: $space-lg 16px;
     text-align: center;
-    font-size: 15px;
+    font-size: $font-size-sm;
     color: $text-softblack;
   }
 
@@ -85,7 +85,7 @@
        the sweep ever rendered an empty result. */
     &__hint {
       margin: 0;
-      font-size: 15px;
+      font-size: $font-size-sm;
       color: $text-softblack;
     }
 
@@ -125,14 +125,14 @@
 
     &__title {
       margin: 0;
-      font-size: 15px;
+      font-size: $font-size-base;
       font-weight: bold;
       color: $text-black;
     }
 
     &__body {
       margin: $space-2xs 0 0;
-      font-size: 15px;
+      font-size: $font-size-sm;
       color: $text-softblack;
     }
   }
@@ -165,14 +165,14 @@
 
     &__title {
       margin: 0;
-      font-size: 15px;
+      font-size: $font-size-base;
       font-weight: 600;
       color: $secondary-blue;
     }
 
     &__body {
       margin: $space-3xs 0 0;
-      font-size: 14px;
+      font-size: $font-size-sm;
       color: $text-black;
     }
   }

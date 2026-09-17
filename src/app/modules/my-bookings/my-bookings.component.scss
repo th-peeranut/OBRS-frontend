@@ -30,7 +30,7 @@
 
   h1 {
     margin: 0 0 6px;
-    font-size: 28px;
+    font-size: $font-size-2xl;
     font-weight: $font-weight-bold;
     color: $text-black;
   }
@@ -45,7 +45,7 @@
   // in the gate's eight pages to say so.
   p {
     margin: 0;
-    font-size: 15px;
+    font-size: $font-size-sm;
     color: $text-softblack;
   }
 }
@@ -200,7 +200,7 @@
 
   dd {
     margin: 0;
-    font-size: 15px;
+    font-size: $font-size-sm;
     color: $text-softblack;
     font-weight: $font-weight-semibold;
   }
@@ -482,7 +482,7 @@
 
   p {
     margin: 14px 0 18px;
-    font-size: 15px;
+    font-size: $font-size-sm;
     color: $text-lightblack;
   }
 }
