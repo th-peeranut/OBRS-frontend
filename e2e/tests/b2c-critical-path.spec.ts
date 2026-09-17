@@ -46,7 +46,11 @@ test('B2C happy path: search → schedule → review → passenger info ready to
 
   // ── Assertion: Next (proceed to payment) button is enabled ───────────────
 
-  await expect(page.locator('.btn-next')).not.toBeDisabled();
+  // OBRS-1955: this used to read `expect('.btn-next').not.toBeDisabled()`. The button no
+  // longer reflects the form's validity - it refuses out loud on click instead - so that
+  // assertion would now pass against an empty form. This asserts what it always meant:
+  // nothing on the page is invalid. Unlike clicking Next it creates no booking.
+  await expect(page.locator('[formControlName].ng-invalid')).toHaveCount(0);
 });
 
 /**
@@ -102,7 +106,11 @@ test('OBRS-858: a guest walks past the passenger form with no login redirect, an
   // autofill or a prefill from a previous step would make the next assertion
   // pass while proving nothing about whether email is optional.
   await expect(page.locator('#booker-email')).toHaveValue('');
-  await expect(page.locator('.btn-next')).not.toBeDisabled();
+  // OBRS-1955: this used to read `expect('.btn-next').not.toBeDisabled()`. The button no
+  // longer reflects the form's validity - it refuses out loud on click instead - so that
+  // assertion would now pass against an empty form. This asserts what it always meant:
+  // nothing on the page is invalid. Unlike clicking Next it creates no booking.
+  await expect(page.locator('[formControlName].ng-invalid')).toHaveCount(0);
 
   // No guard fired. OBRS-856 asserted that AuthService.setPostLoginRedirectUrl()
   // had recorded '/passenger-info' so signing in would return the guest to their

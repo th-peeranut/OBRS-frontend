@@ -33,6 +33,32 @@
       {{ "PASSENGER_INFO.PAGE.BOOKING_TITLE" | translate }}
     </h3>
 
+    <!-- OBRS-1955: what the server refused, named. It sits above both cards because a rejection
+    can name fields in either of them, and because the customer has just been scrolled here.
+    `role="alert"` so a screen reader announces it the moment it appears — the sighted customer
+    gets the same news from the smooth scroll that put this on screen. -->
+    @if (serverFieldErrors.length > 0) {
+      <div class="server-field-errors" role="alert">
+        <div class="server-field-errors__title">
+          {{ "PASSENGER_INFO.ALERT.FIX_THESE_FIELDS" | translate }}
+        </div>
+        <ul class="server-field-errors__list">
+          @for (fieldError of serverFieldErrors; track fieldError.path) {
+            <li>
+              <!-- The separator is real text, not a CSS `::after`: a screen reader and
+              `innerText` both have to see it, and a capture script reading this list back is how
+              the card is reviewed. -->
+              <span class="server-field-errors__label">{{ fieldError.label }}</span>
+              @if (fieldError.reason) {
+                <span class="server-field-errors__separator"> — </span>
+                <span class="server-field-errors__reason">{{ fieldError.reason }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
     <app-booker-info-form
       (validityChange)="onBookerFormValidityChange($event)"
     ></app-booker-info-form>
@@ -48,8 +74,16 @@
       {{ "PASSENGER_INFO.PAGE.SUMMARY_TITLE" | translate }}
     </h3>
 
+    <!-- OBRS-1955 (owner's decision, 2026-09-17): the form's validity no longer disables this.
+    A greyed-out Next gave the customer no reason and no field to go to, and it made the whole
+    client half of this card unreachable — `onSubmitPassengerInfo()` could not run, so nothing
+    could explain anything. The button now refuses out loud: the list above the forms, and the
+    page taken to the first offending field. `isSubmitting` still disables it — that is the
+    OBRS-1853 single-flight guard against a double tap creating two seat holds, which is a
+    different question from whether the form is complete. -->
     <app-passenger-info-summary
-      [isNextDisabled]="!isPassengerFormValid || !isBookerFormValid || isSubmitting"
+      [isNextDisabled]="isSubmitting"
+      [isFormIncomplete]="!isPassengerFormValid || !isBookerFormValid"
       (next)="onSubmitPassengerInfo()"
       (back)="onBack()"
       (promoApplied)="onPromoApplied($event)"
