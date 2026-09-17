@@ -36,7 +36,6 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   // correctly failing — ever since, on SIT as much as anywhere. Nobody read it as a
   // real failure because the suite it lived in was red as a matter of routine.
   await page.fill('#booker-email', 'john.doe@example.com');
-  await page.locator('#booker-gender_male').click();
 
   // Fill passenger 0 form
   await page.locator('#title-0 .dropdown-btn').click();
@@ -92,7 +91,6 @@ test('OBRS-858: a guest walks past the passenger form with no login redirect, an
   await page.fill('#booker-firstName', 'Guest');
   await page.fill('#booker-lastName', 'Walker');
   await page.fill('#booker-phoneNumber', '0812345678');
-  await page.locator('#booker-gender_male').click();
 
   await page.locator('#title-0 .dropdown-btn').click();
   await page.locator('#title-0 .dropdown-option').first().click();
@@ -208,7 +206,6 @@ test('OBRS-855: the access token dies mid-booking — the request is retried on 
   await page.fill('#booker-lastName', 'Doe');
   await page.fill('#booker-phoneNumber', '0812345678');
   await page.fill('#booker-email', 'john.doe@example.com');
-  await page.locator('#booker-gender_male').click();
 
   await page.locator('#title-0 .dropdown-btn').click();
   await page.locator('#title-0 .dropdown-option').first().click();

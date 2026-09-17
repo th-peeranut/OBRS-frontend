@@ -1004,12 +1004,15 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
         .toBeFalse();
     });
 
-    it('using the booker as this passenger withdraws the tick with the type it overwrites', () => {
+    // OBRS-1944: this used to assert the opposite — the booker carried a type, so copying it
+    // overwrote the passenger's and the tick had to be withdrawn with it. The booker has no
+    // gender/status field any more, so the copy must leave BOTH alone: the type the passenger
+    // chose in their own block is the only one there is, and a consent still standing for it
+    // was never withdrawn.
+    it('using the booker as this passenger leaves the passenger own type and its tick alone', () => {
       component.passengerData.at(0).get('gender')?.setValue('MONK');
       component.passengerData.at(0).get('passengerTypeConsent')?.setValue(true);
 
-      // The booker is a nun. patchValue leaves omitted controls alone, so without an explicit
-      // reset the MONK tick would survive onto NUN and render as consent nobody gave.
       component.applyBookerToPassenger(0, {
         isAdult: true,
         title: 1,
@@ -1017,13 +1020,16 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
         middleName: '',
         lastName: 'Jaidee',
         phoneNumber: '0812345678',
-        gender: 'NUN',
+        gender: '',
         isSelectSeat: true,
         passengerSeat: '',
       });
 
-      expect(component.passengerData.at(0).get('gender')?.value).toBe('NUN');
-      expect(component.passengerData.at(0).get('passengerTypeConsent')?.value).toBeFalse();
+      expect(component.passengerData.at(0).get('firstName')?.value)
+        .withContext('the name still copies — only the type stopped copying')
+        .toBe('Malee');
+      expect(component.passengerData.at(0).get('gender')?.value).toBe('MONK');
+      expect(component.passengerData.at(0).get('passengerTypeConsent')?.value).toBeTrue();
     });
 
     it('the consent reaches the emitted passenger payload', () => {

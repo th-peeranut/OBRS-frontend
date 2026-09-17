@@ -85,7 +85,6 @@ describe('BookerInfoFormComponent', () => {
         middleName: '',
         lastName: 'Jaidee',
         phoneNumber: '0812345678',
-        gender: 'MALE',
         email: 'somchai@example.com',
       });
 
@@ -97,23 +96,12 @@ describe('BookerInfoFormComponent', () => {
       expect(result?.email).toBe('somchai@example.com');
     });
 
-    // OBRS-1357: RED on the old code — `gender` carried Validators.required, so validateAndGetBooker()
-    // returned null and the booker could not proceed. Same shape as the OBRS-858 email inversion
-    // above and for the same reason: the field asks for something the system does not act on, so
-    // refusing the booking over it is a validation error no backend change could clear.
-    it('returns the booker when gender/status is missing — the field is optional', () => {
-      component.bookerForm.patchValue({
-        title: 1,
-        firstName: 'Somchai',
-        lastName: 'Jaidee',
-        phoneNumber: '0812345678',
-        gender: '',
-        email: 'somchai@example.com',
-      });
-
-      const result = component.validateAndGetBooker();
-      expect(result).not.toBeNull();
-      expect(result?.gender).toBe('');
+    // OBRS-1944: was "returns the booker when gender/status is missing — the field is optional"
+    // (OBRS-1357). The field is not optional any more, it is gone: it reached no consumer
+    // (buildContactPayload sends 7 fields, ContactReqDto has no column). Asserted on the form
+    // rather than deleted, so re-adding the control goes RED here instead of silently shipping.
+    it('has no gender/status control at all — the booker is never asked for one', () => {
+      expect(component.bookerForm.get('gender')).toBeNull();
     });
 
     it('normalises title when value is a Dropdown object', () => {
@@ -122,7 +110,6 @@ describe('BookerInfoFormComponent', () => {
         firstName: 'Malee',
         lastName: 'Kaew',
         phoneNumber: '0899999999',
-        gender: 'FEMALE',
         email: 'malee@example.com',
       });
 
@@ -140,7 +127,6 @@ describe('BookerInfoFormComponent', () => {
         firstName: 'Somchai',
         lastName: 'Jaidee',
         phoneNumber: '0812345678',
-        gender: 'MALE',
         email: '',
       });
 
@@ -157,7 +143,6 @@ describe('BookerInfoFormComponent', () => {
         firstName: 'Somchai',
         lastName: 'Jaidee',
         phoneNumber: '0812345678',
-        gender: 'MALE',
         email: 'not-an-email',
       });
 
@@ -180,7 +165,7 @@ describe('BookerInfoFormComponent', () => {
   describe('phone validation', () => {
     it('rejects phone not starting with 0', () => {
       component.bookerForm.patchValue({
-        title: 1, firstName: 'A', lastName: 'B', gender: 'MALE',
+        title: 1, firstName: 'A', lastName: 'B',
         phoneNumber: '1234567890',
       });
       expect(component.bookerForm.get('phoneNumber')?.valid).toBeFalse();
@@ -193,7 +178,7 @@ describe('BookerInfoFormComponent', () => {
 
     it('accepts valid 10-digit Thai mobile number', () => {
       component.bookerForm.patchValue({
-        title: 1, firstName: 'A', lastName: 'B', gender: 'MALE',
+        title: 1, firstName: 'A', lastName: 'B',
         phoneNumber: '0812345678',
       });
       expect(component.bookerForm.get('phoneNumber')?.valid).toBeTrue();
@@ -223,34 +208,20 @@ describe('BookerInfoFormComponent', () => {
     });
   });
 
-  // OBRS-1365: adds a 4th gender/status radio (Nun) alongside Male/Female/Monk.
-  describe('gender/status radios (OBRS-1365 nun option)', () => {
-    function radioEl(id: string): HTMLInputElement {
-      const el = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement | null;
-      if (!el) {
-        throw new Error(`Radio input #${id} not found in the rendered template`);
-      }
-      return el;
-    }
-
-    it('renders exactly 4 gender/status radios', () => {
+  // OBRS-1944: was 'gender/status radios (OBRS-1365 nun option)' — 4 radios that wrote to a
+  // control nothing on the wire could receive. Inverted rather than deleted: the assertion the
+  // card actually stands on is that the rendered booker form asks for none of it.
+  describe('gender/status radios are gone (OBRS-1944)', () => {
+    it('renders no booker gender/status radio', () => {
       const radios = fixture.nativeElement.querySelectorAll('input[type="radio"][id^="booker-gender_"]');
-      expect(radios.length).toBe(4);
+      expect(radios.length).toBe(0);
     });
 
-    it('the 4th gender radio is Nun with value="NUN", and selecting it through the DOM writes "NUN" to the form', () => {
-      const nunRadio = radioEl('booker-gender_nun');
-      expect(nunRadio.value).toBe('NUN');
-
-      nunRadio.click();
-      fixture.detectChanges();
-
-      expect(component.bookerForm.get('gender')?.value).toBe('NUN');
-    });
-
-    it('renders the nun icon image for the Nun radio', () => {
-      const img = fixture.nativeElement.querySelector('img[src="icons/passenger-nun.svg"]');
-      expect(img).not.toBeNull();
+    it('renders none of the gender/status icons', () => {
+      const icons = fixture.nativeElement.querySelectorAll(
+        'img[src="icons/passenger-male.svg"], img[src="icons/passenger-female.svg"], img[src="icons/passenger-monk.svg"], img[src="icons/passenger-nun.svg"]'
+      );
+      expect(icons.length).toBe(0);
     });
   });
   // OBRS-641: on a phone these fields opened the full QWERTY keyboard and the browser had no
