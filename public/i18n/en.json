@@ -3317,6 +3317,8 @@
       "MIDDLE_NAME_OPTIONAL": "Middle name (optional)",
       "LAST_NAME": "Last name",
       "LAST_NAME_REQUIRED": "Please enter your last name",
+      "NAME_TOO_SHORT": "Please enter at least 2 characters",
+      "NAME_TOO_LONG": "Please enter no more than 50 characters",
       "PHONE_NUMBER": "Phone number",
       "PHONE_NUMBER_PLACEHOLDER": "Please enter your phone number",
       "PHONE_NUMBER_REQUIRED": "Please enter your phone number",
