@@ -85,6 +85,31 @@ export class PassengerInfoSummaryComponent {
   }
 
   /**
+   * OBRS-1943: the i18n key for the chip shown when a passenger row carries no
+   * seat on either leg — or `null` when a seat IS picked and no such chip is
+   * drawn. The chip used to be unconditionally "not chosen yet", which reads as
+   * unfinished work on an OPEN journey where there is nothing to choose. Every
+   * leg OPEN => the journey-wide open-seating wording (same key as the per-leg
+   * badge above, so the screen states it once); any ASSIGNED leg — including a
+   * mixed round trip, and a leg whose `seatingMode` is missing/unknown — keeps
+   * the original "not chosen yet" chip, because a seat map is still on offer.
+   */
+  seatlessChipKey(
+    passenger: PassengerInfo,
+    schedule?: Schedule[] | null
+  ): string | null {
+    if (passenger.passengerSeat || passenger.passengerSeatReturn) {
+      return null;
+    }
+    const legs = this.getScheduleBooking(schedule);
+    const allOpen =
+      legs.length > 0 && legs.every((leg) => leg?.seatingMode === 'OPEN');
+    return allOpen
+      ? 'PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE'
+      : 'PASSENGER_INFO.SUMMARY.NO_SEAT';
+  }
+
+  /**
    * OBRS-1226: adult/child counts and the total below come from the
    * passenger-info store — the rows that become the real tickets — not from
    * `scheduleFilter.passengerInfo`, which only ever holds what was typed on

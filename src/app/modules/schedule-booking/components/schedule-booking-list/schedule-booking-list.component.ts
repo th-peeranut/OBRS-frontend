@@ -213,6 +213,16 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   departureSharedRoute = false;
   returnSharedRoute = false;
 
+  /** OBRS-1951: true when EVERY row of the leg sells without a fixed seat, which
+   *  is what lets one banner above the list say "ทุกรอบ" and be true. A mixed
+   *  result set (some OPEN, some ASSIGNED) leaves this false and renders
+   *  nothing - the sentence the owner approved is about the whole leg, and a
+   *  per-row pill was the option (A1/A3) that was NOT chosen. Same
+   *  once-not-per-row shape as `departureSharedRoute` above, and set in the
+   *  same place for the same "describes the list about to render" reason. */
+  departureAllOpenSeating = false;
+  returnAllOpenSeating = false;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -669,6 +679,11 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     // and head a new list with the stops of the old one.
     this.departureSharedRoute = this.hasSingleRoute(scheduleList?.departureSchedules ?? []);
     this.returnSharedRoute = this.hasSingleRoute(scheduleList?.arrivalSchedules ?? []);
+    // OBRS-1951: same reason as the two lines above - the banner describes the
+    // list that is about to render, so a search that does not resolve a filter
+    // must not leave the previous search's answer heading the new list.
+    this.departureAllOpenSeating = this.hasOnlyOpenSeating(scheduleList?.departureSchedules ?? []);
+    this.returnAllOpenSeating = this.hasOnlyOpenSeating(scheduleList?.arrivalSchedules ?? []);
 
     if (!scheduleFilter) {
       return;
@@ -719,6 +734,22 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   private hasSingleRoute(schedules: Schedule[]): boolean {
     const first = schedules[0]?.routeSlug;
     return !!first && schedules.every((s) => s.routeSlug === first);
+  }
+
+  /** OBRS-1951: does EVERY row of this leg board without an assigned seat?
+   *
+   *  The `=== 'OPEN'` test is the one every existing surface already uses on
+   *  this same field (`passenger-info-form.component.ts:247`,
+   *  `passenger-info.component.ts:317`, `my-bookings.component.ts:533`), so the
+   *  search results cannot disagree with the screen the customer reaches next.
+   *
+   *  The length guard is the whole point: `[].every()` is `true`, and an empty
+   *  leg would otherwise head a list with no rows in it with a claim about
+   *  "every round". A row whose `seatingMode` is missing counts as a row that
+   *  disagrees - the field is optional (`schedule.interface.ts:83`) and a leg we
+   *  cannot prove is uniform must show nothing, not guess. */
+  private hasOnlyOpenSeating(schedules: Schedule[]): boolean {
+    return schedules.length > 0 && schedules.every((s) => s.seatingMode === 'OPEN');
   }
 
   private resolveLegEstimates(

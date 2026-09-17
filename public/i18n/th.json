@@ -3239,7 +3239,11 @@
     "PICKUP_STOP": "จุดขึ้น",
     "DROPOFF_STOP": "จุดลง",
     "OPEN_IN_MAPS": "เปิดในแผนที่",
-    "RESTORED_UNAVAILABLE": "รอบการเดินทางที่คุณเลือกไว้ก่อนหน้านี้ไม่ว่างแล้ว กรุณาเลือกรอบใหม่"
+    "RESTORED_UNAVAILABLE": "รอบการเดินทางที่คุณเลือกไว้ก่อนหน้านี้ไม่ว่างแล้ว กรุณาเลือกรอบใหม่",
+    "OPEN_SEATING_BANNER": {
+      "TITLE": "ทุกรอบในเส้นทางนี้เป็นแบบขึ้นนั่งตามที่ว่าง",
+      "BODY": "ไม่ต้องเลือกที่นั่งตอนจอง ขึ้นรถแล้วนั่งที่ว่างได้เลย"
+    }
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -3363,7 +3367,7 @@
       "NUN": "แม่ชี"
     },
     "SUMMARY": {
-      "OPEN_SEATING_BADGE": "ไม่ระบุที่นั่ง (Open Seating)",
+      "OPEN_SEATING_BADGE": "ขึ้นนั่งตามที่ว่าง",
       "PASSENGERS_TITLE": "ผู้โดยสาร",
       "NO_SEAT": "ยังไม่เลือกที่นั่ง",
       "SEAT_LABEL": "ที่นั่ง {{seat}}"

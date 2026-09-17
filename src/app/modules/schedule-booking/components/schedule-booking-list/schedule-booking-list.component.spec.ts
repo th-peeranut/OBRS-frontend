@@ -1599,3 +1599,197 @@ describe('ScheduleBookingListComponent (OBRS-862 nearest day with trips)', () =>
     ).toBe('No trips found');
   });
 });
+
+// OBRS-1951 — the "every round here boards open seating" banner above a list.
+// The claim the copy makes is about the WHOLE result set, so the interesting
+// cases are the ones where a per-row test would be green and the sentence still
+// false: a mixed leg, and an empty one (`[].every()` is `true`).
+describe('ScheduleBookingListComponent (open-seating banner)', () => {
+  let fixture: ComponentFixture<ScheduleBookingListComponent>;
+  let store: MockStore;
+
+  function scheduleWith(id: number, seatingMode?: string): Schedule {
+    return {
+      id,
+      vehicleType: 'van',
+      departureDateTime: '2030-06-17T08:00:00+07:00',
+      arrivalDateTime: '2030-06-17T09:58:00+07:00',
+      pricePerSeat: '200',
+      availableSeats: 10,
+      availableSeatNumbers: ['1A'],
+      routeSlug: 'chonburi-bangkok',
+      seatingMode,
+    } as Schedule;
+  }
+
+  // `isSelectFirst` is what the return leg's whole block is gated on, and it is
+  // only true once an outbound round has been picked — so the return-leg cases
+  // have to set it, exactly as the OBRS-1654 tests above do.
+  function render(scheduleList: ScheduleList | null, selectFirst = false) {
+    store.overrideSelector(selectScheduleList, scheduleList as ScheduleList);
+    store.overrideSelector(selectScheduleFilter, null as unknown as ScheduleFilter);
+    store.overrideSelector(selectProvinceWithStation, [] as never[]);
+    fixture = TestBed.createComponent(ScheduleBookingListComponent);
+    fixture.detectChanges();
+    if (selectFirst) {
+      fixture.componentInstance.isSelectFirst = true;
+      fixture.detectChanges();
+    }
+  }
+
+  function banners(leg: 'departure' | 'return'): DebugElement[] {
+    return fixture.debugElement.queryAll(
+      By.css(`[data-testid="open-seating-banner-${leg}"]`)
+    );
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [
+        ScheduleBookingListComponent,
+        ScheduleDelayNoticeComponent,
+        ArrivalDateNoticeComponent,
+      ],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        provideMockStore(),
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+        { provide: AuthService, useValue: createAuthServiceStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+        { provide: BookingPolicyService, useValue: createBookingPolicyServiceStub() },
+      ],
+    }).compileComponents();
+    store = TestBed.inject(MockStore);
+  });
+
+  it('shows the banner on the outbound leg when every round is OPEN', () => {
+    render({
+      departureSchedules: [scheduleWith(1, 'OPEN'), scheduleWith(2, 'OPEN')],
+      arrivalSchedules: null,
+    });
+
+    expect(fixture.componentInstance.departureAllOpenSeating).toBe(true);
+    expect(banners('departure').length).toBe(1);
+    // No translations are loaded under TranslateModule.forRoot(), so the key
+    // itself renders — which also proves the banner reads the new key and not
+    // one of OBRS-1943's PASSENGER_INFO.SUMMARY.* strings.
+    const text = (banners('departure')[0].nativeElement.textContent || '').trim();
+    expect(text).toContain('SCHEDULE_BOOKING.OPEN_SEATING_BANNER.TITLE');
+    expect(text).toContain('SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY');
+  });
+
+  it('hides the banner when the outbound leg mixes OPEN and ASSIGNED rounds', () => {
+    render({
+      departureSchedules: [scheduleWith(1, 'OPEN'), scheduleWith(2, 'ASSIGNED')],
+      arrivalSchedules: null,
+    });
+
+    expect(fixture.componentInstance.departureAllOpenSeating).toBe(false);
+    expect(banners('departure').length).toBe(0);
+  });
+
+  it('hides the banner when every outbound round is ASSIGNED', () => {
+    render({
+      departureSchedules: [scheduleWith(1, 'ASSIGNED'), scheduleWith(2, 'ASSIGNED')],
+      arrivalSchedules: null,
+    });
+
+    expect(banners('departure').length).toBe(0);
+  });
+
+  it('hides the banner when seatingMode is missing on any round', () => {
+    render({
+      departureSchedules: [scheduleWith(1, 'OPEN'), scheduleWith(2, undefined)],
+      arrivalSchedules: null,
+    });
+
+    expect(fixture.componentInstance.departureAllOpenSeating).toBe(false);
+    expect(banners('departure').length).toBe(0);
+  });
+
+  // `[].every()` answers true, so without the length guard an empty leg claims
+  // something about rounds that are not there.
+  it('hides the banner when the outbound leg is empty', () => {
+    render({ departureSchedules: [], arrivalSchedules: null });
+
+    expect(fixture.componentInstance.departureAllOpenSeating).toBe(false);
+    expect(banners('departure').length).toBe(0);
+  });
+
+  it('shows the banner on the return leg when every return round is OPEN', () => {
+    render(
+      {
+        departureSchedules: [scheduleWith(1, 'OPEN')],
+        arrivalSchedules: [scheduleWith(2, 'OPEN'), scheduleWith(3, 'OPEN')],
+      },
+      true
+    );
+
+    expect(fixture.componentInstance.returnAllOpenSeating).toBe(true);
+    expect(banners('return').length).toBe(1);
+  });
+
+  it('hides the banner on the return leg when its rounds are mixed', () => {
+    render(
+      {
+        departureSchedules: [scheduleWith(1, 'OPEN')],
+        arrivalSchedules: [scheduleWith(2, 'OPEN'), scheduleWith(3, 'ASSIGNED')],
+      },
+      true
+    );
+
+    expect(fixture.componentInstance.returnAllOpenSeating).toBe(false);
+    expect(banners('return').length).toBe(0);
+  });
+
+  it('hides the banner on the return leg when every return round is ASSIGNED', () => {
+    render(
+      {
+        departureSchedules: [scheduleWith(1, 'OPEN')],
+        arrivalSchedules: [scheduleWith(2, 'ASSIGNED')],
+      },
+      true
+    );
+
+    expect(banners('return').length).toBe(0);
+  });
+
+  it('hides the banner on the return leg when seatingMode is missing there', () => {
+    render(
+      {
+        departureSchedules: [scheduleWith(1, 'OPEN')],
+        arrivalSchedules: [scheduleWith(2, undefined)],
+      },
+      true
+    );
+
+    expect(banners('return').length).toBe(0);
+  });
+
+  it('hides the banner on the return leg when it is empty', () => {
+    render(
+      { departureSchedules: [scheduleWith(1, 'OPEN')], arrivalSchedules: [] },
+      true
+    );
+
+    expect(fixture.componentInstance.returnAllOpenSeating).toBe(false);
+    expect(banners('return').length).toBe(0);
+  });
+
+  // The two legs are decided independently: a route can sell one leg open and
+  // the other assigned, and reading the wrong leg's answer is the defect this
+  // pins. Outbound all-OPEN + return all-ASSIGNED ⇒ exactly one banner, on the
+  // outbound.
+  it('decides the two legs independently', () => {
+    render(
+      {
+        departureSchedules: [scheduleWith(1, 'OPEN')],
+        arrivalSchedules: [scheduleWith(2, 'ASSIGNED')],
+      },
+      true
+    );
+
+    expect(banners('departure').length).toBe(1);
+    expect(banners('return').length).toBe(0);
+  });
+});
