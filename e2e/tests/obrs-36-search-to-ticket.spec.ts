@@ -182,7 +182,6 @@ async function fillPassengerAndBooker(page: Page): Promise<void> {
   // OBRS-238: required and format-checked for ONLINE bookings, so `.btn-next` stays
   // disabled without it and the click below would silently do nothing.
   await page.fill('#booker-email', 'somchai.jaidee@example.com');
-  await page.locator('#booker-gender_male').click();
 
   await page.locator('#title-0 .dropdown-btn').click();
   await page.locator('#title-0 .dropdown-option').first().click();
