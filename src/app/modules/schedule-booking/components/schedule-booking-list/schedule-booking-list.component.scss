@@ -137,6 +137,46 @@
     }
   }
 
+  /* OBRS-1951 (design A2) — the "every round here boards open seating" banner.
+     Unlike `.return-boarding-notice` above it carries a FILL rather than an
+     accent rail, because the owner's approved board is a tinted box; the fill is
+     $secondary-light-blue and the title on it is $secondary-blue, the pair
+     variables.scss:60 records as 4.61:1 — AA for this text size. The body line
+     is $text-black on the same fill, further clear of it. Dark mode is repainted
+     in dark-theme.scss section 14 for the same reason as the notice above: this
+     class is neither `.schedule-item` nor inside `.card-container`, so no
+     blanket rule there reaches it. */
+  .open-seating-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-2xs;
+    margin: 0 0 $space-sm;
+    padding: $space-xs $space-sm;
+    border-radius: $radius-sm;
+    background: $secondary-light-blue;
+
+    &__icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+      font-size: 18px;
+      line-height: 1;
+      color: $secondary-blue;
+    }
+
+    &__title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: $secondary-blue;
+    }
+
+    &__body {
+      margin: $space-3xs 0 0;
+      font-size: 14px;
+      color: $text-black;
+    }
+  }
+
   /* OBRS-864. Declared here, at list level, because the block renders in two
      places: once above a list whose rows all run the same route, and on the row
      itself when they do not and only the row can say which stop it means. One
