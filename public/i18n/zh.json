@@ -3369,7 +3369,8 @@
     "ALERT": {
       "CREATE_SUCCESS": "预订保存成功",
       "CREATE_FAILED": "无法创建预订，请重试。",
-      "CAPACITY_FULL": "此班次座位已满，请减少乘客人数或选择其他班次。"
+      "CAPACITY_FULL": "此班次座位已满，请减少乘客人数或选择其他班次。",
+      "FIX_THESE_FIELDS": "请先修正以下内容再继续："
     }
   },
   "PAYMENT": {

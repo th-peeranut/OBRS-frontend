@@ -45,6 +45,24 @@ import { AnalyticsService } from '../../services/analytics/analytics.service';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 import { BUSINESS_POLICY_VERSION } from '../business-policy/business-policy.version';
 import { TITLE_OPTIONS } from '../../shared/constants/title-options';
+import {
+  apiErrorCode,
+  apiFieldErrors,
+  resolveApiAlertMessage,
+} from '../../shared/lib/api-error';
+import {
+  BookingFieldError,
+  describeControlId,
+  mapBookingFieldErrors,
+} from './booking-field-errors';
+
+/**
+ * OBRS-1955. `[formControlName]` and not a bare `.ng-invalid`: Angular puts that class on the
+ * `<form>` and on every `formGroupName`/`formArrayName` wrapper too, and those come FIRST in DOM
+ * order, so the bare selector would scroll to the top of the card and focus nothing. Scoped to the
+ * page's own host element, in DOM order — which on this page is reading order, booker card first.
+ */
+const INVALID_CONTROL_SELECTOR = 'app-passenger-info [formControlName].ng-invalid';
 
 @Component({
     selector: 'app-passenger-info',
@@ -59,6 +77,16 @@ export class PassengerInfoComponent {
   bookerInfoFormComponent?: BookerInfoFormComponent;
   @ViewChild(PassengerInfoSummaryComponent)
   passengerInfoSummaryComponent?: PassengerInfoSummaryComponent;
+  /**
+   * OBRS-1955: these two no longer gate anything. `[isNextDisabled]` used to read them; the
+   * owner's decision this card was to stop letting the form's validity grey out the button and
+   * to explain the refusal on click instead.
+   *
+   * Kept rather than deleted, deliberately: removing them orphans `@Output() validityChange` and
+   * the `emitValidity()` plumbing behind it in BOTH child forms — a much larger removal, with its
+   * own specs, than the four lines it saves here. Whether that whole chain goes is the owner's
+   * call, not a side effect of this card. Nothing on this page reads them today.
+   */
   isPassengerFormValid = false;
   isBookerFormValid = false;
   /**
@@ -82,6 +110,11 @@ export class PassengerInfoComponent {
   // sidebar's instant preview). Only this value — never a guessed/typed one
   // that wasn't confirmed — is ever sent on the create-booking call.
   private appliedPromoCode: string | null = null;
+  /**
+   * OBRS-1955: what the server refused, field by field, shown above the forms until the next
+   * submit. Empty on every path except a 400 whose `errors[]` named at least one field.
+   */
+  serverFieldErrors: BookingFieldError[] = [];
   rawProvinceStationList: Observable<StationApi[]>;
   constructor(
     private store: Store,
@@ -142,11 +175,22 @@ export class PassengerInfoComponent {
     if (this.isSubmitting) {
       return;
     }
+    // OBRS-1955: a new attempt answers the previous refusal — leaving the old list up while the
+    // customer edits would keep pointing at a field they may already have fixed.
+    this.serverFieldErrors = [];
+
     const passengerInfo =
       this.passengerInfoFormComponent?.validateAndGetPassengerInfo();
     const booker = this.bookerInfoFormComponent?.validateAndGetBooker();
 
     if (!passengerInfo || !booker) {
+      // OBRS-1955: this used to be a bare `return`, and it was unreachable anyway — the Next
+      // button disabled itself the moment either form went invalid, so the customer met a dead
+      // button and no reason at all. The button is now live (see the template) and this is where
+      // the refusal is explained: the same list the server path fills, and the page taken to the
+      // first offending field, whose inline message says what is wrong with it.
+      this.serverFieldErrors = this.describeInvalidControls();
+      this.focusFirstInvalidControl();
       return;
     }
 
@@ -176,12 +220,16 @@ export class PassengerInfoComponent {
     let isBookingCreated = false;
 
     if (bookingPayload) {
-      // OBRS-109 (#37): when a confirmed promo code is being sent, opt out of
-      // the global error alert so a PROMO_CODE_* rejection (the preview ->
-      // submit race) can be shown inline on the reverted field instead —
-      // handleBookingCreationError replicates the generic alert for any
-      // other error on this call.
-      const suppressGlobalErrorAlert = !!this.appliedPromoCode;
+      // OBRS-109 (#37) opted out of the global error alert only when a promo code was applied,
+      // so a PROMO_CODE_* rejection could be shown inline on the reverted field instead.
+      // OBRS-1955 makes that unconditional: a 400 naming fields must be answered by the list
+      // above the forms, not by a modal that says only "ข้อมูลไม่ผ่านการตรวจสอบ", and the choice
+      // has to be made from the RESPONSE, which the request-time flag cannot see.
+      // handleBookingCreationError now owns every ending, and falls back to
+      // `resolveApiAlertMessage` — the interceptor's own text — so nothing else changes.
+      // It suppresses the ALERT only: the 401 path is a separate argument below, because
+      // bundling them is what would have left an expired session with no recovery at all.
+      const suppressGlobalErrorAlert = true;
 
       try {
         const response = await firstValueFrom(
@@ -189,7 +237,11 @@ export class PassengerInfoComponent {
             .createBooking(
               bookingPayload,
               suppressGlobalErrorAlert,
-              this.idempotencyKeyFor(bookingPayload)
+              this.idempotencyKeyFor(bookingPayload),
+              // OBRS-1955: the 401 recovery stays on for an ordinary booking. Only the
+              // promo-preview race, which OBRS-109 bundled into this call, may swallow a 401 -
+              // see BookingService.createBooking.
+              !!this.appliedPromoCode
             )
             .pipe(take(1))
         );
@@ -244,27 +296,31 @@ export class PassengerInfoComponent {
     this.router.navigate(['/review-schedule-booking']);
   }
 
-  // OBRS-109 (#37): createBooking was called with the global error alert
-  // suppressed only when a promo code was applied. A PROMO_CODE_* rejection
-  // is the expected preview->submit race — surface it inline on the reverted
-  // field. Any other error on that same (silenced) call still needs an
-  // alert, since the interceptor won't show one for this request.
+  /**
+   * The single owner of what a failed create-booking shows, since OBRS-1955 made the global alert
+   * unconditionally suppressed for this call. Order matters: the promo race and the capacity
+   * refusal are named codes with their own remedy, a field-level 400 goes to the list above the
+   * forms, and everything else keeps the interceptor's own text.
+   */
   private handleBookingCreationError(error: unknown): void {
-    if (!this.appliedPromoCode || !(error instanceof HttpErrorResponse)) {
+    if (!(error instanceof HttpErrorResponse)) {
+      this.alertService.error(
+        this.translateService.instant('PASSENGER_INFO.ALERT.CREATE_FAILED')
+      );
       return;
     }
 
     const errorCode = String(error.error?.errorCode ?? '');
-    if (errorCode.startsWith('PROMO_CODE')) {
+
+    // OBRS-109 (#37): the expected preview->submit race — surface it inline on the reverted field.
+    if (this.appliedPromoCode && errorCode.startsWith('PROMO_CODE')) {
       this.passengerInfoSummaryComponent?.revertPromoWithError(errorCode);
       this.appliedPromoCode = null;
       return;
     }
 
-    // OBRS-323: capacity-full rejection on this (promo-suppressed) call —
-    // the no-promo path already gets this from the BE's localized message via
-    // the global error interceptor, so this branch only fires when the global
-    // alert was suppressed for the applied-promo call.
+    // OBRS-323: capacity-full rejection. Its own message, because "seats just went" is not a
+    // field the customer can correct.
     if (errorCode.startsWith('BOOKING_ERROR_SEATS')) {
       this.alertService.error(
         this.translateService.instant('PASSENGER_INFO.ALERT.CAPACITY_FULL')
@@ -272,9 +328,66 @@ export class PassengerInfoComponent {
       return;
     }
 
+    // OBRS-1955: the case the owner reported. The body already names every refused field; show
+    // them, take the customer to the first one, and say nothing generic on top of it.
+    if (apiErrorCode(error) === 'VALIDATION_FAILED') {
+      const fields = mapBookingFieldErrors(apiFieldErrors(error), (key, params) =>
+        this.translateService.instant(key, params)
+      );
+      if (fields.length > 0) {
+        this.serverFieldErrors = fields;
+        this.focusControlById(fields.find((f) => f.controlId)?.controlId ?? null);
+        return;
+      }
+      // A VALIDATION_FAILED with an empty `errors[]` names nothing to point at. Falling through
+      // to the alert is deliberate: silence would be worse than the modal this card is replacing.
+    }
+
     this.alertService.error(
-      this.translateService.instant('PASSENGER_INFO.ALERT.CREATE_FAILED')
+      resolveApiAlertMessage(error, (key) => this.translateService.instant(key))
     );
+  }
+
+  /**
+   * Takes the customer to the first control the browser has marked invalid, in DOM order — the
+   * booker card comes before the passenger cards in the template, so DOM order is reading order.
+   *
+   * Angular puts `ng-invalid` on the control's own element, so this needs no list of field names
+   * and cannot fall behind one: a validator added to either form tomorrow is covered.
+   *
+   * Queried off `document` rather than through an injected `ElementRef`, the same way and for the
+   * same reason as `schedule-booking-filter.component.ts`: the spec constructs this component with
+   * `new` and positional arguments, so a new constructor parameter is a compile error in files
+   * this card has no business editing. `app-passenger-info` scopes it to this page.
+   */
+  private focusFirstInvalidControl(): boolean {
+    return this.bringIntoView(document.querySelector<HTMLElement>(INVALID_CONTROL_SELECTOR));
+  }
+
+  /** Every control the browser has marked invalid, named the same way a server rejection is. */
+  private describeInvalidControls(): BookingFieldError[] {
+    return Array.from(document.querySelectorAll<HTMLElement>(INVALID_CONTROL_SELECTOR))
+      .filter((el) => el.id)
+      .map((el) =>
+        describeControlId(el.id, (key, params) => this.translateService.instant(key, params))
+      );
+  }
+
+  private focusControlById(controlId: string | null): boolean {
+    if (!controlId) {
+      return false;
+    }
+    return this.bringIntoView(document.getElementById(controlId));
+  }
+
+  private bringIntoView(el: HTMLElement | null): boolean {
+    if (!el) {
+      return false;
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // `preventScroll` so the smooth scroll above is not cut short by the jump focus() would make.
+    el.focus({ preventScroll: true });
+    return true;
   }
 
   private async buildBookingPayload(
