@@ -3361,7 +3361,7 @@
       "NUN": "แม่ชี"
     },
     "SUMMARY": {
-      "OPEN_SEATING_BADGE": "ไม่ระบุที่นั่ง (Open Seating)",
+      "OPEN_SEATING_BADGE": "ขึ้นนั่งตามที่ว่าง",
       "PASSENGERS_TITLE": "ผู้โดยสาร",
       "NO_SEAT": "ยังไม่เลือกที่นั่ง",
       "SEAT_LABEL": "ที่นั่ง {{seat}}"
