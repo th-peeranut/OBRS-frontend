@@ -60,8 +60,11 @@
                   bookerForm.get('firstName')?.dirty)
               "
               />
+              <!-- OBRS-1952: one branch per rule. The single catch-all branch that used to sit
+              here printed "กรุณากรอกชื่อจริง" at a field that HAD a name in it, because the
+              length errors below did not exist yet and only `required` could fire. -->
               @if (
-                bookerForm.get('firstName')?.errors &&
+                bookerForm.get('firstName')?.hasError('required') &&
                 (bookerForm.get('firstName')?.touched ||
                 bookerForm.get('firstName')?.dirty)
                 ) {
@@ -69,6 +72,28 @@
                   class="text-error"
                   >
                   {{ "PASSENGER_INFO.FORM.FIRST_NAME_REQUIRED" | translate }}
+                </div>
+              }
+              @if (
+                bookerForm.get('firstName')?.hasError('minlength') &&
+                (bookerForm.get('firstName')?.touched ||
+                bookerForm.get('firstName')?.dirty)
+                ) {
+                <div
+                  class="text-error"
+                  >
+                  {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                </div>
+              }
+              @if (
+                bookerForm.get('firstName')?.hasError('maxlength') &&
+                (bookerForm.get('firstName')?.touched ||
+                bookerForm.get('firstName')?.dirty)
+                ) {
+                <div
+                  class="text-error"
+                  >
+                  {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
                 </div>
               }
             </div>
@@ -98,7 +123,7 @@
               "
                   />
                   @if (
-                    bookerForm.get('lastName')?.errors &&
+                    bookerForm.get('lastName')?.hasError('required') &&
                     (bookerForm.get('lastName')?.touched ||
                     bookerForm.get('lastName')?.dirty)
                     ) {
@@ -106,6 +131,28 @@
                       class="text-error"
                       >
                       {{ "PASSENGER_INFO.FORM.LAST_NAME_REQUIRED" | translate }}
+                    </div>
+                  }
+                  @if (
+                    bookerForm.get('lastName')?.hasError('minlength') &&
+                    (bookerForm.get('lastName')?.touched ||
+                    bookerForm.get('lastName')?.dirty)
+                    ) {
+                    <div
+                      class="text-error"
+                      >
+                      {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                    </div>
+                  }
+                  @if (
+                    bookerForm.get('lastName')?.hasError('maxlength') &&
+                    (bookerForm.get('lastName')?.touched ||
+                    bookerForm.get('lastName')?.dirty)
+                    ) {
+                    <div
+                      class="text-error"
+                      >
+                      {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
                     </div>
                   }
                 </div>
@@ -169,8 +216,8 @@
                   <!-- OBRS-1953: the two optional fields sit behind disclosure links, so
                   the first view carries only what the booking actually requires and an
                   optional field stops reading as heavy as "นามสกุล *". This is layout
-                  only — no validator moved with them: `middleName` never had one and
-                  `email` keeps the OBRS-858 format check whether it is on screen or not.
+                  only — no validator moved with them: `middleName` keeps the OBRS-1952
+                  length rule and `email` the OBRS-858 format check, on screen or not.
                   A control that already holds a value opens its own section (see
                   isOptionalFieldShown), and collapsing hides without clearing. -->
                   <div class="col-12 optional-disclosure">
@@ -220,7 +267,14 @@
                   <!-- Middle name, when present -->
                   @if (isMiddleNameShown()) {
                     <div class="col-12 col-md-6" id="booker-middleName-field">
-                      <label for="booker-middleName">
+                      <label
+                        for="booker-middleName"
+                        [class.label-error]="
+                          bookerForm.get('middleName')?.errors &&
+                          (bookerForm.get('middleName')?.touched ||
+                            bookerForm.get('middleName')?.dirty)
+                        "
+                        >
                         {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
                       </label>
                       <input
@@ -228,7 +282,37 @@
                         id="booker-middleName"
                         formControlName="middleName"
                         autocomplete="additional-name"
+                        [class.form-error]="
+                          bookerForm.get('middleName')?.errors &&
+                          (bookerForm.get('middleName')?.touched ||
+                            bookerForm.get('middleName')?.dirty)
+                        "
                         />
+                        <!-- OBRS-1952: still optional — blank stays valid and reaches the wire as null.
+                        But once it HAS a value, `@Size(min = 2, max = 50)` applies to it too. The
+                        disclosure moved where this field lives, not what it refuses. -->
+                        @if (
+                          bookerForm.get('middleName')?.hasError('minlength') &&
+                          (bookerForm.get('middleName')?.touched ||
+                          bookerForm.get('middleName')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                          </div>
+                        }
+                        @if (
+                          bookerForm.get('middleName')?.hasError('maxlength') &&
+                          (bookerForm.get('middleName')?.touched ||
+                          bookerForm.get('middleName')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                          </div>
+                        }
                       </div>
                     }
                   <!-- Email -->

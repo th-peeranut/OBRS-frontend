@@ -10,7 +10,6 @@ import {
   FormBuilder,
   FormControl,
   FormGroup,
-  Validators,
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -43,6 +42,8 @@ import { selectScheduleBooking } from '../../../../shared/stores/schedule-bookin
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { shareReplay } from 'rxjs/operators';
 import { MAX_PASSENGERS_PER_BOOKING, LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
+import { trimmedRequiredValidator } from '../../../../shared/validators/trimmed-required.validator';
+import { trimmedLengthValidator } from '../../../../shared/validators/trimmed-length.validator';
 import { isLowSeatCount } from '../../../../shared/lib/trip-format';
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
 import { ScheduleService } from '../../../../services/schedule/schedule.service';
@@ -516,10 +517,11 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * OBRS-1953: the passenger's middle name has no validator and never had one, exactly
-   * like the booker's — so it sits behind the same `+ เพิ่มชื่อกลาง` link rather than
-   * taking a half-row of its own on every passenger card. Same tri-state rule: a row
-   * that comes back from the store with a middle name in it opens itself.
+   * OBRS-1953: the passenger's middle name is never required, exactly like the booker's
+   * — so it sits behind the same `+ เพิ่มชื่อกลาง` link rather than taking a half-row of
+   * its own on every passenger card. It is not rule-free: OBRS-1952 gave it
+   * `trimmedLengthValidator(2, 50)`, which still fires inside the expanded section. Same
+   * tri-state rule: a row that comes back from the store with a middle name opens itself.
    */
   isPassengerMiddleNameShown(index: number): boolean {
     return isOptionalFieldShown(
@@ -941,9 +943,15 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       useBookerInfo: [false],
       isAdult: [isAdult],
       title: [null],
-      firstName: ['', Validators.required],
-      middleName: [''],
-      lastName: ['', Validators.required],
+      // OBRS-1952: mirrors `PassengerReqDto`'s `@NotBlank @Size(min = 2, max = 50)`, the same
+      // way booker-info-form now mirrors `ContactReqDto`. Unlike the booker's,
+      // `buildPassengersPayload()` sends these RAW — it does not trim — so here the trim-aware
+      // rule is the stricter of the two rather than the matching one. Same rule on both forms on
+      // purpose: `applyBookerToPassenger()` copies the booker's values straight into this group,
+      // and a passenger rule looser than the booker's would make that copy the way past it.
+      firstName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
+      middleName: ['', [trimmedLengthValidator(2, 50)]],
+      lastName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
       // OBRS-455: NOT an SMS destination — every booking message goes to the booker's contact
       // phone, never to a per-passenger number — so this keeps the wider local rule while the
       // booker's field above was narrowed. Same regex as before, now named.

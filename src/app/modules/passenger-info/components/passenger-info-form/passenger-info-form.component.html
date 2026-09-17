@@ -116,8 +116,9 @@
                     group.get('firstName')?.dirty)
                 "
                         />
+                        <!-- OBRS-1952: one branch per rule — see booker-info-form. -->
                         @if (
-                          group.get('firstName')?.errors &&
+                          group.get('firstName')?.hasError('required') &&
                           (group.get('firstName')?.touched ||
                           group.get('firstName')?.dirty)
                           ) {
@@ -125,6 +126,28 @@
                             class="text-error"
                             >
                             {{ "PASSENGER_INFO.FORM.FIRST_NAME_REQUIRED" | translate }}
+                          </div>
+                        }
+                        @if (
+                          group.get('firstName')?.hasError('minlength') &&
+                          (group.get('firstName')?.touched ||
+                          group.get('firstName')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                          </div>
+                        }
+                        @if (
+                          group.get('firstName')?.hasError('maxlength') &&
+                          (group.get('firstName')?.touched ||
+                          group.get('firstName')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
                           </div>
                         }
                       </div>
@@ -153,7 +176,7 @@
                 "
                             />
                             @if (
-                              group.get('lastName')?.errors &&
+                              group.get('lastName')?.hasError('required') &&
                               (group.get('lastName')?.touched ||
                               group.get('lastName')?.dirty)
                               ) {
@@ -163,11 +186,34 @@
                                 {{ "PASSENGER_INFO.FORM.LAST_NAME_REQUIRED" | translate }}
                               </div>
                             }
+                            @if (
+                              group.get('lastName')?.hasError('minlength') &&
+                              (group.get('lastName')?.touched ||
+                              group.get('lastName')?.dirty)
+                              ) {
+                              <div
+                                class="text-error"
+                                >
+                                {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                              </div>
+                            }
+                            @if (
+                              group.get('lastName')?.hasError('maxlength') &&
+                              (group.get('lastName')?.touched ||
+                              group.get('lastName')?.dirty)
+                              ) {
+                              <div
+                                class="text-error"
+                                >
+                                {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                              </div>
+                            }
                           </div>
-                          <!-- OBRS-1953: ชื่อกลาง carries no validator at all and is the same
-                          field the BOOKER hides behind `+ เพิ่มชื่อกลาง`, so it gets the same
-                          treatment here — one field, one rule, and a passenger row stops
-                          spending a half-row on it. Owner's call, 17 Sep 2026. -->
+                          <!-- OBRS-1953: ชื่อกลาง is never required and is the same field the
+                          BOOKER hides behind `+ เพิ่มชื่อกลาง`, so it gets the same treatment
+                          here — one field, one rule, and a passenger row stops spending a
+                          half-row on it. Owner's call, 17 Sep 2026. The OBRS-1952 length
+                          rule came with it and still fires inside the expanded section. -->
                           <div class="col-12 optional-disclosure">
                             <button
                               type="button"
@@ -193,7 +239,14 @@
                           </div>
                           @if (isPassengerMiddleNameShown(i)) {
                             <div class="col-12 col-md-6" id="middleName-field-{{ i }}">
-                              <label for="middleName-{{ i }}">
+                              <label
+                                for="middleName-{{ i }}"
+                                [class.label-error]="
+                                  group.get('middleName')?.errors &&
+                                  (group.get('middleName')?.touched ||
+                                    group.get('middleName')?.dirty)
+                                "
+                                >
                                 {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
                               </label>
                               <input
@@ -201,7 +254,35 @@
                                 id="middleName-{{ i }}"
                                 formControlName="middleName"
                                 autocomplete="section-passenger-{{ i }} additional-name"
+                                [class.form-error]="
+                                  group.get('middleName')?.errors &&
+                                  (group.get('middleName')?.touched ||
+                                    group.get('middleName')?.dirty)
+                                "
                                 />
+                                <!-- OBRS-1952: optional, but length-checked once filled — see booker-info-form. -->
+                                @if (
+                                  group.get('middleName')?.hasError('minlength') &&
+                                  (group.get('middleName')?.touched ||
+                                  group.get('middleName')?.dirty)
+                                  ) {
+                                  <div
+                                    class="text-error"
+                                    >
+                                    {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                                  </div>
+                                }
+                                @if (
+                                  group.get('middleName')?.hasError('maxlength') &&
+                                  (group.get('middleName')?.touched ||
+                                  group.get('middleName')?.dirty)
+                                  ) {
+                                  <div
+                                    class="text-error"
+                                    >
+                                    {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                                  </div>
+                                }
                             </div>
                           }
                           <!-- OBRS-1953: this phone is OPTIONAL (the SMS destination is the

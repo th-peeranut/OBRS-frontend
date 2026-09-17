@@ -346,4 +346,75 @@ describe('BookerInfoFormComponent', () => {
       expect(ctrl?.valid).toBeFalse();
     });
   });
+
+  // OBRS-1952: ContactReqDto has always carried `@NotBlank @Size(min = 2, max = 50)` on these
+  // three; this form only carried `Validators.required`. A one-character surname therefore left
+  // the browser clean and came back as a 400 whose only visible trace was a generic modal.
+  describe('name length parity with ContactReqDto (OBRS-1952)', () => {
+    const fillValid = () => {
+      component.bookerForm.patchValue({
+        firstName: 'Somchai',
+        lastName: 'Jaidee',
+        phoneNumber: '0812345678',
+      });
+    };
+
+    it('rejects the one-character surname that used to reach the server', () => {
+      fillValid();
+      component.bookerForm.get('lastName')?.setValue('T');
+      expect(component.bookerForm.get('lastName')?.hasError('minlength')).toBeTrue();
+      expect(component.validateAndGetBooker()).toBeNull();
+    });
+
+    it('rejects a one-character first name too', () => {
+      fillValid();
+      component.bookerForm.get('firstName')?.setValue('T');
+      expect(component.validateAndGetBooker()).toBeNull();
+    });
+
+    it('measures the TRIMMED value, because the payload builder trims before sending', () => {
+      fillValid();
+      component.bookerForm.get('lastName')?.setValue(' T ');
+      expect(component.bookerForm.get('lastName')?.hasError('minlength')).toBeTrue();
+    });
+
+    it('rejects a whitespace-only name, which `Validators.required` accepted', () => {
+      fillValid();
+      component.bookerForm.get('firstName')?.setValue('   ');
+      expect(component.bookerForm.get('firstName')?.hasError('required')).toBeTrue();
+    });
+
+    it('rejects a name longer than the 50 the column holds', () => {
+      fillValid();
+      component.bookerForm.get('lastName')?.setValue('J'.repeat(51));
+      expect(component.bookerForm.get('lastName')?.hasError('maxlength')).toBeTrue();
+    });
+
+    it('leaves the middle name optional — blank is still valid', () => {
+      fillValid();
+      component.bookerForm.get('middleName')?.setValue('');
+      expect(component.bookerForm.get('middleName')?.valid).toBeTrue();
+      expect(component.validateAndGetBooker()).not.toBeNull();
+    });
+
+    it('but length-checks the middle name once it has a value', () => {
+      fillValid();
+      component.bookerForm.get('middleName')?.setValue('T');
+      expect(component.bookerForm.get('middleName')?.hasError('minlength')).toBeTrue();
+      expect(component.validateAndGetBooker()).toBeNull();
+    });
+
+    it('shows the too-short message, not "please enter your last name", at a field that has one', () => {
+      fillValid();
+      const ctrl = component.bookerForm.get('lastName');
+      ctrl?.setValue('T');
+      ctrl?.markAsTouched();
+      fixture.detectChanges();
+      const texts = Array.from(
+        fixture.nativeElement.querySelectorAll('.text-error')
+      ).map((el: any) => el.textContent.trim());
+      expect(texts).toContain('PASSENGER_INFO.FORM.NAME_TOO_SHORT');
+      expect(texts).not.toContain('PASSENGER_INFO.FORM.LAST_NAME_REQUIRED');
+    });
+  });
 });
