@@ -318,7 +318,7 @@
     }
 
     .sales-sub {
-      font-size: 11px;
+      font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
     }
   }
 
