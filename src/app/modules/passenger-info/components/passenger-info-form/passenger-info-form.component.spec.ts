@@ -946,13 +946,103 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
     return el;
   }
 
+  // OBRS-1953: the optional phone starts behind a per-row disclosure link, so a spec
+  // that asks the input a question has to expand its row first. Nothing about the
+  // input itself changed.
+  function expandPhoneRows(rows: number[]): void {
+    for (const i of rows) {
+      component.togglePassengerPhone(i);
+    }
+    fixture.detectChanges();
+  }
+
+  // OBRS-1953: the passenger's phone is optional (the SMS destination is the BOOKER's
+  // number), so it moved behind a per-row disclosure link. Layout only — the control
+  // keeps the validators it had.
+  describe('optional phone behind a disclosure link (OBRS-1953)', () => {
+    function el(id: string): HTMLElement | null {
+      return fixture.nativeElement.querySelector(`#${id}`);
+    }
+
+    it('hides only the optional phone; the required names stay in the first view', () => {
+      for (const i of [0, 1]) {
+        expect(el(`firstName-${i}`)).withContext(`firstName ${i}`).toBeTruthy();
+        expect(el(`lastName-${i}`)).withContext(`lastName ${i}`).toBeTruthy();
+        expect(el(`phoneNumber-${i}`)).withContext(`phoneNumber ${i}`).toBeNull();
+      }
+    });
+
+    it('offers a real <button> per row, reachable by Tab', () => {
+      for (const i of [0, 1]) {
+        const button = el(`phoneNumber-disclosure-${i}`);
+        expect(button).withContext(`row ${i}`).toBeTruthy();
+        expect(button?.tagName).withContext(`row ${i}`).toBe('BUTTON');
+        expect(button?.getAttribute('tabindex')).withContext(`row ${i}`).toBeNull();
+        expect(button?.getAttribute('aria-expanded')).withContext(`row ${i}`).toBe('false');
+      }
+    });
+
+    it('expands one row without expanding the other', () => {
+      (el('phoneNumber-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('phoneNumber-0')).toBeTruthy();
+      expect(el('phoneNumber-1')).toBeNull();
+    });
+
+    it('collapsing again hides the field but does not clear what was typed', () => {
+      (el('phoneNumber-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      component.passengerData.at(0).get('phoneNumber')?.setValue('0898765432');
+
+      (el('phoneNumber-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('phoneNumber-0')).withContext('hidden again').toBeNull();
+      expect(component.passengerData.at(0).get('phoneNumber')?.value).toBe('0898765432');
+    });
+
+    it('opens itself for a row that already carries a number', () => {
+      component.passengerData.at(1).get('phoneNumber')?.setValue('0898765432');
+      fixture.detectChanges();
+
+      expect(el('phoneNumber-1')).toBeTruthy();
+      expect(el('phoneNumber-0')).withContext('still empty').toBeNull();
+    });
+
+    it('changes no validator — the phone is still optional and still format-checked', () => {
+      const ctrl = component.passengerData.at(0).get('phoneNumber');
+
+      ctrl?.setValue('');
+      expect(ctrl?.valid).withContext('empty is allowed').toBeTrue();
+
+      ctrl?.setValue('0812');
+      expect(ctrl?.valid).withContext('bad number still rejected').toBeFalse();
+    });
+
+    it('keeps a row\'s choice with that row when an earlier row is deleted', () => {
+      // Row 1 is collapsed by hand; deleting row 0 must not leave row 1 wearing it.
+      component.passengerData.at(1).get('phoneNumber')?.setValue('0898765432');
+      component.togglePassengerPhone(1);
+      expect(component.isPassengerPhoneShown(1)).withContext('collapsed by hand').toBeFalse();
+
+      component.deletePassenger(0);
+
+      expect(component.isPassengerPhoneShown(0))
+        .withContext('the surviving row keeps its own collapsed state')
+        .toBeFalse();
+    });
+  });
+
   it('every passenger phone opens the telephone keypad', () => {
+    expandPhoneRows([0, 1]);
     for (const i of [0, 1]) {
       expect(inputEl(`phoneNumber-${i}`).getAttribute('inputmode')).withContext(`row ${i}`).toBe('tel');
     }
   });
 
   it('the autofill tokens are scoped to their own passenger row', () => {
+    expandPhoneRows([0, 1]);
     for (const i of [0, 1]) {
       expect(inputEl(`phoneNumber-${i}`).getAttribute('autocomplete')).toBe(`section-passenger-${i} tel`);
       expect(inputEl(`firstName-${i}`).getAttribute('autocomplete')).toBe(`section-passenger-${i} given-name`);

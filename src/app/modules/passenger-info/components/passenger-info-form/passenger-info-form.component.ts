@@ -52,6 +52,10 @@ import {
   stripPhoneSeparators,
   THAI_LOCAL_PHONE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
+import {
+  isOptionalFieldShown,
+  OptionalFieldDisclosure,
+} from '../../../../shared/lib/optional-field-disclosure';
 
 /** Seat-attribute list, keyed by the backend's plain-numeric seat label
  *  (OBRS-362). Shared shape between the fetch pipelines and the template. */
@@ -192,6 +196,12 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   private readonly blockedSeatsQuery$ = new Subject<void>();
 
   titleOptions: Dropdown[] = [...TITLE_OPTIONS];
+
+  // OBRS-1953: one entry per passenger row — the per-row disclosure state for the
+  // OPTIONAL phone field. Kept index-aligned with `passengerData` by the two methods
+  // that change the row COUNT (insertPassenger/deletePassenger); the store round trip
+  // patches rows in place and so cannot shift these.
+  private phoneDisclosure: OptionalFieldDisclosure[] = [];
 
   scheduleFilter: Observable<ScheduleFilter>;
 
@@ -482,6 +492,25 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     return this.passengerData.at(index).get(controlName) as FormControl;
   }
 
+  /**
+   * OBRS-1953: the passenger's phone is optional (it is NOT the SMS destination — that
+   * is the booker's, see createPassengerGroup), so it sits behind a disclosure link
+   * instead of taking a full half-row beside the two required name fields. Layout only:
+   * the control keeps exactly the validators it had, on screen or not, and collapsing
+   * hides without clearing — a row that comes back from the store with a number in it
+   * opens itself rather than hiding the value the traveler already typed.
+   */
+  isPassengerPhoneShown(index: number): boolean {
+    return isOptionalFieldShown(
+      this.phoneDisclosure[index],
+      this.passengerData.at(index)?.get('phoneNumber')?.value
+    );
+  }
+
+  togglePassengerPhone(index: number): void {
+    this.phoneDisclosure[index] = !this.isPassengerPhoneShown(index);
+  }
+
   // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts,
   // scoped to ONE row of the passenger FormArray. buildPassengerInfoPayload()
   // below strips the dashes back out before the value reaches the store
@@ -507,6 +536,9 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
 
   deletePassenger(index: number) {
     this.passengerData.removeAt(index);
+    // OBRS-1953: removing a row from the MIDDLE shifts every later row's index, so the
+    // disclosure flags have to move with them or row N+1 would inherit row N's state.
+    this.phoneDisclosure.splice(index, 1);
     this.clampActiveIndices();
     this.emitValidity();
   }
@@ -952,6 +984,10 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     while (this.passengerData.length < passengers.length) {
       this.passengerData.push(this.createPassengerGroup());
     }
+    // OBRS-1953: rows are only ever added/removed at the TAIL here, so surviving rows
+    // keep their index; this just drops flags for rows that no longer exist. A row
+    // added back later has no flag and derives its state from its value again.
+    this.phoneDisclosure.length = passengers.length;
 
     passengers.forEach((passenger, index) => {
       this.passengerData.at(index).patchValue({

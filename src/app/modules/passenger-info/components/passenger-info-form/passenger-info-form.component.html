@@ -176,7 +176,36 @@
                               </div>
                             }
                           </div>
-                          <div class="col-12 col-md-6">
+                          <!-- OBRS-1953: this phone is OPTIONAL (the SMS destination is the
+                          booker's number, not this one), so it sits behind a disclosure
+                          link instead of carrying the same visual weight as the required
+                          names above it. Layout only — the control's validators are
+                          untouched, and collapsing hides without clearing. -->
+                          <div class="col-12 optional-disclosure">
+                            <button
+                              type="button"
+                              class="btn btn-link p-0 optional-disclosure-toggle"
+                              id="phoneNumber-disclosure-{{ i }}"
+                              [attr.aria-expanded]="isPassengerPhoneShown(i)"
+                              attr.aria-controls="phoneNumber-field-{{ i }}"
+                              (click)="togglePassengerPhone(i)"
+                              >
+                              <i
+                                class="bi me-1"
+                                [class.bi-plus]="!isPassengerPhoneShown(i)"
+                                [class.bi-dash]="isPassengerPhoneShown(i)"
+                                aria-hidden="true"
+                              ></i>
+                              {{
+                              (isPassengerPhoneShown(i)
+                              ? "PASSENGER_INFO.FORM.PASSENGER_PHONE_HIDE"
+                              : "PASSENGER_INFO.FORM.PASSENGER_PHONE_ADD"
+                              ) | translate
+                              }}
+                            </button>
+                          </div>
+                          @if (isPassengerPhoneShown(i)) {
+                          <div class="col-12 col-md-6" id="phoneNumber-field-{{ i }}">
                             <!-- Phone number -->
                             <label
                               for="phoneNumber-{{ i }}"
@@ -220,6 +249,7 @@
                                 </div>
                               }
                             </div>
+                          }
                             <!-- Gender/status — OBRS-1357: optional, so no `*`, no error state and
                             no label-error binding: the control has no validator left that could
                             put it in one. -->

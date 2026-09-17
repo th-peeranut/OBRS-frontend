@@ -427,6 +427,8 @@ async function run(device, departureDate) {
     await page.locator('#booker-phoneNumber').fill('0812345678');
     // Required by `bookerForm` even though the label carries no asterisk —
     // leaving it empty is what keeps "ถัดไป" disabled with no visible error.
+    // OBRS-1953: the email sits behind a disclosure link now — expand before filling.
+    await page.locator('#booker-email-disclosure').click();
     await page.locator('#booker-email').fill('obrs634.measure@example.com');
     await tick(page, '#booker-gender_male');
     // Copies booker → passenger 0; without it the per-passenger form stays

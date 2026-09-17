@@ -500,3 +500,43 @@ input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
     -webkit-appearance: none;
 }
+
+// =============================================================================
+// OBRS-1953: optional booking-form fields behind a disclosure link
+// =============================================================================
+//
+// Shared by `app-booker-info-form` and every row of `app-passenger-info-form`
+// rather than copied into both component stylesheets — the same reason the
+// `.app-date-field` family (OBRS-185) lives here: two copies of a look drift,
+// and a dark-mode fix applied to one of them silently misses the other.
+//
+// `--bs-link-color` / `--bs-link-hover-color` instead of a plain `color`:
+// Bootstrap 5.3 derives `.btn-link`'s `--bs-btn-color`, `-hover-color` and
+// `-active-color` from those two, so redeclaring the pair themes every state at
+// once instead of losing a source-order tie to `.btn:hover` (OBRS-1517).
+.optional-disclosure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border-left: 2px solid $primary-lightgrey;
+  padding-left: $space-xs;
+}
+
+.optional-disclosure-toggle {
+  --bs-link-color: #{$text-primary};
+  --bs-link-hover-color: #{$primary-blue-hover};
+
+  // Customer surface: design-system.md §11 wants ≥ 44 CSS px, and on a link the
+  // text box alone is ~21px — the min-height is what the thumb actually gets.
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}

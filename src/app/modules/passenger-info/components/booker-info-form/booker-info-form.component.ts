@@ -22,6 +22,10 @@ import {
   stripPhoneSeparators,
   THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
+import {
+  isOptionalFieldShown,
+  OptionalFieldDisclosure,
+} from '../../../../shared/lib/optional-field-disclosure';
 
 @Component({
     selector: 'app-booker-info-form',
@@ -35,6 +39,12 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
   @Output() validityChange = new EventEmitter<boolean>();
 
   titleOptions: Dropdown[] = [...TITLE_OPTIONS];
+
+  // OBRS-1953: the booker's two optional fields sit behind a disclosure link so the
+  // first view carries only what a booking actually requires. `undefined` = not yet
+  // decided by the traveler; see isOptionalFieldShown() for why that is not `false`.
+  private middleNameDisclosure: OptionalFieldDisclosure;
+  private emailDisclosure: OptionalFieldDisclosure;
 
   constructor(private fb: FormBuilder) {
     this.createForm();
@@ -83,6 +93,31 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
 
   getControl(controlName: string): FormControl {
     return this.bookerForm.get(controlName) as FormControl;
+  }
+
+  // OBRS-1953. Collapsing only hides — no control is ever cleared or re-validated
+  // here, so `middleName` stays untouched and `email` keeps its OBRS-858 format
+  // check whether it is on screen or not.
+  isMiddleNameShown(): boolean {
+    return isOptionalFieldShown(
+      this.middleNameDisclosure,
+      this.bookerForm.get('middleName')?.value
+    );
+  }
+
+  toggleMiddleName(): void {
+    this.middleNameDisclosure = !this.isMiddleNameShown();
+  }
+
+  isEmailShown(): boolean {
+    return isOptionalFieldShown(
+      this.emailDisclosure,
+      this.bookerForm.get('email')?.value
+    );
+  }
+
+  toggleEmail(): void {
+    this.emailDisclosure = !this.isEmailShown();
   }
 
   // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts.
