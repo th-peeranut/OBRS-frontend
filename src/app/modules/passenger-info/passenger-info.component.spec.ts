@@ -5,10 +5,14 @@ import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version
 import {
   createAnalyticsServiceStub,
   createRouterStub,
+  createScheduleServiceStub,
   createStoreStub,
   createTranslateStub,
 } from '../../testing/test-stubs';
 import { PassengerInfoSummaryComponent } from './components/passenger-info-summary/passenger-info-summary.component';
+import { BookerInfoFormComponent } from './components/booker-info-form/booker-info-form.component';
+import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
+import { FormBuilder } from '@angular/forms';
 
 describe('PassengerInfoComponent', () => {
   let component: PassengerInfoComponent;
@@ -478,5 +482,71 @@ describe('PassengerInfoComponent idempotency key (OBRS-25)', () => {
 
     const [firstKey, secondKey] = keysFrom(createBooking);
     expect(secondKey).not.toBe(firstKey);
+  });
+});
+
+/**
+ * OBRS-1952, end of the chain: the two child forms are the REAL components here, not stubs, so
+ * this is the whole path the customer walked in the 2026-09-17 report — a one-character surname
+ * that the browser waved through and the server answered with a bare "ข้อมูลไม่ผ่านการตรวจสอบ".
+ * With the length rule in place the request is never made at all.
+ */
+describe('PassengerInfoComponent — a too-short name never reaches createBooking (OBRS-1952)', () => {
+  function pageWith(createBooking: jasmine.Spy, lastName: string): PassengerInfoComponent {
+    const component = new PassengerInfoComponent(
+      createStoreStub(),
+      createRouterStub(),
+      { createBooking, setActiveBookingId: () => undefined } as never,
+      createTranslateStub(),
+      { success: () => undefined, error: () => undefined } as never,
+      createAnalyticsServiceStub()
+    );
+    spyOn(component as any, 'setBookingStore').and.stub();
+
+    const booker = new BookerInfoFormComponent(new FormBuilder());
+    booker.bookerForm.patchValue({
+      firstName: 'Somchai',
+      lastName,
+      phoneNumber: '0812345678',
+    });
+
+    const passengers = new PassengerInfoFormComponent(
+      createStoreStub(),
+      createRouterStub(),
+      new FormBuilder(),
+      createTranslateStub(),
+      createScheduleServiceStub()
+    );
+    passengers.ngOnInit();
+    if (passengers.passengerData.length === 0) {
+      passengers.insertPassenger(true);
+    }
+    passengers.passengerData.at(0).patchValue({ firstName: 'Somchai', lastName });
+
+    (component as any).bookerInfoFormComponent = booker;
+    (component as any).passengerInfoFormComponent = passengers;
+    return component;
+  }
+
+  it('does not call createBooking when the surname is one character', async () => {
+    const createBooking = jasmine.createSpy('createBooking');
+    const component = pageWith(createBooking, 'T');
+
+    await component.onSubmitPassengerInfo();
+
+    expect(createBooking).not.toHaveBeenCalled();
+  });
+
+  it('marks the offending control invalid rather than failing silently somewhere else', async () => {
+    const createBooking = jasmine.createSpy('createBooking');
+    const component = pageWith(createBooking, 'T');
+
+    await component.onSubmitPassengerInfo();
+
+    const booker = (component as any).bookerInfoFormComponent as BookerInfoFormComponent;
+    expect(booker.bookerForm.get('lastName')?.hasError('minlength')).toBeTrue();
+    expect(booker.bookerForm.get('lastName')?.touched)
+      .withContext('markAllAsTouched() ran, so the inline error is on screen')
+      .toBeTrue();
   });
 });

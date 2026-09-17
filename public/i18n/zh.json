@@ -3240,7 +3240,11 @@
     "PICKUP_STOP": "上车点",
     "DROPOFF_STOP": "下车点",
     "OPEN_IN_MAPS": "在地图中打开",
-    "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。"
+    "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。",
+    "OPEN_SEATING_BANNER": {
+      "TITLE": "本路线所有班次均为自由座",
+      "BODY": "订票时无需选座，上车后坐任意空位即可。"
+    }
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -3315,6 +3319,8 @@
       "MIDDLE_NAME_OPTIONAL": "中间名（可选）",
       "LAST_NAME": "姓",
       "LAST_NAME_REQUIRED": "请输入您的姓",
+      "NAME_TOO_SHORT": "请至少输入 2 个字符",
+      "NAME_TOO_LONG": "请输入不超过 50 个字符",
       "PHONE_NUMBER": "手机号码",
       "PHONE_NUMBER_PLACEHOLDER": "请输入您的手机号码",
       "PHONE_NUMBER_REQUIRED": "请输入您的手机号码",
