@@ -22,6 +22,8 @@
  * discarded entry would put the customer back in front of the bare modal.
  */
 
+import { hasOwnKey } from '../../shared/lib/own-key';
+
 /** One backend rejection, ready to show and to scroll to. */
 export interface BookingFieldError {
   /** The bean path as the backend sent it, e.g. `departureSchedule.passengers[0].lastName`. */
@@ -48,6 +50,15 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   email: 'PASSENGER_INFO.FORM.EMAIL',
 };
 
+/**
+ * OBRS-601: `FIELD_LABEL_KEYS[field]` is a runtime string into an object literal, so `constructor`
+ * and `__proto__` would resolve to a FUNCTION that is neither nullish nor falsy — and the field
+ * name here comes straight off the wire. `hasOwnKey` is the only lookup that refuses those.
+ */
+function labelKeyFor(field: string): string | null {
+  return hasOwnKey(FIELD_LABEL_KEYS, field) ? FIELD_LABEL_KEYS[field] : null;
+}
+
 const PASSENGER_PATH = /^(?:departure|arrival)Schedule\.passengers\[(\d+)\]\.(.+)$/;
 const CONTACT_PATH = /^contact\.(.+)$/;
 
@@ -72,7 +83,7 @@ export function mapBookingFieldErrors(
         ),
         reason,
         // Both forms give every control an id; the passenger form suffixes it with the row index.
-        controlId: FIELD_LABEL_KEYS[passenger[2]] ? `${passenger[2]}-${index}` : null,
+        controlId: labelKeyFor(passenger[2]) ? `${passenger[2]}-${index}` : null,
       };
     }
 
@@ -86,7 +97,7 @@ export function mapBookingFieldErrors(
           translate
         ),
         reason,
-        controlId: FIELD_LABEL_KEYS[contact[1]] ? `booker-${contact[1]}` : null,
+        controlId: labelKeyFor(contact[1]) ? `booker-${contact[1]}` : null,
       };
     }
 
@@ -107,7 +118,7 @@ export function describeControlId(
   translate: (key: string, params?: Record<string, unknown>) => string
 ): BookingFieldError {
   const booker = /^booker-(.+)$/.exec(controlId);
-  if (booker && FIELD_LABEL_KEYS[booker[1]]) {
+  if (booker && labelKeyFor(booker[1])) {
     return {
       path: controlId,
       label: sectionLabel(translate('PASSENGER_INFO.BOOKER.SECTION_TITLE'), booker[1], translate),
@@ -117,7 +128,7 @@ export function describeControlId(
   }
 
   const passenger = /^(.+)-(\d+)$/.exec(controlId);
-  if (passenger && FIELD_LABEL_KEYS[passenger[1]]) {
+  if (passenger && labelKeyFor(passenger[1])) {
     return {
       path: controlId,
       label: sectionLabel(
@@ -138,6 +149,6 @@ function sectionLabel(
   field: string,
   translate: (key: string, params?: Record<string, unknown>) => string
 ): string {
-  const key = FIELD_LABEL_KEYS[field];
+  const key = labelKeyFor(field);
   return `${section} · ${key ? translate(key) : field}`;
 }
