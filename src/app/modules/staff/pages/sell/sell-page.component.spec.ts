@@ -2219,4 +2219,48 @@ describe('SellPageComponent - child fare needs a ticket desk (OBRS-1238)', () =>
 
     expect((component as any).ticketDeskStopSlugs).toEqual(new Set(['nong_chak']));
   });
+
+  it('reports the catalogue as unavailable only while it has not loaded', () => {
+    const component = makeComponent();
+
+    (component as any).ticketDeskStopSlugs = null;
+    expect((component as any).ticketDeskCatalogueUnavailable).toBeTrue();
+
+    withDesks(component, ['nong_chak']);
+    expect((component as any).ticketDeskCatalogueUnavailable).toBeFalse();
+  });
+
+  it('a failed stop lookup leaves the catalogue unavailable and the child tile enabled', () => {
+    // The wiring, end to end: the error callback is what turns a dead `GET /api/stops` into
+    // the one thing the clerk can see. Setting the field by hand would not catch it being
+    // unsubscribed or renamed.
+    const stationService = createStationServiceStub();
+    spyOn(stationService, 'getAll').and.returnValue(throwError(() => new Error('stops down')) as never);
+    const component = makeComponent(
+      undefined, undefined, undefined, undefined, undefined, undefined, stationService
+    );
+
+    component.ngOnInit();
+    (component as any).pickupSlug = 'roadside_pole';
+
+    expect((component as any).ticketDeskStopSlugs).toBeNull();
+    expect((component as any).ticketDeskCatalogueUnavailable).toBeTrue();
+    expect((component as any).childSaleBlocked).toBeFalse();
+  });
+
+  it('opts out of the global error modal - a failed catalogue must not blank the sell screen', () => {
+    // The global handler is a BLOCKING modal. This page loses nothing usable when the
+    // catalogue is missing (unknown = allowed; the server still refuses), so the modal would
+    // only stand between the clerk and the counter - the OBRS-642 failure mode, measured on
+    // this same endpoint. Shipping without the flag cost the E2E gate two 35-minute timeouts.
+    const stationService = createStationServiceStub();
+    const getAll = spyOn(stationService, 'getAll').and.returnValue(of({ data: [] }) as never);
+    const component = makeComponent(
+      undefined, undefined, undefined, undefined, undefined, undefined, stationService
+    );
+
+    component.ngOnInit();
+
+    expect(getAll).toHaveBeenCalledWith({ skipErrorAlert: true });
+  });
 });

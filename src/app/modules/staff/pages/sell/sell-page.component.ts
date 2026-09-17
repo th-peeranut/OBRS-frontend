@@ -250,11 +250,14 @@ export class SellPageComponent implements OnInit, OnDestroy, CanComponentDeactiv
 
   ngOnInit(): void {
     this.loadTrips(this.selectedDate);
-    // OBRS-1238: which stops have a ticket desk. skipErrorAlert is NOT passed - if this
-    // fails the clerk should see it, because the child controls will then stay enabled
-    // and the refusal will arrive from the server instead.
+    // OBRS-1238: which stops have a ticket desk. skipErrorAlert IS passed, and this is
+    // the call site making that decision: the global handler is a BLOCKING modal, and
+    // this fetch is background enrichment for one tile. A failure has to degrade to
+    // `ticketDeskStopSlugs = null` - unknown means allowed, the server still refuses -
+    // not lock the clerk out of the whole sell screen. That lock-out is the exact
+    // OBRS-642 failure mode, measured on this same endpoint.
     this.stationService
-      .getAll()
+      .getAll({ skipErrorAlert: true })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -506,6 +509,17 @@ export class SellPageComponent implements OnInit, OnDestroy, CanComponentDeactiv
    * OBRS-1238: may this sale carry a child fare? False only when the stop list HAS
    * loaded and the selected pickup is not one of the stops with a ticket desk.
    */
+  /**
+   * OBRS-1238: the stop catalogue could not be loaded, so nothing is known about ticket
+   * desks. `childSaleBlocked` stays false in that state on purpose - unknown means allowed -
+   * which leaves the clerk with no signal at all unless we say so. This is the visible half
+   * of the pair `station.effect.ts` names: a `skipErrorAlert` opt-out must ship a surface,
+   * or the failure is just silence.
+   */
+  protected get ticketDeskCatalogueUnavailable(): boolean {
+    return this.ticketDeskStopSlugs === null;
+  }
+
   protected get childSaleBlocked(): boolean {
     if (this.ticketDeskStopSlugs === null || !this.pickupSlug) {
       return false;

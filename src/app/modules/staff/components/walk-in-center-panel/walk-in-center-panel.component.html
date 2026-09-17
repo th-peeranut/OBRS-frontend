@@ -237,6 +237,10 @@
                   <div class="text-danger small text-center mb-3" role="status">
                     {{ 'STAFF.SELL.CHILD_NO_TICKET_DESK' | translate }}
                   </div>
+                } @else if (ticketDeskCatalogueUnavailable) {
+                  <div class="ticket-desk-warning small text-center mb-3" role="status">
+                    {{ 'STAFF.SELL.CHILD_DESK_CATALOGUE_UNAVAILABLE' | translate }}
+                  </div>
                 } @else if (fareCategory === 'child') {
                   <div class="text-muted small text-center mb-3">
                     {{ 'PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT' | translate }}
