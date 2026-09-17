@@ -131,6 +131,23 @@
           }
         </div>
       }
+      <!-- OBRS-1951 (design A2): said ONCE above the list, not as a pill on each
+           row. Rendered only when every row of this leg is `OPEN`, because the
+           copy claims "ทุกรอบ" - a mixed result renders nothing rather than a
+           sentence that is false for some of the rows under it. -->
+      @if (departureAllOpenSeating) {
+        <div class="open-seating-banner" data-testid="open-seating-banner-departure">
+          <i class="bi bi-info-circle open-seating-banner__icon" aria-hidden="true"></i>
+          <div class="open-seating-banner__text">
+            <p class="open-seating-banner__title">
+              {{ "SCHEDULE_BOOKING.OPEN_SEATING_BANNER.TITLE" | translate }}
+            </p>
+            <p class="open-seating-banner__body">
+              {{ "SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY" | translate }}
+            </p>
+          </div>
+        </div>
+      }
       @for (departure of departureList; track trackById($index, departure)) {
         <div class="schedule-item mb-3">
           <!-- LEFT -->
@@ -339,6 +356,22 @@
                 }
               </div>
             }
+          </div>
+        }
+        <!-- OBRS-1951: the return leg answers on its OWN rows, never the
+             outbound's - a route can sell one leg open and the other assigned,
+             and this banner speaks for the list directly below it. -->
+        @if (returnAllOpenSeating) {
+          <div class="open-seating-banner" data-testid="open-seating-banner-return">
+            <i class="bi bi-info-circle open-seating-banner__icon" aria-hidden="true"></i>
+            <div class="open-seating-banner__text">
+              <p class="open-seating-banner__title">
+                {{ "SCHEDULE_BOOKING.OPEN_SEATING_BANNER.TITLE" | translate }}
+              </p>
+              <p class="open-seating-banner__body">
+                {{ "SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY" | translate }}
+              </p>
+            </div>
           </div>
         }
       }
