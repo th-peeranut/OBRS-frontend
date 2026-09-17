@@ -39,14 +39,26 @@
                       id="fareCategory_child-{{ i }}"
                       formControlName="isAdult"
                       [value]="false"
+                      [attr.disabled]="childBoardingBlocked ? '' : null"
                       />
                       <label class="form-check-label" for="fareCategory_child-{{ i }}">
                         {{ "PASSENGER_INFO.BADGE.CHILD" | translate }}
                       </label>
                     </div>
-                    <div class="fare-category-hint text-muted small">
-                      {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT" | translate }}
-                    </div>
+                    <!-- OBRS-1238: `[attr.disabled]` rather than disabling the CONTROL -
+                    both radios share the one `isAdult` control, so disabling it would
+                    take the adult option away too. The server refuses this booking on its
+                    own; what this line buys is the reason arriving before the payment
+                    step instead of after it. -->
+                    @if (childBoardingBlocked) {
+                      <div class="fare-category-hint text-danger small">
+                        {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_NO_TICKET_DESK" | translate }}
+                      </div>
+                    } @else {
+                      <div class="fare-category-hint text-muted small">
+                        {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT" | translate }}
+                      </div>
+                    }
                   </div>
                   <!-- OBRS-1239: numbered here, not a bare "passenger information",
                   because this block repeats once per passenger. -->

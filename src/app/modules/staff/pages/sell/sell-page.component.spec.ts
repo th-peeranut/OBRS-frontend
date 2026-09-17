@@ -19,6 +19,17 @@ import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
+import { StationService } from '../../../../services/station/station.service';
+import { StationApi } from '../../../../shared/interfaces/station.interface';
+
+/**
+ * OBRS-1238: the page now asks which stops have a ticket desk. Returns an EMPTY list by default,
+ * which resolves to "no stop has a desk"; every pre-existing case here books at a stop that is
+ * not in it, so pass an explicit list in the cases that are about the child controls.
+ */
+function createStationServiceStub(stations: Partial<StationApi>[] = []): StationService {
+  return { getAll: () => of({ data: stations } as never) } as unknown as StationService;
+}
 
 function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
   return {
@@ -130,7 +141,9 @@ function makeComponent(
   // of which exercise the permission gate) keeps testing what it was written
   // for; the negative case gets its own stub explicitly (see the DOM suite
   // below).
-  authStub = createAuthServiceStub(false, true)
+  authStub = createAuthServiceStub(false, true),
+  // OBRS-1238: the stop catalogue the ticket-desk block is read from.
+  stationService = createStationServiceStub()
 ): SellPageComponent {
   return new SellPageComponent(
     staffApi,
@@ -140,7 +153,7 @@ function makeComponent(
     adminApi,
     scheduleStore,
     router,
-    authStub
+    authStub, stationService
   );
 }
 
@@ -1007,7 +1020,7 @@ describe('SellPageComponent', () => {
         createAdminApiStub(),
         createScheduleStoreStub(),
         createRouterStub(),
-        createAuthServiceStub(false, true)
+        createAuthServiceStub(false, true), createStationServiceStub()
       );
       return { comp, translate };
     }
@@ -1185,7 +1198,7 @@ describe('SellPageComponent', () => {
         createAdminApiStub(),
         createScheduleStoreStub(),
         createRouterStub(),
-        createAuthServiceStub(false, true)
+        createAuthServiceStub(false, true), createStationServiceStub()
       );
       return { comp, api, translate };
     }
@@ -1236,7 +1249,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         api, createAlertStub(), createTranslateStub(), new FormBuilder(),
         createAdminApiStub(), createScheduleStoreStub(), createRouterStub(),
-        createAuthServiceStub(false, true)
+        createAuthServiceStub(false, true), createStationServiceStub()
       );
       comp.ngOnInit();
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
@@ -1400,7 +1413,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true), createStationServiceStub()
       );
       comp.ngOnInit();
 
@@ -1427,7 +1440,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true), createStationServiceStub()
       );
       comp.ngOnInit();
 
@@ -1453,7 +1466,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true), createStationServiceStub()
       );
       comp.ngOnInit();
 
@@ -1477,7 +1490,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true), createStationServiceStub()
       );
       comp.ngOnInit();
 
@@ -1505,7 +1518,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true)
+        createAdminApiStub(), store, createRouterStub(), createAuthServiceStub(false, true), createStationServiceStub()
       );
       comp.ngOnInit();
 
@@ -1886,6 +1899,8 @@ describe('SellPageComponent — OBRS-667 owner-only cancel gate (DOM)', () => {
         { provide: StaffSchedulesStore, useValue: createScheduleStoreStub() },
         { provide: Router, useValue: createRouterStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false, hasAnyRole) },
+        // OBRS-1238: the page reads the stop catalogue for the ticket-desk flag.
+        { provide: StationService, useValue: createStationServiceStub() },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -2044,6 +2059,7 @@ describe('SellPageComponent — OBRS-1755 canDeactivate', () => {
         { provide: StaffSchedulesStore, useValue: createScheduleStoreStub() },
         { provide: Router, useValue: createRouterStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false, false) },
+        { provide: StationService, useValue: createStationServiceStub() },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -2103,6 +2119,7 @@ describe('SellPageComponent - OBRS-974 schedule-delete modal title (DOM)', () =>
         { provide: StaffSchedulesStore, useValue: createScheduleStoreStub() },
         { provide: Router, useValue: createRouterStub() },
         { provide: AuthService, useValue: createAuthServiceStub(false, true) },
+        { provide: StationService, useValue: createStationServiceStub() },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -2140,5 +2157,66 @@ describe('SellPageComponent - OBRS-974 schedule-delete modal title (DOM)', () =>
     expect(title.textContent!.trim())
       .withContext('a raw i18n key leaked to the screen')
       .toBe((enI18n as any).ADMIN.COMMON.CANCEL_TRIP_CONFIRM_TITLE);
+  });
+});
+
+/**
+ * OBRS-1238: a child ticket may only BOARD at a stop with a ticket desk, so the counter's child
+ * controls are blocked whenever the selected pickup is not one of them.
+ *
+ * <p>⛔ The block is UX. The server refuses the same sale with
+ * `CHILD_FARE_STOP_WITHOUT_TICKET_DESK` (proved in `ChildBoardingStopIT`); what these cases pin is
+ * that the clerk finds out BEFORE taking the money.
+ */
+describe('SellPageComponent - child fare needs a ticket desk (OBRS-1238)', () => {
+  function withDesks(component: SellPageComponent, slugs: string[]): void {
+    (component as any).ticketDeskStopSlugs = new Set(slugs);
+  }
+
+  it('blocks the child fare at a pickup with no ticket desk, and allows it at one with', () => {
+    const component = makeComponent();
+    withDesks(component, ['nong_chak']);
+
+    (component as any).pickupSlug = 'roadside_pole';
+    expect((component as any).childSaleBlocked).toBeTrue();
+
+    (component as any).pickupSlug = 'nong_chak';
+    expect((component as any).childSaleBlocked).toBeFalse();
+  });
+
+  it('does NOT block while the stop list has not loaded - a failed lookup must not close every counter', () => {
+    const component = makeComponent();
+    (component as any).ticketDeskStopSlugs = null;
+    (component as any).pickupSlug = 'roadside_pole';
+
+    expect((component as any).childSaleBlocked).toBeFalse();
+  });
+
+  it('drops a captured child fare when the pickup moves to a stop with no desk', () => {
+    const component = makeComponent();
+    withDesks(component, ['nong_chak']);
+    (component as any).selectedFareCategory = 'child';
+    (component as any).openChildCount = 2;
+
+    (component as any).onPickupChanged('roadside_pole');
+
+    // Left standing, this would be a sale the clerk could still press Sell on and the server
+    // would refuse - the refusal arriving after the customer has handed over cash.
+    expect((component as any).selectedFareCategory).toBe('adult');
+    expect((component as any).openChildCount).toBe(0);
+  });
+
+  it('ngOnInit fills the desk set from the stop catalogue', () => {
+    const component = makeComponent(
+      undefined, undefined, undefined, undefined, undefined, undefined,
+      createStationServiceStub([
+        { id: 1, slug: 'nong_chak', hasTicketDesk: true },
+        { id: 2, slug: 'roadside_pole', hasTicketDesk: false },
+      ])
+    );
+
+    component.ngOnInit();
+
+    expect((component as any).ticketDeskStopSlugs).toEqual(new Set(['nong_chak']));
   });
 });

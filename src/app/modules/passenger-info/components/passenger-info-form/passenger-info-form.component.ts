@@ -24,6 +24,11 @@ import {
   SeatMapRespDto,
 } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
+import {
+  StationApi,
+  stationAllowsChildBoarding,
+} from '../../../../shared/interfaces/station.interface';
 import {
   invokeGetPassengerInfo,
   invokeSetPassengerInfo,
@@ -195,6 +200,21 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
 
   scheduleFilter: Observable<ScheduleFilter>;
 
+  /**
+   * OBRS-1238 — true when the boarding stop this trip was searched with has no
+   * ticket desk, so a child fare cannot be sold for it.
+   *
+   * <p>The child radio is disabled and the reason is stated HERE, on the screen
+   * where the category is chosen, rather than letting the customer reach the
+   * payment step and be refused there (AC-7). ⛔ It is not the guard: the server
+   * refuses the same booking on its own (OBRS-126), and this field exists only
+   * so the refusal is not a surprise.
+   *
+   * <p>A ROUND trip is blocked if EITHER end lacks a desk — the return leg
+   * boards at the outbound destination, so both stops are boarding stops.
+   */
+  childBoardingBlocked = false;
+
   constructor(
     private store: Store,
     private router: Router,
@@ -333,6 +353,22 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.store.dispatch(invokeGetPassengerInfo());
+
+    // OBRS-1238: the stop list is already in the store (the parent page dispatches
+    // invokeGetAllProvinceWithStationApi on entry), so this costs no extra request.
+    combineLatest([
+      this.scheduleFilter,
+      this.store.pipe(select(selectProvinceWithStation)),
+    ])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(([filterState, stations]) => {
+        this.childBoardingBlocked = this.resolveChildBoardingBlocked(filterState, stations);
+        // Re-coerced here as well as at insert time, because the two subscriptions
+        // that build passengers and resolve this flag can settle in either order.
+        if (this.childBoardingBlocked) {
+          this.forceEveryPassengerToAdult();
+        }
+      });
 
     this.passengerInfo.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       if (data && data.length) {
@@ -887,7 +923,9 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   private createPassengerGroup(isAdult: boolean = false): FormGroup {
     return this.fb.group({
       useBookerInfo: [false],
-      isAdult: [isAdult],
+      // OBRS-1238: a KIDS count carried over from the home search cannot survive a
+      // boarding stop with no ticket desk - the server would refuse the booking.
+      isAdult: [this.childBoardingBlocked ? true : isAdult],
       title: [null],
       firstName: ['', Validators.required],
       middleName: [''],
@@ -1012,4 +1050,46 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     const isValid = (this.passengerForm?.valid ?? false) && hasPassenger;
     this.validityChange.emit(isValid);
   }
+
+  /**
+   * OBRS-1238 — every stop this booking BOARDS at must have a ticket desk before a
+   * child fare can be chosen. That is the origin on a one-way trip, and the origin
+   * AND the destination on a round trip (the return leg boards where the outbound
+   * one ended).
+   */
+  private resolveChildBoardingBlocked(
+    filterState: ScheduleFilter | null | undefined,
+    stations: StationApi[] | null | undefined
+  ): boolean {
+    if (!filterState) {
+      return false;
+    }
+    if (!stationAllowsChildBoarding(filterState.startStationId, stations)) {
+      return true;
+    }
+    return (
+      this.isReturnTrip(filterState.roundTrip) &&
+      !stationAllowsChildBoarding(filterState.stopStationId, stations)
+    );
+  }
+
+  /** Mirrors `PassengerInfoComponent#isReturnTrip` - the same two shapes the store holds. */
+  private isReturnTrip(
+    roundTrip: ScheduleFilter['roundTrip'] | number | null | undefined
+  ): boolean {
+    const roundTripId =
+      typeof roundTrip === 'object' && roundTrip !== null ? roundTrip.id : roundTrip;
+    const value = String(roundTripId).toLowerCase();
+    return roundTripId === 2 || value === 'return' || value === '2';
+  }
+
+  private forceEveryPassengerToAdult(): void {
+    for (const group of this.passengerData.controls) {
+      const isAdult = group.get('isAdult');
+      if (isAdult && isAdult.value !== true) {
+        isAdult.setValue(true);
+      }
+    }
+  }
+
 }

@@ -68,6 +68,8 @@ function makeComponent(overrides: Record<string, unknown> = {}, isAdmin = true, 
       .and.returnValue(of({ data: { primaryPhotoUrl: 'https://sb.example/o/public/b/stops/7/x.jpg' } })),
     deleteStopPhoto: jasmine.createSpy('deleteStopPhoto').and.returnValue(of({ data: null })),
     updateStopLabels: jasmine.createSpy('updateStopLabels').and.returnValue(of({ data: null })),
+    // OBRS-1954: the owner's ticket-desk switch.
+    updateStopTicketDesk: jasmine.createSpy('updateStopTicketDesk').and.returnValue(of({ data: null })),
     createStop: jasmine.createSpy('createStop').and.returnValue(of({ data: null })),
     deleteStop: jasmine.createSpy('deleteStop').and.returnValue(of({ data: null })),
     ...overrides,
@@ -575,5 +577,89 @@ describe('StopsPageComponent - map picker fallback center (OBRS-1030, AC3)', () 
     const { component } = makeComponent();
 
     expect(component.mapFallbackCenter).toBeNull();
+  });
+});
+
+/**
+ * OBRS-1954: the owner's own switch for "this stop has a ticket desk" - the flag OBRS-1238's
+ * child-boarding guard reads. Until this shipped, moving a desk meant a migration and a deploy.
+ */
+describe('StopsPageComponent - ticket-desk toggle (OBRS-1954)', () => {
+  function row(hasTicketDesk: boolean) {
+    return {
+      id: 7,
+      slug: 'nong_chak',
+      name: 'หนองชาก',
+      status: 'Active',
+      statusCode: 'active',
+      stopType: 'Pickup',
+      stopTypeCode: 'pickup',
+      hasTicketDesk,
+    };
+  }
+
+  const clickEvent = () => ({ stopPropagation: jasmine.createSpy('stopPropagation') }) as unknown as Event;
+
+  it('sends the NEW value and flips the row optimistically', async () => {
+    const { component, adminApi } = makeComponent();
+    const target = row(false);
+
+    await component.toggleTicketDesk(target, clickEvent());
+
+    expect(adminApi.updateStopTicketDesk).toHaveBeenCalledWith(7, true);
+    expect(target.hasTicketDesk).toBeTrue();
+  });
+
+  it('reverts the row and surfaces the error when the save fails', async () => {
+    const { component, adminApi, alert } = makeComponent({
+      updateStopTicketDesk: jasmine
+        .createSpy('updateStopTicketDesk')
+        .and.returnValue(throwError(() => new Error('boom'))),
+    });
+    const target = row(true);
+
+    await component.toggleTicketDesk(target, clickEvent());
+
+    // A switch left showing the value the click asked for, after a save that did not happen, is
+    // the OBRS-852 lying-Save-button shape in miniature.
+    expect(target.hasTicketDesk).toBeTrue();
+    expect(adminApi.updateStopTicketDesk).toHaveBeenCalledWith(7, false);
+    expect(alert.error).toHaveBeenCalled();
+  });
+
+  it('does not stack a second save while one is in flight', async () => {
+    const { component, adminApi } = makeComponent();
+    component.ticketDeskSavingId = 99;
+
+    await component.toggleTicketDesk(row(false), clickEvent());
+
+    expect(adminApi.updateStopTicketDesk).not.toHaveBeenCalled();
+  });
+
+  it('survives a language switch: the toggled value is written to the DTO the rows are rebuilt from', async () => {
+    // applyLocalization() rebuilds `rows` from `rawStops` on every onLangChange. A row-only
+    // optimistic write is thrown away there, and the switch would then show the OLD value while
+    // the server already held the new one - an owner trusting that display would re-click and
+    // silently undo their own correct change.
+    const { component } = makeComponent({
+      getStopsForAdmin: jasmine.createSpy('getStopsForAdmin').and.returnValue(
+        of({ data: [{ ...STOP_LIST[0], hasTicketDesk: false }] })
+      ),
+    });
+    await component.load();
+
+    await component.toggleTicketDesk(component.rows[0], clickEvent());
+    component.applyLocalization();
+
+    expect(component.rows[0].hasTicketDesk).toBeTrue();
+  });
+
+  it('stops the click from also opening the row detail modal', async () => {
+    const { component } = makeComponent();
+    const event = clickEvent();
+
+    await component.toggleTicketDesk(row(false), event);
+
+    expect(event.stopPropagation).toHaveBeenCalled();
   });
 });
