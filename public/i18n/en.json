@@ -3382,7 +3382,8 @@
     "ALERT": {
       "CREATE_SUCCESS": "Booking saved successfully",
       "CREATE_FAILED": "Unable to create the booking. Please try again.",
-      "CAPACITY_FULL": "This trip is fully booked. Please reduce the passenger count or choose another schedule."
+      "CAPACITY_FULL": "This trip is fully booked. Please reduce the passenger count or choose another schedule.",
+      "FIX_THESE_FIELDS": "Please correct the following before continuing:"
     }
   },
   "PAYMENT": {
