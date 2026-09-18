@@ -66,7 +66,7 @@
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.04);
   color: $text-softblack;
-  font-size: 14px;
+  font-size: $font-size-sm;
   line-height: 1.5;
 
   strong {
@@ -111,7 +111,7 @@
   // caught it. $text-softblack is 5.99:1 on that same surface, and repointing a tint-borne
   // $text-lightblack site to it is exactly the trade OBRS-769 made for its two.
   color: $text-softblack;
-  font-size: 14px;
+  font-size: $font-size-sm;
   line-height: 1.5;
 
   a {

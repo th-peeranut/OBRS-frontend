@@ -13,6 +13,10 @@ function dto(overrides: Partial<CustomerTripPositionRespDto> = {}): CustomerTrip
     recordedAt: null,
     stale: false,
     windowOpensAt: null,
+    boardingStopOrder: null,
+    nextStopOrder: null,
+    totalStops: null,
+    stopsRemaining: null,
     ...overrides,
   };
 }
@@ -125,5 +129,89 @@ describe('resolveTripTrackView', () => {
     expect(notYetOpen.timeText).not.toContain('T');
     expect(live.timeText).toBe('14:32');
     expect(live.timeText).not.toContain('T');
+  });
+
+  // ── OBRS-1084 — positional "stops remaining" progress line ─────────────
+  const PROGRESS_FIELDS = { boardingStopOrder: 5, nextStopOrder: 2, totalStops: 8 };
+
+  describe('resolveTripTrackView — OBRS-1084 progress line', () => {
+    it('AC4: progress is null for every state EXCEPT LIVE/STALE, even when all four source fields are present', () => {
+      const otherStates: CustomerTripPositionRespDto['state'][] = [
+        'NO_SIGNAL',
+        'UNAVAILABLE',
+        'NOT_YET_OPEN',
+        'CLOSED',
+      ];
+      for (const state of otherStates) {
+        const view = resolveTripTrackView(dto({ state, ...PROGRESS_FIELDS, stopsRemaining: 3 }));
+        expect(view.progress).withContext(`${state} must never carry a progress line`).toBeNull();
+      }
+    });
+
+    it('AC4: LIVE and STALE use DIFFERENT headline keys for the same stopsRemaining — STALE reads as "last known", never LIVE copy', () => {
+      const live = resolveTripTrackView(dto({ state: 'LIVE', ...PROGRESS_FIELDS, stopsRemaining: 3 }));
+      const stale = resolveTripTrackView(dto({ state: 'STALE', ...PROGRESS_FIELDS, stopsRemaining: 3 }));
+
+      expect(live.progress?.headlineKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.LIVE_REMAINING');
+      expect(stale.progress?.headlineKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.STALE_REMAINING');
+      expect(stale.progress?.headlineKey).not.toBe(live.progress?.headlineKey);
+    });
+
+    it('stopsRemaining = 3 / 0 / -2 resolve to three distinct headline keys (LIVE)', () => {
+      const positive = resolveTripTrackView(dto({ state: 'LIVE', ...PROGRESS_FIELDS, stopsRemaining: 3 }));
+      const zero = resolveTripTrackView(dto({ state: 'LIVE', ...PROGRESS_FIELDS, stopsRemaining: 0 }));
+      const negative = resolveTripTrackView(dto({ state: 'LIVE', ...PROGRESS_FIELDS, stopsRemaining: -2 }));
+
+      const keys = [positive.progress?.headlineKey, zero.progress?.headlineKey, negative.progress?.headlineKey];
+      expect(new Set(keys).size).toBe(3);
+      expect(positive.progress?.headlineKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.LIVE_REMAINING');
+      expect(positive.progress?.headlineParams).toEqual({ count: 3 });
+      expect(zero.progress?.headlineKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.LIVE_NEXT_IS_YOURS');
+      expect(zero.progress?.headlineParams).toBeNull();
+      expect(negative.progress?.headlineKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.LIVE_PASSED');
+    });
+
+    it('AC5: stopsRemaining < 0 never uses the REMAINING key (no "0 stops left" rendering) and carries no count param', () => {
+      const negative = resolveTripTrackView(dto({ state: 'LIVE', ...PROGRESS_FIELDS, stopsRemaining: -2 }));
+
+      expect(negative.progress?.headlineKey).not.toContain('REMAINING');
+      expect(negative.progress?.headlineKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.LIVE_PASSED');
+      expect(negative.progress?.headlineParams).toBeNull();
+    });
+
+    it('the "passed N of M stops" line is derived from nextStopOrder/totalStops, independent of the sign of stopsRemaining', () => {
+      const view = resolveTripTrackView(dto({ state: 'LIVE', boardingStopOrder: 5, nextStopOrder: 2, totalStops: 8, stopsRemaining: 3 }));
+
+      expect(view.progress?.passedKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.STOPS_PASSED_COUNT');
+      expect(view.progress?.passedParams).toEqual({ passed: 1, total: 8 }); // nextStopOrder - 1
+    });
+
+    it('any one of the four required fields being null collapses the WHOLE progress line to null', () => {
+      const missingBoarding = resolveTripTrackView(
+        dto({ state: 'LIVE', boardingStopOrder: null, nextStopOrder: 2, totalStops: 8, stopsRemaining: 3 })
+      );
+      const missingNext = resolveTripTrackView(
+        dto({ state: 'STALE', boardingStopOrder: 5, nextStopOrder: null, totalStops: 8, stopsRemaining: 3 })
+      );
+      const missingTotal = resolveTripTrackView(
+        dto({ state: 'LIVE', boardingStopOrder: 5, nextStopOrder: 2, totalStops: null, stopsRemaining: 3 })
+      );
+      const missingRemaining = resolveTripTrackView(
+        dto({ state: 'LIVE', boardingStopOrder: 5, nextStopOrder: 2, totalStops: 8, stopsRemaining: null })
+      );
+
+      expect(missingBoarding.progress).toBeNull();
+      expect(missingNext.progress).toBeNull();
+      expect(missingTotal.progress).toBeNull();
+      expect(missingRemaining.progress).toBeNull();
+    });
+
+    it('all four fields present resolves a non-null progress line for both LIVE and STALE', () => {
+      const live = resolveTripTrackView(dto({ state: 'LIVE', ...PROGRESS_FIELDS, stopsRemaining: 3 }));
+      const stale = resolveTripTrackView(dto({ state: 'STALE', ...PROGRESS_FIELDS, stopsRemaining: 3 }));
+
+      expect(live.progress).not.toBeNull();
+      expect(stale.progress).not.toBeNull();
+    });
   });
 });

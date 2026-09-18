@@ -271,9 +271,12 @@
                       }}
                     </span>
                     <span class="summary-passenger-chips">
-                      @if (!p.passengerSeat && !p.passengerSeatReturn) {
+                      <!-- OBRS-1943: an OPEN journey has no seat to choose, so
+                      the seatless chip states the open-seating wording instead
+                      of "not chosen yet" (which still shows on ASSIGNED). -->
+                      @if (seatlessChipKey(p, scheduleBooking?.schedule); as seatlessKey) {
                         <span class="seat-passenger-chip">
-                          {{ "PASSENGER_INFO.SUMMARY.NO_SEAT" | translate }}
+                          {{ seatlessKey | translate }}
                         </span>
                       }
                       @if (p.passengerSeat) {
@@ -380,9 +383,11 @@
           <!-- Promo code (OBRS-109 / #37): instant preview against the client-side
           subtotal above; only a confirmed-applied code is ever sent to the
           booking-submit call (see PassengerInfoComponent). -->
+          <!-- OBRS-1955: the disabled state is NOT isNextDisabled any more - see isFormIncomplete
+          on this component. -->
           <app-promo-code-field
             [amount]="sumFare(scheduleBooking?.schedule, (passengerInfo$ | async))"
-            [disabled]="isNextDisabled"
+            [disabled]="isFormIncomplete || isNextDisabled"
             (applied)="onPromoApplied($event)"
             (removed)="onPromoRemoved()"
           ></app-promo-code-field>

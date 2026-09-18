@@ -12,8 +12,10 @@ import {
 import { AlertService } from '../../../../shared/services/alert.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { environment } from '../../../../../environments/environment';
 import {
   Option,
+  PROVINCE_MAP_CENTERS,
   ReturnStopOption,
   StopDetailForm,
   StopRow,
@@ -97,6 +99,13 @@ export class StopsPageComponent implements OnInit, OnDestroy {
   protected isCreating = false;
 
   /**
+   * OBRS-1954: the id of the stop whose ticket-desk toggle is in flight, or null. One save at a
+   * time - every switch on the page is disabled while it runs, not just the one that was clicked,
+   * because a second click landing mid-flight would race this one's optimistic write.
+   */
+  protected ticketDeskSavingId: number | null = null;
+
+  /**
    * OBRS-1680: may this caller edit the PLACE, as opposed to their own sign on it?
    *
    * <p>Read once in the constructor rather than called from the template: a getter here would run
@@ -104,6 +113,10 @@ export class StopsPageComponent implements OnInit, OnDestroy {
    * cannot change without a new sign-in or a role preview, both of which rebuild this component.
    */
   protected readonly canEditPhysical: boolean;
+
+  /** OBRS-1030: the picker's own two inputs — read once, same as `canEditPhysical` above. */
+  protected readonly mapsApiKey = environment.mapsApiKey;
+  protected readonly mapsMapId = environment.mapsMapId;
 
   protected provinceOptions: Option[] = [];
   // OBRS-1481: rebuilt in applyLocalization AND whenever a stop is opened, because the list
@@ -269,6 +282,12 @@ export class StopsPageComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** OBRS-1030 (AC3): measured province centers — see `PROVINCE_MAP_CENTERS`' own doc. Null
+   *  for a province not in that table, which the picker reads as "use the fixed constant". */
+  protected get mapFallbackCenter(): { lat: number; lng: number } | null {
+    return PROVINCE_MAP_CENTERS[this.selected?.provinceCode ?? ''] ?? null;
+  }
+
   protected closeDetail(): void {
     this.isFormModalOpen = false;
     this.selected = null;
@@ -333,6 +352,56 @@ export class StopsPageComponent implements OnInit, OnDestroy {
    * case, so it gets its own sentence rather than the generic failure message: the operator has
    * to be told the stop is in use, otherwise the button reads as broken.
    */
+  /**
+   * OBRS-1954: turns this stop's ticket desk on or off. Saves immediately rather than through
+   * the detail modal, because the flag has neither of that form's two problems - it is one
+   * boolean, not a full replace, and it is OWNER-writable while most of that form is ADMIN-only.
+   *
+   * <p>Written optimistically and reverted on failure: the row is the only place this value is
+   * shown, so leaving it on the pre-click value until a round trip completes would make every
+   * click look ignored.
+   *
+   * <p>⛔ The screen is not the guard. Turning a desk OFF stops NEW child tickets being sold for
+   * that stop from the next request onward; tickets already sold are untouched (OBRS-1238's guard
+   * is on the write). Saying otherwise on this screen would promise a recall it cannot perform.
+   */
+  protected async toggleTicketDesk(row: StopRow, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (this.ticketDeskSavingId !== null) {
+      return;
+    }
+    const next = !row.hasTicketDesk;
+    this.ticketDeskSavingId = row.id;
+    this.applyTicketDesk(row, next);
+    try {
+      await firstValueFrom(this.adminApiService.updateStopTicketDesk(row.id, next));
+    } catch (error) {
+      this.applyTicketDesk(row, !next);
+      await this.alertService.error(
+        extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED')
+      );
+    } finally {
+      this.ticketDeskSavingId = null;
+    }
+  }
+
+  /**
+   * OBRS-1954: writes the flag onto the rendered row AND onto the DTO it was built from.
+   *
+   * <p>Both halves are load-bearing. `applyLocalization()` rebuilds `rows` from `rawStops` on
+   * every language switch, so a row-only write is thrown away the moment the owner changes
+   * language without reloading - and the switch would then show the OLD value while the server
+   * already held the new one. An owner trusting that display would re-click and silently undo
+   * their own correct change: the OBRS-852 lying-display shape, reached by a different door.
+   */
+  private applyTicketDesk(row: StopRow, hasTicketDesk: boolean): void {
+    row.hasTicketDesk = hasTicketDesk;
+    const source = this.rawStops.find((dto) => dto.id === row.id);
+    if (source) {
+      source.hasTicketDesk = hasTicketDesk;
+    }
+  }
+
   protected async deleteStop(row: StopRow, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     if (this.isDeleting) {

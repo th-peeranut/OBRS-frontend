@@ -3,17 +3,17 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import {
   AdminApiService,
-  AdminExpenseDto,
   AdminVehicleDto,
+  PendingExpenseGroupDto,
 } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import { VehiclesStore } from '../../vehicles/vehicles.store';
 import {
-  ExpenseRow,
+  ExpenseApprovalGroupRow,
   Option,
+  toExpenseApprovalGroupRow,
   toExpenseCategoryOptionsFrom,
-  toExpenseRow,
 } from '../expenses-page.mappers';
 
 /**
@@ -37,11 +37,12 @@ import {
     standalone: false
 })
 export class ExpenseApprovalSectionComponent implements OnInit, OnDestroy {
-  protected pendingExpenses: ExpenseRow[] = [];
-  protected approvalBusyId: number | null = null;
+  protected pendingExpenses: ExpenseApprovalGroupRow[] = [];
+  /** The composite action key (`bill:<settleId>` / `exp:<id>`) of the row currently being ruled on. */
+  protected approvalBusyId: string | null = null;
 
   private readonly subscriptions = new Subscription();
-  private rawPendingExpenses: AdminExpenseDto[] = [];
+  private rawPendingGroups: PendingExpenseGroupDto[] = [];
   private rawVehicles: AdminVehicleDto[] = [];
   private categoryOptions: Option[] = [];
 
@@ -79,26 +80,39 @@ export class ExpenseApprovalSectionComponent implements OnInit, OnDestroy {
   private async loadPending(): Promise<void> {
     try {
       const response = await firstValueFrom(this.adminApiService.getPendingExpenses());
-      this.rawPendingExpenses = response?.data ?? [];
+      this.rawPendingGroups = response?.data ?? [];
     } catch {
-      this.rawPendingExpenses = [];
+      this.rawPendingGroups = [];
     }
     this.applyLocalization();
   }
 
-  protected async onApproveExpense(id: number): Promise<void> {
-    await this.ruleOnExpense(id, () => firstValueFrom(this.adminApiService.approveExpense(id)));
+  /** OBRS-1891: a `SETTLE_BILL` row rules on `row.settleId` via the whole-bill endpoints; a
+   * `SINGLE` row rules on `row.expenseId` via the pre-OBRS-1891 per-expense endpoints. */
+  protected async onApproveExpense(row: ExpenseApprovalGroupRow): Promise<void> {
+    const call =
+      row.groupType === 'SETTLE_BILL'
+        ? () => firstValueFrom(this.adminApiService.approveExpenseSettle(row.settleId as number))
+        : () => firstValueFrom(this.adminApiService.approveExpense(row.expenseId as number));
+    await this.ruleOnRow(row, call);
   }
 
-  protected async onRejectExpense(event: { id: number; rejectionReason: string }): Promise<void> {
-    await this.ruleOnExpense(event.id, () =>
-      firstValueFrom(this.adminApiService.rejectExpense(event.id, event.rejectionReason))
-    );
+  protected async onRejectExpense(event: {
+    row: ExpenseApprovalGroupRow;
+    rejectionReason: string;
+  }): Promise<void> {
+    const { row, rejectionReason } = event;
+    const call =
+      row.groupType === 'SETTLE_BILL'
+        ? () =>
+            firstValueFrom(this.adminApiService.rejectExpenseSettle(row.settleId as number, rejectionReason))
+        : () => firstValueFrom(this.adminApiService.rejectExpense(row.expenseId as number, rejectionReason));
+    await this.ruleOnRow(row, call);
   }
 
-  private async ruleOnExpense(id: number, call: () => Promise<unknown>): Promise<void> {
+  private async ruleOnRow(row: ExpenseApprovalGroupRow, call: () => Promise<unknown>): Promise<void> {
     if (this.approvalBusyId !== null) return;
-    this.approvalBusyId = id;
+    this.approvalBusyId = row.actionKey;
     try {
       await call();
       this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
@@ -117,13 +131,15 @@ export class ExpenseApprovalSectionComponent implements OnInit, OnDestroy {
   private applyLocalization(): void {
     this.categoryOptions = toExpenseCategoryOptionsFrom((key) => this.translate.instant(key));
     const centralLabel = this.translate.instant('ADMIN.EXPENSES.VEHICLE_CENTRAL_OPTION');
+    const gasBillLabel = this.translate.instant('ADMIN.EXPENSES.APPROVAL.GAS_BILL');
 
-    this.pendingExpenses = this.rawPendingExpenses.map((dto) =>
-      toExpenseRow(
+    this.pendingExpenses = this.rawPendingGroups.map((dto) =>
+      toExpenseApprovalGroupRow(
         dto,
         this.rawVehicles,
         this.categoryOptions,
         centralLabel,
+        gasBillLabel,
         this.translate.currentLang
       )
     );

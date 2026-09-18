@@ -48,6 +48,10 @@
             <th>{{ 'ADMIN.STOPS.COL_NAME' | translate }}</th>
             <th>{{ 'ADMIN.STOPS.COL_TYPE' | translate }}</th>
             <th>{{ 'ADMIN.STOPS.COL_STATUS' | translate }}</th>
+            <!-- OBRS-1954: the owner's own switch. A column rather than a field in the
+                 detail modal because it saves on its own endpoint and on its own click -
+                 that form is an ADMIN full-replace an owner cannot send. -->
+            <th>{{ 'ADMIN.STOPS.COL_TICKET_DESK' | translate }}</th>
             <th></th>
           </tr>
         </thead>
@@ -67,6 +71,19 @@
               <td>{{ row.name }}</td>
               <td>{{ row.stopType }}</td>
               <td>{{ row.status }}</td>
+              <td>
+                <label class="form-check form-switch m-0" (click)="$event.stopPropagation()">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    [checked]="row.hasTicketDesk"
+                    [disabled]="ticketDeskSavingId !== null"
+                    [attr.aria-label]="'ADMIN.STOPS.COL_TICKET_DESK' | translate"
+                    (change)="toggleTicketDesk(row, $event)"
+                  />
+                </label>
+              </td>
               <td class="text-end">
                 <button type="button" class="admin-btn admin-btn-sm" (click)="openStop(row.id)">
                   {{ 'ADMIN.COMMON.EDIT' | translate }}
@@ -86,7 +103,7 @@
           }
           @if (filteredRows.length === 0) {
             <tr>
-              <td [attr.colspan]="showSlugColumn ? 5 : 4" class="admin-muted">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+              <td [attr.colspan]="showSlugColumn ? 6 : 5" class="admin-muted">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
             </tr>
           }
         </tbody>
@@ -107,6 +124,9 @@
   [returnStopOptions]="returnStopOptions"
   [canEditPhysical]="canEditPhysical"
   [isCreating]="isCreating"
+  [mapsApiKey]="mapsApiKey"
+  [mapsMapId]="mapsMapId"
+  [mapFallbackCenter]="mapFallbackCenter"
   (closed)="closeDetail()"
   (save)="save()"
   (photoSelected)="onPhotoSelected($event)"

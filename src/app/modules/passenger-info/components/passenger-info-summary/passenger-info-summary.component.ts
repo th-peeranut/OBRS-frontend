@@ -44,6 +44,14 @@ import {
 })
 export class PassengerInfoSummaryComponent {
   @Input() isNextDisabled = true;
+  /**
+   * OBRS-1955: the promo field used to hang off `isNextDisabled`, and that input stopped meaning
+   * "the form is incomplete" when the owner's decision made the Next button live. Without this
+   * second input, enabling Next would silently have enabled the promo field too — a change nobody
+   * asked for, and the one the customer-contrast gate caught: an ENABLED promo input exposes a
+   * border that has always been 1.35:1 on white, below the AA floor of 3.
+   */
+  @Input() isFormIncomplete = true;
   @Output() next = new EventEmitter<void>();
   @Output() back = new EventEmitter<void>();
   // OBRS-109 (#37): bubble the confirmed/removed promo code up to the page,
@@ -82,6 +90,31 @@ export class PassengerInfoSummaryComponent {
 
   getScheduleBooking(schedule?: Schedule[] | null): Schedule[] {
     return schedule ?? [];
+  }
+
+  /**
+   * OBRS-1943: the i18n key for the chip shown when a passenger row carries no
+   * seat on either leg — or `null` when a seat IS picked and no such chip is
+   * drawn. The chip used to be unconditionally "not chosen yet", which reads as
+   * unfinished work on an OPEN journey where there is nothing to choose. Every
+   * leg OPEN => the journey-wide open-seating wording (same key as the per-leg
+   * badge above, so the screen states it once); any ASSIGNED leg — including a
+   * mixed round trip, and a leg whose `seatingMode` is missing/unknown — keeps
+   * the original "not chosen yet" chip, because a seat map is still on offer.
+   */
+  seatlessChipKey(
+    passenger: PassengerInfo,
+    schedule?: Schedule[] | null
+  ): string | null {
+    if (passenger.passengerSeat || passenger.passengerSeatReturn) {
+      return null;
+    }
+    const legs = this.getScheduleBooking(schedule);
+    const allOpen =
+      legs.length > 0 && legs.every((leg) => leg?.seatingMode === 'OPEN');
+    return allOpen
+      ? 'PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE'
+      : 'PASSENGER_INFO.SUMMARY.NO_SEAT';
   }
 
   /**

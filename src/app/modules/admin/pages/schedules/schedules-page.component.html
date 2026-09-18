@@ -12,6 +12,15 @@
     @if (activeTab === 'set') {
       <button
         type="button"
+        class="admin-btn schedule-extend-window-btn"
+        [disabled]="isExtendingWindow"
+        (click)="extendTimetableWindow()"
+        >
+        <span class="material-symbols-outlined" [attr.translate]="'no'">event_repeat</span>
+        <span>{{ 'ADMIN.SCHEDULES.EXTEND_WINDOW' | translate }}</span>
+      </button>
+      <button
+        type="button"
         class="admin-btn admin-btn-primary"
         (click)="openCreateModal()"
         >

@@ -29,6 +29,43 @@ export interface PayeeSpendRowDto {
   totalAmount: string;
 }
 
+/**
+ * OBRS-1619 AC1 — one bill behind a payee's line.
+ *
+ * `receiptNo` is null on a bill that carries no receipt number; the screen shows a dash rather than
+ * inventing one. `workDone` is this bill's own line texts in entry order — NOT the distinct set the
+ * report line shows, because two identical lines on one bill are two things that were paid for.
+ */
+export interface PayeeBillDto {
+  expenseId: number;
+  /** ISO `yyyy-MM-dd`. */
+  expenseDate: string;
+  receiptNo: string | null;
+  workDone: string[];
+  amount: string;
+}
+
+/**
+ * OBRS-1619 AC1 — `GET /admin/reports/expense-by-payee/bills`: the second screen.
+ *
+ * It echoes the filter it was resolved under (`year`/`month`/`category`) because the reader has to
+ * be able to see that the list is under the same window as the report that opened it — a drill-down
+ * showing 2025 bills beneath a report filtered to 2026 is exactly what that echo makes visible.
+ *
+ * `payeeId === null` is the "ยังไม่ระบุผู้รับเงิน" bucket, drilled into like any other row.
+ */
+export interface PayeeBillListDto {
+  payeeId: number | null;
+  payeeName: string | null;
+  year: number | null;
+  month: number | null;
+  category: string | null;
+  bills: PayeeBillDto[];
+  billCount: number;
+  /** Must equal the figure on the report line that opened it. */
+  totalAmount: string;
+}
+
 export interface PayeeSpendReportDto {
   /** `null` means every year — the default, and the reason the report can be trusted at a glance. */
   year: number | null;

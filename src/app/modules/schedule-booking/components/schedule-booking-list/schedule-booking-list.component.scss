@@ -28,7 +28,7 @@
 
   .title {
     margin-bottom: 16px;
-    font-size: $font-size-md;
+    font-size: $font-size-lg;
     font-weight: bold;
   }
 
@@ -44,7 +44,7 @@
     margin: $space-2xs 0;
     padding: $space-lg 16px;
     text-align: center;
-    font-size: 15px;
+    font-size: $font-size-sm;
     color: $text-softblack;
   }
 
@@ -85,7 +85,7 @@
        the sweep ever rendered an empty result. */
     &__hint {
       margin: 0;
-      font-size: 15px;
+      font-size: $font-size-sm;
       color: $text-softblack;
     }
 
@@ -125,15 +125,55 @@
 
     &__title {
       margin: 0;
-      font-size: 15px;
+      font-size: $font-size-base;
       font-weight: bold;
       color: $text-black;
     }
 
     &__body {
       margin: $space-2xs 0 0;
-      font-size: 15px;
+      font-size: $font-size-sm;
       color: $text-softblack;
+    }
+  }
+
+  /* OBRS-1951 (design A2) — the "every round here boards open seating" banner.
+     Unlike `.return-boarding-notice` above it carries a FILL rather than an
+     accent rail, because the owner's approved board is a tinted box; the fill is
+     $secondary-light-blue and the title on it is $secondary-blue, the pair
+     variables.scss:60 records as 4.61:1 — AA for this text size. The body line
+     is $text-black on the same fill, further clear of it. Dark mode is repainted
+     in dark-theme.scss section 14 for the same reason as the notice above: this
+     class is neither `.schedule-item` nor inside `.card-container`, so no
+     blanket rule there reaches it. */
+  .open-seating-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-2xs;
+    margin: 0 0 $space-sm;
+    padding: $space-xs $space-sm;
+    border-radius: $radius-sm;
+    background: $secondary-light-blue;
+
+    &__icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+      font-size: 18px;
+      line-height: 1;
+      color: $secondary-blue;
+    }
+
+    &__title {
+      margin: 0;
+      font-size: $font-size-base;
+      font-weight: 600;
+      color: $secondary-blue;
+    }
+
+    &__body {
+      margin: $space-3xs 0 0;
+      font-size: $font-size-sm;
+      color: $text-black;
     }
   }
 

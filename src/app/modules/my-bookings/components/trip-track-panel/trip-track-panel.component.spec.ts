@@ -6,7 +6,7 @@ import { of, throwError } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { TripTrackPanelComponent } from './trip-track-panel.component';
 import { TripTrackService } from '../../../../services/trip-track/trip-track.service';
-import { CustomerTripPositionRespDto } from '../../../../shared/lib/trip-track-view';
+import { CustomerTripPositionRespDto, TRIP_TRACK_POLL_ACTIVE_MS } from '../../../../shared/lib/trip-track-view';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
 import { environment } from '../../../../../environments/environment';
 import {
@@ -33,6 +33,10 @@ function resp(
       recordedAt: null,
       stale: false,
       windowOpensAt: null,
+      boardingStopOrder: null,
+      nextStopOrder: null,
+      totalStops: null,
+      stopsRemaining: null,
       ...overrides,
     },
   };
@@ -275,6 +279,73 @@ describe('TripTrackPanelComponent', () => {
     expect(mapEl.properties['lat']).toBe(13.5);
     expect(mapEl.properties['lon']).toBe(100.6);
     expect(mapEl.properties['stale']).toBeTrue();
+  });
+
+  // ── OBRS-1084 — positional "stops remaining" progress line ────────────────
+  describe('OBRS-1084 — stops-remaining progress line', () => {
+    it('renders the progress line and the passed-count line when the resolver returns all four fields', () => {
+      service.getVehiclePosition.and.returnValue(
+        of(resp('LIVE', { lat: 1, lon: 1, boardingStopOrder: 5, nextStopOrder: 2, totalStops: 8, stopsRemaining: 3 }))
+      );
+      changeTicketId(1);
+      fixture.detectChanges();
+
+      const progressEl = fixture.nativeElement.querySelector('.trip-track-panel__progress');
+      const countEl = fixture.nativeElement.querySelector('.trip-track-panel__progress-count');
+      expect(progressEl).not.toBeNull();
+      expect(countEl).not.toBeNull();
+      expect(component.view?.progress?.headlineKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.LIVE_REMAINING');
+    });
+
+    it('omits both progress lines entirely when any one source field is null', () => {
+      service.getVehiclePosition.and.returnValue(
+        of(resp('LIVE', { lat: 1, lon: 1, boardingStopOrder: 5, nextStopOrder: null, totalStops: 8, stopsRemaining: 3 }))
+      );
+      changeTicketId(1);
+      fixture.detectChanges();
+
+      expect(component.view?.progress).toBeNull();
+      expect(fixture.nativeElement.querySelector('.trip-track-panel__progress')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.trip-track-panel__progress-count')).toBeNull();
+    });
+
+    it('omits the progress line for states other than LIVE/STALE even when all four fields are present', () => {
+      service.getVehiclePosition.and.returnValue(
+        of(resp('NO_SIGNAL', { boardingStopOrder: 5, nextStopOrder: 2, totalStops: 8, stopsRemaining: 3 }))
+      );
+      changeTicketId(1);
+      fixture.detectChanges();
+
+      expect(component.view?.progress).toBeNull();
+      expect(fixture.nativeElement.querySelector('.trip-track-panel__progress')).toBeNull();
+    });
+
+    it('AC5: stopsRemaining = -2 (already passed) never renders the REMAINING key/copy', () => {
+      service.getVehiclePosition.and.returnValue(
+        of(resp('LIVE', { lat: 1, lon: 1, boardingStopOrder: 5, nextStopOrder: 7, totalStops: 8, stopsRemaining: -2 }))
+      );
+      changeTicketId(1);
+      fixture.detectChanges();
+
+      expect(component.view?.progress?.headlineKey).toBe('MY_BOOKINGS.TRIP_TRACK.PROGRESS.LIVE_PASSED');
+      expect(component.view?.progress?.headlineKey).not.toContain('REMAINING');
+    });
+
+    it('AC6: adding the four progress fields to the response issues NO extra getVehiclePosition calls versus the pre-existing baseline', fakeAsync(() => {
+      service.getVehiclePosition.and.returnValue(
+        of(resp('LIVE', { lat: 1, lon: 1, boardingStopOrder: 5, nextStopOrder: 2, totalStops: 8, stopsRemaining: 3 }))
+      );
+      changeTicketId(1);
+      fixture.detectChanges();
+      // Same shape/count as U14's baseline (one initial call).
+      expect(service.getVehiclePosition).toHaveBeenCalledTimes(1);
+
+      tick(TRIP_TRACK_POLL_ACTIVE_MS);
+      // Same active-lane cadence as before this feature (one call per 60s tick) —
+      // the progress fields do not add a second call or change the interval.
+      expect(service.getVehiclePosition).toHaveBeenCalledTimes(2);
+      fixture.destroy();
+    }));
   });
 
   // ── OBRS-726: measured contrast of the refresh-failed strip ────────────────
