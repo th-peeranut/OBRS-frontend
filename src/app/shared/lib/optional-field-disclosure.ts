@@ -12,12 +12,24 @@
  */
 export type OptionalFieldDisclosure = boolean | undefined;
 
-/** Whether the optional field behind a disclosure link is currently on screen. */
+/**
+ * Whether the optional field behind a disclosure link is currently on screen.
+ *
+ * `isInvalid` outranks the traveler's own choice, and it has to. OBRS-1955 made the
+ * Next button live and explains a refusal by listing the offending controls out of the
+ * DOM (`app-passenger-info [formControlName].ng-invalid`) and focusing the first one —
+ * so a control this function hides is a control that card cannot name or reach. Typing
+ * a bad number and then collapsing the section to be rid of it is a natural way to undo,
+ * and collapsing deliberately keeps the value, which would leave the booking refused
+ * over a field the traveler cannot see. A field that is blocking the booking is not
+ * optional any more, so it stays on screen until it is fixed or emptied.
+ */
 export function isOptionalFieldShown(
   choice: OptionalFieldDisclosure,
-  value: unknown
+  value: unknown,
+  isInvalid = false
 ): boolean {
-  return choice ?? hasDisclosableValue(value);
+  return isInvalid || (choice ?? hasDisclosableValue(value));
 }
 
 /**

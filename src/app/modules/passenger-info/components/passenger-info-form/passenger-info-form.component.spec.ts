@@ -1028,6 +1028,34 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
       expect(ctrl?.valid).withContext('bad number still rejected').toBeFalse();
     });
 
+    // OBRS-1955 lists the offending controls straight out of the DOM
+    // (`app-passenger-info [formControlName].ng-invalid`) and focuses the first one. A
+    // collapsed field is not in the DOM at all, and collapsing deliberately KEEPS the
+    // value - so "type a bad number, then collapse the section to be rid of it" would
+    // refuse the booking over a field that is nowhere on screen and name nothing.
+    it('refuses to collapse a field that is blocking the booking', () => {
+      const ctrl = component.passengerData.at(0).get('phoneNumber');
+      ctrl?.setValue('0812');
+      ctrl?.markAsTouched();
+      fixture.detectChanges();
+      expect(ctrl?.invalid).withContext('the number is refused').toBeTrue();
+
+      component.togglePassengerPhone(0);
+      fixture.detectChanges();
+
+      expect(el('phoneNumber-0')).withContext('still on screen').toBeTruthy();
+      expect(
+        fixture.nativeElement.querySelector('[formControlName].ng-invalid#phoneNumber-0')
+      )
+        .withContext('reachable by the selector OBRS-1955 focuses through')
+        .toBeTruthy();
+
+      // Emptying it is the way out - then the traveler's collapse applies again.
+      ctrl?.setValue('');
+      fixture.detectChanges();
+      expect(el('phoneNumber-0')).withContext('collapses once it stops blocking').toBeNull();
+    });
+
     it('keeps a row\'s choice with that row when an earlier row is deleted', () => {
       // Row 1 is collapsed by hand; deleting row 0 must not leave row 1 wearing it.
       component.passengerData.at(1).get('phoneNumber')?.setValue('0898765432');

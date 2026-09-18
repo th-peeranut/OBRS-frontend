@@ -508,7 +508,8 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   isPassengerPhoneShown(index: number): boolean {
     return isOptionalFieldShown(
       this.phoneDisclosure[index],
-      this.passengerData.at(index)?.get('phoneNumber')?.value
+      this.passengerData.at(index)?.get('phoneNumber')?.value,
+      this.passengerData.at(index)?.get('phoneNumber')?.invalid ?? false
     );
   }
 
@@ -526,7 +527,8 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   isPassengerMiddleNameShown(index: number): boolean {
     return isOptionalFieldShown(
       this.middleNameDisclosure[index],
-      this.passengerData.at(index)?.get('middleName')?.value
+      this.passengerData.at(index)?.get('middleName')?.value,
+      this.passengerData.at(index)?.get('middleName')?.invalid ?? false
     );
   }
 

@@ -109,7 +109,8 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
   isMiddleNameShown(): boolean {
     return isOptionalFieldShown(
       this.middleNameDisclosure,
-      this.bookerForm.get('middleName')?.value
+      this.bookerForm.get('middleName')?.value,
+      this.bookerForm.get('middleName')?.invalid ?? false
     );
   }
 
@@ -120,7 +121,8 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
   isEmailShown(): boolean {
     return isOptionalFieldShown(
       this.emailDisclosure,
-      this.bookerForm.get('email')?.value
+      this.bookerForm.get('email')?.value,
+      this.bookerForm.get('email')?.invalid ?? false
     );
   }
 
