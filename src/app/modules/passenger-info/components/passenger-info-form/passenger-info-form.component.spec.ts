@@ -1004,12 +1004,15 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
         .toBeFalse();
     });
 
-    it('using the booker as this passenger withdraws the tick with the type it overwrites', () => {
+    // OBRS-1944: this used to assert the opposite — the booker carried a type, so copying it
+    // overwrote the passenger's and the tick had to be withdrawn with it. The booker has no
+    // gender/status field any more, so the copy must leave BOTH alone: the type the passenger
+    // chose in their own block is the only one there is, and a consent still standing for it
+    // was never withdrawn.
+    it('using the booker as this passenger leaves the passenger own type and its tick alone', () => {
       component.passengerData.at(0).get('gender')?.setValue('MONK');
       component.passengerData.at(0).get('passengerTypeConsent')?.setValue(true);
 
-      // The booker is a nun. patchValue leaves omitted controls alone, so without an explicit
-      // reset the MONK tick would survive onto NUN and render as consent nobody gave.
       component.applyBookerToPassenger(0, {
         isAdult: true,
         title: 1,
@@ -1017,13 +1020,16 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
         middleName: '',
         lastName: 'Jaidee',
         phoneNumber: '0812345678',
-        gender: 'NUN',
+        gender: '',
         isSelectSeat: true,
         passengerSeat: '',
       });
 
-      expect(component.passengerData.at(0).get('gender')?.value).toBe('NUN');
-      expect(component.passengerData.at(0).get('passengerTypeConsent')?.value).toBeFalse();
+      expect(component.passengerData.at(0).get('firstName')?.value)
+        .withContext('the name still copies — only the type stopped copying')
+        .toBe('Malee');
+      expect(component.passengerData.at(0).get('gender')?.value).toBe('MONK');
+      expect(component.passengerData.at(0).get('passengerTypeConsent')?.value).toBeTrue();
     });
 
     it('the consent reaches the emitted passenger payload', () => {
@@ -1034,5 +1040,71 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
 
       expect(payload[0].passengerTypeConsent).toBeTrue();
     });
+  });
+});
+
+// OBRS-1952: PassengerReqDto carries `@NotBlank @Size(min = 2, max = 50)` on the three name
+// fields; this form carried only `Validators.required`, so a one-character name submitted
+// cleanly and came back as a 400 the funnel could only show as a generic modal.
+describe('PassengerInfoFormComponent — name length parity with PassengerReqDto (OBRS-1952)', () => {
+  let component: PassengerInfoFormComponent;
+
+  beforeEach(() => {
+    component = new PassengerInfoFormComponent(
+      createStoreStub(),
+      createRouterStub(),
+      new FormBuilder(),
+      createTranslateStub(),
+      createScheduleServiceStub()
+    );
+    component.ngOnInit();
+    if (component.passengerData.length === 0) {
+      component.insertPassenger(true);
+    }
+    component.passengerData.at(0).patchValue({
+      firstName: 'Somchai',
+      lastName: 'Jaidee',
+    });
+  });
+
+  it('rejects a one-character surname instead of letting the server reject it', () => {
+    component.passengerData.at(0).get('lastName')?.setValue('T');
+
+    expect(component.passengerData.at(0).get('lastName')?.hasError('minlength')).toBeTrue();
+    expect(component.validateAndGetPassengerInfo()).toBeNull();
+  });
+
+  it('measures the TRIMMED value, because passenger-info.component trims before sending', () => {
+    component.passengerData.at(0).get('firstName')?.setValue(' T ');
+
+    expect(component.passengerData.at(0).get('firstName')?.hasError('minlength')).toBeTrue();
+  });
+
+  it('rejects a whitespace-only name, which `Validators.required` accepted', () => {
+    component.passengerData.at(0).get('firstName')?.setValue('   ');
+
+    expect(component.passengerData.at(0).get('firstName')?.hasError('required')).toBeTrue();
+  });
+
+  it('rejects a name longer than the 50 the column holds', () => {
+    component.passengerData.at(0).get('lastName')?.setValue('J'.repeat(51));
+
+    expect(component.passengerData.at(0).get('lastName')?.hasError('maxlength')).toBeTrue();
+  });
+
+  it('leaves the middle name optional, but length-checks it once it has a value', () => {
+    const middleName = component.passengerData.at(0).get('middleName');
+
+    middleName?.setValue('');
+    expect(middleName?.valid).toBeTrue();
+
+    middleName?.setValue('T');
+    expect(middleName?.hasError('minlength')).toBeTrue();
+  });
+
+  it('accepts the two-character name the server has always accepted', () => {
+    component.passengerData.at(0).get('lastName')?.setValue('Na');
+
+    expect(component.passengerData.at(0).get('lastName')?.valid).toBeTrue();
   });
 });

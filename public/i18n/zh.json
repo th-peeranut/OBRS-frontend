@@ -1242,7 +1242,15 @@
       "FOCUSED_CLEAR": "显示全部班次",
       "VEHICLE_UNDER_MAINTENANCE": "该车辆在所选日期存在未关闭的维护记录，请更换车辆或日期",
       "CARGO_CAPACITY_LABEL": "本班次货物配额覆盖值（千克）",
-      "CARGO_CAPACITY_HELPER": "留空 = 使用该车型的配额。"
+      "CARGO_CAPACITY_HELPER": "留空 = 使用该车型的配额。",
+      "EXTEND_WINDOW": "延长一个周期",
+      "EXTEND_WINDOW_CONFIRM_TITLE": "要延长时刻表吗？",
+      "EXTEND_WINDOW_CONFIRM_TEXT": "此操作会将所有路线的时刻表一次性延长一个周期，使用当前已设置的窗口长度，无需输入任何内容。",
+      "EXTEND_WINDOW_CONFIRM_BTN": "延长",
+      "EXTEND_WINDOW_LOADING": "正在延长时刻表，如时刻表较多可能需要一些时间。",
+      "EXTEND_WINDOW_SUCCESS": "已延长 {{setsExtended}} 个排班组，至 {{newStartDate}} – {{newEndDate}}，新建了 {{schedulesCreated}} 个班次。",
+      "EXTEND_WINDOW_NO_NEW_TRIPS": "已延长 {{setsExtended}} 个排班组，至 {{newStartDate}} – {{newEndDate}}。该窗口内的所有班次均已存在，因此未创建新班次。",
+      "EXTEND_WINDOW_FAILED": "无法延长时刻表。"
     },
     "BOOKINGS": {
       "TITLE": "预订管理",
@@ -2072,6 +2080,14 @@
       }
     },
     "PAYEE_SPEND_REPORT": {
+      "EXPORT_LABEL": "导出本报表",
+      "COL_BILL_DATE": "单据日期",
+      "COL_BILL_NO": "单据编号",
+      "BILLS_TITLE": "单据明细 — {{payee}}",
+      "BILLS_CLOSE": "关闭",
+      "BILLS_LOADING": "正在加载单据…",
+      "BILLS_EMPTY": "所选期间该收款方没有单据",
+      "BILLS_LOAD_FAILED": "加载单据失败，请重试。",
       "SUBTITLE": "按收款方统计的支出——修车厂、加油站及其他收款方",
       "FILTER_YEAR": "年份",
       "YEAR_OPTION": "{{year}} · {{count}} 张单据 · {{amount}}",
@@ -3227,7 +3243,11 @@
     "PICKUP_STOP": "上车点",
     "DROPOFF_STOP": "下车点",
     "OPEN_IN_MAPS": "在地图中打开",
-    "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。"
+    "RESTORED_UNAVAILABLE": "您之前选择的班次已无空位，请重新选择。",
+    "OPEN_SEATING_BANNER": {
+      "TITLE": "本路线所有班次均为自由座",
+      "BODY": "订票时无需选座，上车后坐任意空位即可。"
+    }
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -3302,6 +3322,8 @@
       "MIDDLE_NAME_OPTIONAL": "中间名（可选）",
       "LAST_NAME": "姓",
       "LAST_NAME_REQUIRED": "请输入您的姓",
+      "NAME_TOO_SHORT": "请至少输入 2 个字符",
+      "NAME_TOO_LONG": "请输入不超过 50 个字符",
       "PHONE_NUMBER": "手机号码",
       "PHONE_NUMBER_PLACEHOLDER": "请输入您的手机号码",
       "PHONE_NUMBER_REQUIRED": "请输入您的手机号码",
@@ -3358,7 +3380,8 @@
     "ALERT": {
       "CREATE_SUCCESS": "预订保存成功",
       "CREATE_FAILED": "无法创建预订，请重试。",
-      "CAPACITY_FULL": "此班次座位已满，请减少乘客人数或选择其他班次。"
+      "CAPACITY_FULL": "此班次座位已满，请减少乘客人数或选择其他班次。",
+      "FIX_THESE_FIELDS": "请先修正以下内容再继续："
     }
   },
   "PAYMENT": {

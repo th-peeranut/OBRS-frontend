@@ -36,7 +36,6 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   // correctly failing — ever since, on SIT as much as anywhere. Nobody read it as a
   // real failure because the suite it lived in was red as a matter of routine.
   await page.fill('#booker-email', 'john.doe@example.com');
-  await page.locator('#booker-gender_male').click();
 
   // Fill passenger 0 form
   await page.locator('#title-0 .dropdown-btn').click();
@@ -47,7 +46,11 @@ test('B2C happy path: search → schedule → review → passenger info ready to
 
   // ── Assertion: Next (proceed to payment) button is enabled ───────────────
 
-  await expect(page.locator('.btn-next')).not.toBeDisabled();
+  // OBRS-1955: this used to read `expect('.btn-next').not.toBeDisabled()`. The button no
+  // longer reflects the form's validity - it refuses out loud on click instead - so that
+  // assertion would now pass against an empty form. This asserts what it always meant:
+  // nothing on the page is invalid. Unlike clicking Next it creates no booking.
+  await expect(page.locator('[formControlName].ng-invalid')).toHaveCount(0);
 });
 
 /**
@@ -92,7 +95,6 @@ test('OBRS-858: a guest walks past the passenger form with no login redirect, an
   await page.fill('#booker-firstName', 'Guest');
   await page.fill('#booker-lastName', 'Walker');
   await page.fill('#booker-phoneNumber', '0812345678');
-  await page.locator('#booker-gender_male').click();
 
   await page.locator('#title-0 .dropdown-btn').click();
   await page.locator('#title-0 .dropdown-option').first().click();
@@ -104,7 +106,11 @@ test('OBRS-858: a guest walks past the passenger form with no login redirect, an
   // autofill or a prefill from a previous step would make the next assertion
   // pass while proving nothing about whether email is optional.
   await expect(page.locator('#booker-email')).toHaveValue('');
-  await expect(page.locator('.btn-next')).not.toBeDisabled();
+  // OBRS-1955: this used to read `expect('.btn-next').not.toBeDisabled()`. The button no
+  // longer reflects the form's validity - it refuses out loud on click instead - so that
+  // assertion would now pass against an empty form. This asserts what it always meant:
+  // nothing on the page is invalid. Unlike clicking Next it creates no booking.
+  await expect(page.locator('[formControlName].ng-invalid')).toHaveCount(0);
 
   // No guard fired. OBRS-856 asserted that AuthService.setPostLoginRedirectUrl()
   // had recorded '/passenger-info' so signing in would return the guest to their
@@ -208,7 +214,6 @@ test('OBRS-855: the access token dies mid-booking — the request is retried on 
   await page.fill('#booker-lastName', 'Doe');
   await page.fill('#booker-phoneNumber', '0812345678');
   await page.fill('#booker-email', 'john.doe@example.com');
-  await page.locator('#booker-gender_male').click();
 
   await page.locator('#title-0 .dropdown-btn').click();
   await page.locator('#title-0 .dropdown-option').first().click();

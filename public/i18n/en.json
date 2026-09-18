@@ -1242,7 +1242,15 @@
       "FOCUSED_CLEAR": "Show all schedules",
       "VEHICLE_UNDER_MAINTENANCE": "This vehicle has an open maintenance record covering the selected date. Choose a different vehicle or date.",
       "CARGO_CAPACITY_LABEL": "Cargo Quota Override for This Trip (kg)",
-      "CARGO_CAPACITY_HELPER": "Empty = use the vehicle type's quota."
+      "CARGO_CAPACITY_HELPER": "Empty = use the vehicle type's quota.",
+      "EXTEND_WINDOW": "Extend the timetable by one more period",
+      "EXTEND_WINDOW_CONFIRM_TITLE": "Extend the timetable?",
+      "EXTEND_WINDOW_CONFIRM_TEXT": "This extends every route's timetable by one more period, using the window length already configured. Nothing needs to be typed in.",
+      "EXTEND_WINDOW_CONFIRM_BTN": "Extend",
+      "EXTEND_WINDOW_LOADING": "Extending the timetable — this can take a moment for a large timetable.",
+      "EXTEND_WINDOW_SUCCESS": "Extended {{setsExtended}} schedule set(s) to {{newStartDate}} – {{newEndDate}}, creating {{schedulesCreated}} new trip(s).",
+      "EXTEND_WINDOW_NO_NEW_TRIPS": "Extended {{setsExtended}} schedule set(s) to {{newStartDate}} – {{newEndDate}}. Every trip in the new window already existed, so no new trips were created.",
+      "EXTEND_WINDOW_FAILED": "Unable to extend the timetable."
     },
     "BOOKINGS": {
       "TITLE": "Bookings Management",
@@ -2072,6 +2080,14 @@
       }
     },
     "PAYEE_SPEND_REPORT": {
+      "EXPORT_LABEL": "Export this report",
+      "COL_BILL_DATE": "Bill date",
+      "COL_BILL_NO": "Bill no.",
+      "BILLS_TITLE": "Bills — {{payee}}",
+      "BILLS_CLOSE": "Close",
+      "BILLS_LOADING": "Loading bills…",
+      "BILLS_EMPTY": "No bills for this payee in the selected period",
+      "BILLS_LOAD_FAILED": "Could not load the bills. Please try again.",
       "SUBTITLE": "Spend grouped by who received the money — garages, fuel stations and other payees",
       "FILTER_YEAR": "Year",
       "YEAR_OPTION": "{{year}} · {{count}} bills · {{amount}}",
@@ -3227,7 +3243,11 @@
     "PICKUP_STOP": "Pickup",
     "DROPOFF_STOP": "Drop-off",
     "OPEN_IN_MAPS": "Open in Maps",
-    "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one."
+    "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one.",
+    "OPEN_SEATING_BANNER": {
+      "TITLE": "Every trip on this route boards by open seating",
+      "BODY": "No seat to pick when you book — just take any free seat once you are on board."
+    }
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -3302,6 +3322,8 @@
       "MIDDLE_NAME_OPTIONAL": "Middle name (optional)",
       "LAST_NAME": "Last name",
       "LAST_NAME_REQUIRED": "Please enter your last name",
+      "NAME_TOO_SHORT": "Please enter at least 2 characters",
+      "NAME_TOO_LONG": "Please enter no more than 50 characters",
       "PHONE_NUMBER": "Phone number",
       "PHONE_NUMBER_PLACEHOLDER": "Please enter your phone number",
       "PHONE_NUMBER_REQUIRED": "Please enter your phone number",
@@ -3358,7 +3380,8 @@
     "ALERT": {
       "CREATE_SUCCESS": "Booking saved successfully",
       "CREATE_FAILED": "Unable to create the booking. Please try again.",
-      "CAPACITY_FULL": "This trip is fully booked. Please reduce the passenger count or choose another schedule."
+      "CAPACITY_FULL": "This trip is fully booked. Please reduce the passenger count or choose another schedule.",
+      "FIX_THESE_FIELDS": "Please correct the following before continuing:"
     }
   },
   "PAYMENT": {

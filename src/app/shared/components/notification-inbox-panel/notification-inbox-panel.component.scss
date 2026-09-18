@@ -1,3 +1,5 @@
+@import "../../../../styles/variables.scss";
+
 .notification-inbox-panel {
   display: flex;
   flex-direction: column;
@@ -15,7 +17,7 @@
 
 .notification-inbox-title {
   margin: 0;
-  font-size: 14px;
+  font-size: $font-size-sm;
   font-weight: 700;
   color: var(--admin-text);
 }
@@ -59,6 +61,6 @@
   padding-top: 8px;
   border-top: 1px solid var(--admin-outline);
   color: var(--admin-muted);
-  font-size: 11px;
+  font-size: $font-size-xs; // OBRS-640: was 11px, under the 12px floor
   text-align: center;
 }
