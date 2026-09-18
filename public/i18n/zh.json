@@ -2809,6 +2809,8 @@
     "LASTNAME": "姓",
     "LASTNAME_PLACEHOLDER": "请输入您的姓",
     "LASTNAME_REQUIRED": "请输入您的姓",
+    "NAME_TOO_SHORT": "请至少输入 2 个字符",
+    "NAME_TOO_LONG": "请输入不超过 50 个字符",
     "PDPA_CONSENT": "我同意收集和使用我的个人数据（PDPA）",
     "PDPA_CONSENT_REQUIRED": "您必须接受PDPA同意才能继续",
     "EMAIL": "电子邮件",
@@ -3632,6 +3634,8 @@
       "PHONE_INVALID": "请输入有效的 10 位电话号码（例如 0812345678）。",
       "THAI_MOBILE_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678），系统会向该号码发送短信。",
       "ID_CARD_INVALID": "请输入有效的 13 位身份证号码。",
+      "NAME_TOO_SHORT": "请至少输入 2 个字符",
+      "NAME_TOO_LONG": "请输入不超过 50 个字符",
       "EMAIL_INVALID": "请输入有效的电子邮箱地址。"
     },
     "CANCEL_BOOKING": {
