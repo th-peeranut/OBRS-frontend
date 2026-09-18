@@ -206,6 +206,68 @@ describe('RegisterComponent', () => {
       expect(control.hasError('required')).toBeFalse();
     });
   });
+
+  // OBRS-1957: `SignUpReqDto` is `@Size(min = 2, max = 50)` on firstName/lastName, so signing up
+  // as "ก" produced a 400 with nothing on screen naming the field. middleName is the exception —
+  // `@Size(max = 50)` with no minimum — and the form must not be stricter than the server there.
+  describe('name length matches SignUpReqDto (OBRS-1957)', () => {
+    const control = (name: string) => {
+      component.createForm();
+      return component.registerForm.get(name)!;
+    };
+
+    it('rejects a 1-character first name', () => {
+      const first = control('firstName');
+      first.setValue('ก');
+      expect(first.hasError('minlength')).toBeTrue();
+    });
+
+    it('rejects a 51-character surname', () => {
+      const last = control('lastName');
+      last.setValue('ก'.repeat(51));
+      expect(last.hasError('maxlength')).toBeTrue();
+    });
+
+    it('reports a whitespace-only name as required, NOT as too short', () => {
+      // The template keys three messages off these errors; a value that is blank after trimming
+      // has to reach the "please enter your name" branch, not the "at least 2 characters" one.
+      const first = control('firstName');
+      first.setValue('   ');
+      expect(first.hasError('required')).toBeTrue();
+      expect(first.hasError('minlength')).toBeFalse();
+    });
+
+    it('accepts a 1-character middle name, which the DTO allows', () => {
+      const middle = control('middleName');
+      middle.setValue('ก');
+      expect(middle.valid).toBeTrue();
+    });
+
+    it('still caps the middle name at 50', () => {
+      const middle = control('middleName');
+      middle.setValue('ก'.repeat(51));
+      expect(middle.hasError('maxlength')).toBeTrue();
+    });
+
+    // Validating the trimmed length while SENDING the raw string is the failure this rule was
+    // meant to remove, not a smaller version of it: 50 characters between two spaces passes
+    // 2..50 here and arrives 52 long, and `@Size(max = 50)` counts what arrives.
+    it('sends the names trimmed, which is the length it validated', async () => {
+      fillValidForm();
+      component.registerForm.patchValue({
+        firstName: '  สมชาย  ',
+        middleName: '  กลาง  ',
+        lastName: '  รักดี  ',
+      });
+
+      await component.register();
+
+      const sent = authStub.register.calls.mostRecent().args[0];
+      expect(sent.firstName).toBe('สมชาย');
+      expect(sent.middleName).toBe('กลาง');
+      expect(sent.lastName).toBe('รักดี');
+    });
+  });
 });
 
 /**

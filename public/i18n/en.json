@@ -1094,6 +1094,7 @@
       "COL_NAME": "Stop name",
       "COL_TYPE": "Type",
       "COL_STATUS": "Status",
+      "COL_TICKET_DESK": "Ticket desk",
       "EDIT_TITLE": "Edit stop: {{slug}}",
       "PROVINCE": "Province",
       "RETURN_BOARDING_STOP": "Return boarding stop",
@@ -1722,7 +1723,12 @@
           "SUCCESS": "Driver cash day marked as returned.",
           "ALREADY_RETURNED": "This day has already been returned.",
           "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)",
-          "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)"
+          "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)",
+          "RETURNED_AMOUNT": "Amount returned",
+          "RETURNED_BY": "Received by",
+          "RETURNED_AT": "Received at",
+          "DISCREPANCY_SHORT": "short",
+          "DISCREPANCY_OVER": "over"
         },
         "REOPEN": {
           "ACTION_LABEL": "Re-open this box",
@@ -2803,6 +2809,8 @@
     "LASTNAME": "Last name",
     "LASTNAME_PLACEHOLDER": "Please enter your last name",
     "LASTNAME_REQUIRED": "Please enter your last name",
+    "NAME_TOO_SHORT": "Please enter at least 2 characters",
+    "NAME_TOO_LONG": "Please enter no more than 50 characters",
     "PDPA_CONSENT": "I consent to the collection and use of my personal data (PDPA)",
     "PDPA_CONSENT_REQUIRED": "You must accept the PDPA consent to continue",
     "EMAIL": "Email",
@@ -3334,6 +3342,7 @@
       "SEAT_LEG_RETURN": "Return seat",
       "FARE_CATEGORY": "Fare category",
       "FARE_CATEGORY_CHILD_HINT": "Child fare applies to passengers ≤130cm tall.",
+      "FARE_CATEGORY_CHILD_NO_TICKET_DESK": "A child ticket can only board at a stop with a ticket desk. This trip boards elsewhere, so every passenger must be booked at the adult fare.",
       "SEAT_ACTIVE_PASSENGER_LABEL": "Select the passenger to assign a seat",
       "SEAT_CHIP_FALLBACK": "Passenger {{n}}",
       "OPEN_SEAT_SECTION_HINT": "Open seating — board in arrival order.",
@@ -3632,6 +3641,8 @@
       "PHONE_INVALID": "Enter a valid 10-digit phone number (e.g. 0812345678).",
       "THAI_MOBILE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678). We text this number.",
       "ID_CARD_INVALID": "Enter a valid 13-digit ID card number.",
+      "NAME_TOO_SHORT": "Please enter at least 2 characters",
+      "NAME_TOO_LONG": "Please enter no more than 50 characters",
       "EMAIL_INVALID": "Enter a valid email address."
     },
     "CANCEL_BOOKING": {
@@ -3928,6 +3939,8 @@
       "DISCOUNT_CHILD_FARE": "Child fare discount",
       "FARE_CATEGORY_ADULT": "Adult",
       "FARE_CATEGORY_CHILD": "Child",
+      "CHILD_NO_TICKET_DESK": "This pickup stop has no ticket desk, so a child fare cannot be sold for it. Choose a stop with a desk, or sell at the adult fare.",
+      "CHILD_DESK_CATALOGUE_UNAVAILABLE": "The list of stops with a ticket desk could not be loaded, so this check did not run. The child fare is still available, but the server will refuse the sale if this stop has no desk — confirm before taking payment.",
       "CHILD_COUNT_DECREASE": "Decrease child count",
       "CHILD_COUNT_INCREASE": "Increase child count",
       "JUMP_SEAT_OVERFLOW_HINT": "This sale includes the jump seat (no backrest) — the reserve seat sold last.",

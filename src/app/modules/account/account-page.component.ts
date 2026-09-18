@@ -9,6 +9,7 @@ import { AlertService } from '../../shared/services/alert.service';
 import { MyAccountProfile } from '../../shared/interfaces/my-account.interface';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
+import { trimmedLengthValidator } from '../../shared/validators/trimmed-length.validator';
 import { TITLE_OPTIONS } from '../../shared/constants/title-options';
 import {
   THAI_MOBILE_PATTERN,
@@ -110,12 +111,15 @@ export class AccountPageComponent implements OnInit, OnDestroy {
     this.profileForm = this.fb.group({
       // OBRS-1232: minLength went with the free-text input - see the admin user form for why.
       title: ['', [Validators.maxLength(50)]],
-      firstName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
-      middleName: ['', [Validators.maxLength(50)]],
-      lastName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
+      // OBRS-1957: the length rule has to be measured on the TRIMMED value, because that is what
+      // `onSubmit` sends — `Validators.minLength(2)` counted " A " as 3 characters and let it
+      // through to a 400. middleName had no minimum at all while the DTO has `@Size(min = 2)`.
+      firstName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
+      middleName: ['', [trimmedLengthValidator(2, 50)]],
+      lastName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
       // OBRS-1558: optional, but 2-50 when filled in - the same bounds the backend enforces, so a
       // 1-character nickname is refused here instead of coming back as a 400.
-      nickname: ['', [Validators.minLength(2), Validators.maxLength(50)]],
+      nickname: ['', [trimmedLengthValidator(2, 50)]],
       phoneNumber: ['', [Validators.required, thaiMobileValidator]],
     });
   }

@@ -239,6 +239,54 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
+  /**
+   * OBRS-1238: three distinct states under the fare tiles, and the clerk must be able to tell
+   * them apart. "No desk here" is a refusal; "catalogue did not load" is NOT a refusal - the
+   * child tile stays enabled - but it is the only thing standing between the clerk and a
+   * server rejection after the cash is in the drawer.
+   */
+  describe('ticket-desk state under the fare tiles (OBRS-1238)', () => {
+    function renderWith(state: { blocked: boolean; unavailable: boolean }): string {
+      component.selectedTrip = makeTrip({ seatingMode: 'ASSIGNED' });
+      component.childSaleBlocked = state.blocked;
+      component.ticketDeskCatalogueUnavailable = state.unavailable;
+      fixture.detectChanges();
+      return (fixture.nativeElement as HTMLElement).textContent ?? '';
+    }
+
+    it('shows the unavailable-catalogue warning, not the refusal, when the lookup failed', () => {
+      const text = renderWith({ blocked: false, unavailable: true });
+
+      expect(text).toContain('STAFF.SELL.CHILD_DESK_CATALOGUE_UNAVAILABLE');
+      expect(text).not.toContain('STAFF.SELL.CHILD_NO_TICKET_DESK');
+    });
+
+    it('renders the strip on the themed chip pair, not on Bootstrap text-warning', () => {
+      // Measured in-browser: `.text-warning` on this panel is 1.63:1, under the 4.5:1 AA floor.
+      // The class is the whole fix, so nothing else here would catch it reverting - the text
+      // assertions above pass either way.
+      renderWith({ blocked: false, unavailable: true });
+      const strip = (fixture.nativeElement as HTMLElement).querySelector('.ticket-desk-warning');
+
+      expect(strip).not.toBeNull();
+      expect(strip?.classList.contains('text-warning')).toBeFalse();
+    });
+
+    it('shows the refusal, not the warning, when the stop is known to have no desk', () => {
+      const text = renderWith({ blocked: true, unavailable: false });
+
+      expect(text).toContain('STAFF.SELL.CHILD_NO_TICKET_DESK');
+      expect(text).not.toContain('STAFF.SELL.CHILD_DESK_CATALOGUE_UNAVAILABLE');
+    });
+
+    it('shows neither once the catalogue has loaded and the stop has a desk', () => {
+      const text = renderWith({ blocked: false, unavailable: false });
+
+      expect(text).not.toContain('STAFF.SELL.CHILD_NO_TICKET_DESK');
+      expect(text).not.toContain('STAFF.SELL.CHILD_DESK_CATALOGUE_UNAVAILABLE');
+    });
+  });
+
   describe('passenger count stepper (OBRS-324)', () => {
     type Internals = {
       incrementPassengerCount: () => void;

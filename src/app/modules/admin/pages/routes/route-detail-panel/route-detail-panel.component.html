@@ -147,20 +147,21 @@
                     <td class="nowrap">{{ line.row.duration }}</td>
                     <td class="text-right">
                       <div class="admin-inline-actions is-end">
-                        @for (cell of line.row.fares; track cell.vehicleTypeSlug) {
-                          @if (cell.segment) {
-                            <button
-                              type="button"
-                              class="admin-btn admin-btn-small edit-fare-btn"
-                              [attr.aria-label]="
-                                ('ADMIN.COMMON.EDIT' | translate) + ' - ' + cell.vehicleTypeName
-                              "
-                              (click)="editSegment.emit(cell.segment)"
-                              >
-                              <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
-                              {{ cell.vehicleTypeName }}
-                            </button>
-                          }
+                        <!-- OBRS-1034: ONE button for the pair. It used to be one
+                             per priced vehicle type, and both opened the same
+                             dialog - which now edits every type at once. -->
+                        @if (hasPricedFare(line.row)) {
+                          <button
+                            type="button"
+                            class="admin-btn admin-btn-small edit-fare-btn"
+                            [attr.aria-label]="
+                              ('ADMIN.COMMON.EDIT' | translate) + ' - ' + line.row.destination
+                            "
+                            (click)="editSegment.emit(line.row)"
+                            >
+                            <span class="material-symbols-outlined" [attr.translate]="'no'">edit_square</span>
+                            {{ 'ADMIN.COMMON.EDIT' | translate }}
+                          </button>
                         }
                       </div>
                     </td>
