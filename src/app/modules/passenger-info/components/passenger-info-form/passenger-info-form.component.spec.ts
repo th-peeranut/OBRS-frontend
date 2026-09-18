@@ -24,6 +24,7 @@ import { Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
+import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { invokeSetPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.action';
 import { ScheduleService } from '../../../../services/schedule/schedule.service';
 import { PassengerInfoComponent } from '../../passenger-info.component';
@@ -1040,6 +1041,110 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
 
       expect(payload[0].passengerTypeConsent).toBeTrue();
     });
+  });
+});
+
+/**
+ * OBRS-1238: a child ticket may only BOARD at a stop with a ticket desk, so the child radio is
+ * disabled and the reason stated on the screen where the category is chosen - not at the payment
+ * step, and not by a 400 after the customer has typed everything in.
+ *
+ * <p>⛔ The block is UX. `ChildBoardingStopIT` proves the server refuses the same booking on its
+ * own; without that, hiding a radio would be OBRS-126's client-derived authorization.
+ */
+describe('PassengerInfoFormComponent - child fare needs a ticket desk (OBRS-1238)', () => {
+  let fixture: ComponentFixture<PassengerInfoFormComponent>;
+  let component: PassengerInfoFormComponent;
+  let store: MockStore;
+
+  const DESK_STOP = { id: 1, slug: 'nong_chak', status: '', stopType: '', createdAt: '', updatedAt: '', hasTicketDesk: true };
+  const ROADSIDE_STOP = { id: 2, slug: 'roadside', status: '', stopType: '', createdAt: '', updatedAt: '', hasTicketDesk: false };
+
+  const schedule: Schedule = {
+    id: 1,
+    vehicleType: 'van',
+    departureDateTime: '2030-06-17T08:00:00+07:00',
+    arrivalDateTime: '2030-06-17T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 4,
+    availableSeatNumbers: ['1A', '2A', '3A', '4A'],
+    seatingMode: 'ASSIGNED',
+  };
+
+  function render(startStationId: number, opts: { roundTrip?: number; stopStationId?: number } = {}): void {
+    store.overrideSelector(selectScheduleBooking, { schedule: [schedule] });
+    store.overrideSelector(selectScheduleFilter, {
+      passengerInfo: [
+        { type: 'ADULT', count: 1 },
+        { type: 'KIDS', count: 1 },
+      ],
+      startStationId,
+      stopStationId: opts.stopStationId ?? 99,
+      roundTrip: { id: opts.roundTrip ?? 1 },
+    } as never);
+    store.overrideSelector(selectPassengerInfo, null as never);
+    store.overrideSelector(selectProvinceWithStation, [DESK_STOP, ROADSIDE_STOP]);
+    fixture = TestBed.createComponent(PassengerInfoFormComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [PassengerInfoFormComponent],
+      imports: [
+        ReactiveFormsModule,
+        RouterTestingModule,
+        TranslateModule.forRoot(),
+        PassengerSeatModule,
+        DropdownObrsComponent,
+        SelectButtonModule,
+      ],
+      providers: [
+        provideMockStore(),
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+      ],
+    }).compileComponents();
+    store = TestBed.inject(MockStore);
+  });
+
+  it('boarding at a stop WITH a desk leaves the child radio usable', () => {
+    render(DESK_STOP.id);
+
+    expect(component.childBoardingBlocked).toBeFalse();
+    expect(fixture.debugElement.query(By.css('#fareCategory_child-0')).nativeElement.disabled).toBeFalse();
+  });
+
+  it('boarding at a stop with NO desk disables the child radio and states why', () => {
+    render(ROADSIDE_STOP.id);
+
+    expect(component.childBoardingBlocked).toBeTrue();
+    expect(fixture.debugElement.query(By.css('#fareCategory_child-0')).nativeElement.disabled).toBeTrue();
+    // The adult radio must stay usable: both radios share ONE `isAdult` control, so disabling the
+    // control instead of the element would take the working option away too.
+    expect(fixture.debugElement.query(By.css('#fareCategory_adult-0')).nativeElement.disabled).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_NO_TICKET_DESK');
+  });
+
+  it('a KIDS count carried in from the home search is forced back to adult at a desk-less stop', () => {
+    render(ROADSIDE_STOP.id);
+
+    // The search asked for 1 adult + 1 child; the server would refuse that booking outright.
+    expect(component.passengerData.length).toBe(2);
+    expect(component.passengerData.controls.every((g) => g.get('isAdult')?.value === true)).toBeTrue();
+  });
+
+  it('a ROUND trip is blocked when the RETURN leg boards at a desk-less stop', () => {
+    // The return leg boards at the outbound destination, so both stops are boarding stops.
+    render(DESK_STOP.id, { roundTrip: 2, stopStationId: ROADSIDE_STOP.id });
+
+    expect(component.childBoardingBlocked).toBeTrue();
+  });
+
+  it('a ROUND trip between two stops that both have desks is not blocked', () => {
+    render(DESK_STOP.id, { roundTrip: 2, stopStationId: DESK_STOP.id });
+
+    expect(component.childBoardingBlocked).toBeFalse();
   });
 });
 

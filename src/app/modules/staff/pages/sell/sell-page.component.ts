@@ -1,6 +1,8 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { StationService } from '../../../../services/station/station.service';
+import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { Subject, firstValueFrom, forkJoin, of, take } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -149,6 +151,22 @@ export class SellPageComponent implements OnInit, OnDestroy, CanComponentDeactiv
    * `passengerCount` untouched.
    */
   protected openChildCount = 0;
+
+  /**
+   * OBRS-1238: the slugs of stops that have a ticket desk. A child ticket may only
+   * BOARD at one of them, so the child controls are blocked whenever the selected
+   * pickup is not in this set.
+   *
+   * <p>Read from the public stop catalogue (`GET /api/stops`, session-deduped by
+   * StationService) rather than from the segment pairs this page already holds: a
+   * segment ref is `{slug, name}` shared with vehicle types, and widening it for one
+   * flag would put the field on three objects that have no desks.
+   *
+   * <p>`null` = not loaded (or the call failed). Nothing is blocked in that state -
+   * the server still refuses the sale, and a blanket block on a failed lookup would
+   * close every counter in the country over a dropped request.
+   */
+  private ticketDeskStopSlugs: Set<string> | null = null;
   protected isSelling = false;
   protected bookingId: number | null = null;
   protected bookingNumber: string | null = null;
@@ -215,7 +233,8 @@ export class SellPageComponent implements OnInit, OnDestroy, CanComponentDeactiv
     private readonly adminApiService: AdminApiService,
     readonly scheduleStore: StaffSchedulesStore,
     private readonly router: Router,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly stationService: StationService
   ) {
     this.scheduleItemForm = this.formBuilder.group({
       departureDate: [null, [Validators.required]],
@@ -231,6 +250,29 @@ export class SellPageComponent implements OnInit, OnDestroy, CanComponentDeactiv
 
   ngOnInit(): void {
     this.loadTrips(this.selectedDate);
+    // OBRS-1238: which stops have a ticket desk. skipErrorAlert IS passed, and this is
+    // the call site making that decision: the global handler is a BLOCKING modal, and
+    // this fetch is background enrichment for one tile. A failure has to degrade to
+    // `ticketDeskStopSlugs = null` - unknown means allowed, the server still refuses -
+    // not lock the clerk out of the whole sell screen. That lock-out is the exact
+    // OBRS-642 failure mode, measured on this same endpoint.
+    this.stationService
+      .getAll({ skipErrorAlert: true })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const stations: StationApi[] = response?.data ?? [];
+          this.ticketDeskStopSlugs = new Set(
+            stations.filter((station) => station.hasTicketDesk).map((station) => station.slug)
+          );
+          if (this.childSaleBlocked) {
+            this._resetFareCategory();
+          }
+        },
+        error: () => {
+          this.ticketDeskStopSlugs = null;
+        },
+      });
     // Stop/route names are server-localized (resolved from the Accept-Language
     // header) and cached in component state on fetch. The `| translate` pipes
     // re-render on a language switch, but this cached server data does not — so
@@ -463,9 +505,36 @@ export class SellPageComponent implements OnInit, OnDestroy, CanComponentDeactiv
     }
   }
 
+  /**
+   * OBRS-1238: may this sale carry a child fare? False only when the stop list HAS
+   * loaded and the selected pickup is not one of the stops with a ticket desk.
+   */
+  /**
+   * OBRS-1238: the stop catalogue could not be loaded, so nothing is known about ticket
+   * desks. `childSaleBlocked` stays false in that state on purpose - unknown means allowed -
+   * which leaves the clerk with no signal at all unless we say so. This is the visible half
+   * of the pair `station.effect.ts` names: a `skipErrorAlert` opt-out must ship a surface,
+   * or the failure is just silence.
+   */
+  protected get ticketDeskCatalogueUnavailable(): boolean {
+    return this.ticketDeskStopSlugs === null;
+  }
+
+  protected get childSaleBlocked(): boolean {
+    if (this.ticketDeskStopSlugs === null || !this.pickupSlug) {
+      return false;
+    }
+    return !this.ticketDeskStopSlugs.has(this.pickupSlug);
+  }
+
   protected onPickupChanged(slug: string): void {
     this.pickupSlug = slug;
     this.onPickupChange();
+    // OBRS-1238: moving the pickup to a stop with no desk drops any child fare already
+    // captured, rather than leaving one standing for the server to refuse at Sell.
+    if (this.childSaleBlocked) {
+      this._resetFareCategory();
+    }
   }
 
   protected onDropoffChanged(slug: string): void {
