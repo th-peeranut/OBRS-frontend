@@ -213,6 +213,53 @@
             @if (detail.status === 'RETURNED') {
               <p class="admin-muted mt-3">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.ALREADY_RETURNED' | translate }}</p>
 
+              <!-- OBRS-1149: the sign-off writes returnedAmount / discrepancy /
+              reason / who / when onto the day row, and until this block nothing
+              read any of them back - the owner signed for a shortfall that then
+              existed only in the DB. Same read-back shape
+              settlement-detail-modal already uses for a settled round
+              (OBRS-671). The expected amount is NOT repeated here: it is
+              rendered above for every status. -->
+              <div class="settlement-detail-totals" data-testid="driver-cash-returned-summary">
+                @if (detail.returnedAmount !== null) {
+                  <div class="settlement-detail-row" data-testid="driver-cash-returned-amount">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.RETURNED_AMOUNT' | translate }}</span>
+                    <span class="admin-emphasis">{{ formatMoney(detail.returnedAmount) }}</span>
+                  </div>
+                }
+                <!-- Hidden at zero, the same rule the breakdown rows above
+                follow (OBRS-1053/1073): a "0.00" difference explains nothing. -->
+                @if (hasReturnedDiscrepancy) {
+                  <div class="settlement-detail-row" data-testid="driver-cash-returned-discrepancy">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.DISCREPANCY' | translate }}</span>
+                    <span class="admin-emphasis" [class.settlement-nt-negative]="isNegativeMoney(detail.discrepancy ?? '0')">
+                      {{ formatMoney(detail.discrepancy) }}
+                      <span class="admin-muted" data-testid="driver-cash-returned-discrepancy-side">
+                        {{ discrepancySideKey(detail.discrepancy) | translate }}
+                      </span>
+                    </span>
+                  </div>
+                }
+                @if (detail.discrepancyReason) {
+                  <div class="settlement-detail-row" data-testid="driver-cash-returned-discrepancy-reason">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.CONFIRM.REASON_LABEL' | translate }}</span>
+                    <span>{{ detail.discrepancyReason }}</span>
+                  </div>
+                }
+                @if (detail.returnedByName) {
+                  <div class="settlement-detail-row" data-testid="driver-cash-returned-by">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.RETURNED_BY' | translate }}</span>
+                    <span>{{ detail.returnedByName }}</span>
+                  </div>
+                }
+                @if (detail.returnedAt) {
+                  <div class="settlement-detail-row" data-testid="driver-cash-returned-at">
+                    <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.RETURNED_AT' | translate }}</span>
+                    <span>{{ displayDateTime(detail.returnedAt) }}</span>
+                  </div>
+                }
+              </div>
+
               <!-- OBRS-1579: the driver's fuel bill reaches the counter the
               MORNING AFTER the round it paid for, by which time this box is
               signed off. Without this the only way to record it was to key it
