@@ -165,8 +165,8 @@ describe('stops.mappers (OBRS-1022)', () => {
 
   describe('filterStopRows', () => {
     const rows = [
-      { id: 1, slug: 'nong_chak', name: 'หนองชาก', status: 'Active', statusCode: 'active', stopType: 'Pickup', stopTypeCode: 'pickup' },
-      { id: 2, slug: 'bang_saen', name: 'บางแสน', status: 'Active', statusCode: 'active', stopType: 'Dropoff', stopTypeCode: 'dropoff' },
+      { id: 1, slug: 'nong_chak', name: 'หนองชาก', status: 'Active', statusCode: 'active', stopType: 'Pickup', stopTypeCode: 'pickup', hasTicketDesk: true },
+      { id: 2, slug: 'bang_saen', name: 'บางแสน', status: 'Active', statusCode: 'active', stopType: 'Dropoff', stopTypeCode: 'dropoff', hasTicketDesk: false },
     ];
 
     it('returns everything for a blank keyword', () => {

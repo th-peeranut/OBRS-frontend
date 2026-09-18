@@ -593,6 +593,15 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
             await flushAngular(sheet);
           }
 
+          // OBRS-1959: a control that is disabled for as long as the sweep looks at it is a
+          // control this gate reports on without ever measuring it. `prepare` drives the page
+          // into the state that control exists in; `mustRender` names it in that state so a
+          // fixture that stops working reds the gate rather than narrowing it.
+          if (target.prepare) {
+            await target.prepare(sheet);
+            await sheet.waitForTimeout(600);
+          }
+
           const sweep = await sheet.evaluate(MEASURE);
 
           // The precondition, asserted rather than assumed. A renamed theme key

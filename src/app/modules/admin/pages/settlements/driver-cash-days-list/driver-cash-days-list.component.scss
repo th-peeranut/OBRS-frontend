@@ -1,3 +1,8 @@
+// OBRS-1149 — `@use` must precede every other rule. Pulls in
+// `.settlement-nt-negative` (the discrepancy-negative rule) so this table
+// renders it byte-identical to the sign-off modal instead of restating it.
+@use "../cash-signoff-form";
+
 // OBRS-775 host-box rule: an Angular host defaults to `display: inline`, so
 // wrapping an in-flow block child makes the host box malformed.
 :host {
@@ -13,3 +18,4 @@
   margin-left: 4px;
   color: var(--admin-warning-fg);
 }
+

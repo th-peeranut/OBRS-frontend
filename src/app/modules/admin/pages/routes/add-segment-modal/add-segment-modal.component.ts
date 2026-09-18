@@ -21,10 +21,10 @@ import {
  * OBRS-1074: adds a stop pair the route has NO row for.
  *
  * Kept separate from {@link SegmentEditModalComponent} rather than folded into it
- * as a second mode: that one edits ONE vehicle type's fare and owns the
- * duration field plus its blast-radius warning (OBRS-1031), none of which apply
- * when the pair does not exist yet. Reworking the edit dialog to show both
- * vehicle types is OBRS-1034 and is not this card.
+ * as a second mode: that one re-prices an EXISTING pair (every vehicle type it
+ * is priced for, since OBRS-1034) and owns the duration field plus its
+ * blast-radius warning (OBRS-1031), none of which apply when the pair does not
+ * exist yet.
  *
  * Both dialogs share the direction rule (`findStopPairProblem`) and the payload
  * builders in `routes.mappers`, which is where the overlap actually is.

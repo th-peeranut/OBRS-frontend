@@ -25,7 +25,10 @@
   min-width: 0;
   height: 44px;
   padding: 0 $space-sm;
-  border: 1px solid $primary-lightgrey;
+  // OBRS-1959: $primary-lightgrey is 1.35:1 on #ffffff, under the 3:1 that WCAG 1.4.11 asks of a
+  // control boundary. $control-border is the token OBRS-772 created for exactly this — it is what
+  // `.form-control` and the datepicker trigger took — and it measures 4.69:1 on white.
+  border: 1px solid $control-border;
   border-radius: $radius-sm;
   font: inherit;
   font-size: $font-size-sm;
@@ -124,7 +127,9 @@
 :host-context(body.is-dark) {
   .promo-code-input {
     background-color: $dk-bg-input;
-    border-color: $dk-border;
+    // OBRS-1959: $dk-border is 1.35:1 on the dark page background — the same shortfall the light
+    // recipe had. $dk-control-border is the dark half of OBRS-772's control-boundary pair.
+    border-color: $dk-control-border;
     color: $dk-text;
 
     &::placeholder {
