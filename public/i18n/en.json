@@ -1722,7 +1722,12 @@
           "SUCCESS": "Driver cash day marked as returned.",
           "ALREADY_RETURNED": "This day has already been returned.",
           "PARCEL_CLAWBACK": "Parcel-share clawback (already included above)",
-          "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)"
+          "PER_HEAD_PAY": "Per-head pay earned today (already netted at the round, not in the amount above)",
+          "RETURNED_AMOUNT": "Amount returned",
+          "RETURNED_BY": "Received by",
+          "RETURNED_AT": "Received at",
+          "DISCREPANCY_SHORT": "short",
+          "DISCREPANCY_OVER": "over"
         },
         "REOPEN": {
           "ACTION_LABEL": "Re-open this box",
