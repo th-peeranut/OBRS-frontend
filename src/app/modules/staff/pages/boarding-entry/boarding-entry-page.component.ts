@@ -3,7 +3,11 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../../auth/auth.service';
-import { AdminScheduleDto, parseAdminStatus } from '../../../../services/admin/admin-api.service';
+import {
+  AdminScheduleDto,
+  getAdminTranslationLabel,
+  parseAdminStatus,
+} from '../../../../services/admin/admin-api.service';
 import { bangkokDayKey, formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import {
   bangkokInstantMs,
@@ -133,7 +137,14 @@ export class BoardingEntryPageComponent implements OnInit, OnDestroy {
         id: s.id,
         tripId: `#SCH-${s.id}`,
         departure: s.departureDateTime ?? '-',
-        route: s.route?.slug ?? '-',
+        // OBRS-1216: same defect as the manifest header - the slug is a key,
+        // not a route name. Read the renamed label off `translations`,
+        // degrading locale -> th -> en -> '-' (never the slug).
+        route:
+          getAdminTranslationLabel(s.route?.translations, this.currentLocale) ??
+          getAdminTranslationLabel(s.route?.translations, 'th') ??
+          getAdminTranslationLabel(s.route?.translations, 'en') ??
+          '-',
         vehicle: s.vehicle?.vehicleNumber ?? s.vehicle?.numberPlate ?? '-',
         status: status.name,
         statusCode: status.code,

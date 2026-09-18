@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { DriverCashDaySummaryRespDto } from '../../../../../shared/interfaces/driver-cash.interface';
 import { formatDisplayDate } from '../../../../../shared/lib/display-date-time';
-import { formatMoney } from '../../../../../shared/lib/money-display';
+import { discrepancySideKey, formatMoney } from '../../../../../shared/lib/money-display';
 
 export type DriverCashDaysContentState = 'loading' | 'invalid' | 'error' | 'empty' | 'data';
 
@@ -62,6 +62,28 @@ export class DriverCashDaysListComponent {
    * thousand separator, `.00` on every whole amount. Staff money is money. */
   protected formatMoney(value: number | string | null | undefined): string {
     return formatMoney(value, this.translate.currentLang);
+  }
+
+  /**
+   * OBRS-1149 — the signed-off difference, shown only on a row that is closed
+   * AND did not balance. `discrepancy` is null on an OPEN row, and `0` on the
+   * ordinary day where the cash matched: printing that in every row would bury
+   * the few rows this column exists for.
+   */
+  protected hasDiscrepancy(item: DriverCashDaySummaryRespDto): boolean {
+    return (
+      item.status === 'RETURNED' &&
+      item.discrepancy !== null &&
+      Number(item.discrepancy) !== 0
+    );
+  }
+
+  // OBRS-1149 — shared with the return modal via money-display.ts so the
+  // short/over mapping can't drift between the two places that render it.
+  protected readonly discrepancySideKey = discrepancySideKey;
+
+  protected isNegativeMoney(value: string): boolean {
+    return Number(value) < 0;
   }
 
 }

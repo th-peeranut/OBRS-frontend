@@ -74,6 +74,24 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   @Input() childCount = 0;
   @Output() childCountChange = new EventEmitter<number>();
 
+  /**
+   * OBRS-1238: the selected PICKUP stop has no ticket desk, so a child fare cannot be
+   * sold for this trip. Owned by sell-page (it holds `pickupSlug` and the stop list).
+   *
+   * <p>⛔ UX only. The server refuses the same sale with
+   * `CHILD_FARE_STOP_WITHOUT_TICKET_DESK`; this exists so the clerk sees why BEFORE
+   * taking the customer's money, not after (AC-6).
+   */
+  @Input() childSaleBlocked = false;
+
+  /**
+   * OBRS-1238: `GET /api/stops` failed, so no ticket desk is known either way. The child
+   * tile stays ENABLED (unknown = allowed; the server still refuses with
+   * `CHILD_FARE_STOP_WITHOUT_TICKET_DESK`) - this input is what tells the clerk the check
+   * did not run, so a refusal at Sell is not a surprise.
+   */
+  @Input() ticketDeskCatalogueUnavailable = false;
+
   // OBRS-358: how many of the current sale's tickets spill into the jump
   // seat (walk-in-only, sold last) — owned/computed by sell-page
   // (`overflowUnits`), passed through for the inline warning hint below the

@@ -45,6 +45,30 @@
   min-width: 0;
 }
 
+// OBRS-1955. #fde7e7 is the error wash the reschedule/change-seat dialogs already use, and
+// $text-red was measured against exactly that background (variables.scss:90, 4.62:1 — AA).
+.server-field-errors {
+  background-color: #fde7e7;
+  border: 1px solid $text-red;
+  border-radius: $radius-md;
+  padding: $space-sm;
+  color: $text-red;
+}
+
+.server-field-errors__title {
+  font-weight: bold;
+  margin-bottom: $space-xs;
+}
+
+.server-field-errors__list {
+  margin: 0;
+  padding-left: $space-sm;
+}
+
+.server-field-errors__label {
+  font-weight: bold;
+}
+
 .summary-container {
   width: 30%;
   min-width: 0;

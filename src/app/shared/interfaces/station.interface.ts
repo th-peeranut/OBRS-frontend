@@ -59,10 +59,44 @@ export interface StationApi {
   slug: string;
   status: StationLookupValue;
   stopType: StationLookupValue;
+  /**
+   * OBRS-1238 — does this stop have a ticket desk, i.e. may a CHILD ticket
+   * board here? Optional because a cached/older `GET /api/stops` body (the
+   * endpoint is served `public, max-age=300`) does not carry the field.
+   *
+   * ⛔ This is UX, never authorization. The server refuses the sale on its own
+   * (`CHILD_FARE_STOP_WITHOUT_TICKET_DESK`); what this field buys is the
+   * customer seeing WHY before they reach the payment step instead of after.
+   */
+  hasTicketDesk?: boolean;
   createdAt: string;
   updatedAt: string;
   display?: StationTranslationCollection;
   translations?: StationTranslationCollection;
+}
+
+/**
+ * OBRS-1238 — may a child ticket board at this station id?
+ *
+ * <p>Absent/unknown answers TRUE, deliberately. A stale cached stop list that
+ * predates the field would otherwise hide the child option at every stop in the
+ * country, which is a worse failure than letting the server state the refusal
+ * itself — and the server still does, so nothing is actually sold that should
+ * not be.
+ */
+export function stationAllowsChildBoarding(
+  stationId: string | number | null | undefined,
+  stationList: StationApi[] | null | undefined
+): boolean {
+  if (stationId === null || stationId === undefined || stationId === '') {
+    return true;
+  }
+  const parsed = Number(stationId);
+  const match = (stationList ?? []).find((station) => station.id === parsed);
+  if (!match || match.hasTicketDesk === undefined) {
+    return true;
+  }
+  return match.hasTicketDesk;
 }
 
 export function getStationTranslationLabel(

@@ -39,14 +39,26 @@
                       id="fareCategory_child-{{ i }}"
                       formControlName="isAdult"
                       [value]="false"
+                      [attr.disabled]="childBoardingBlocked ? '' : null"
                       />
                       <label class="form-check-label" for="fareCategory_child-{{ i }}">
                         {{ "PASSENGER_INFO.BADGE.CHILD" | translate }}
                       </label>
                     </div>
-                    <div class="fare-category-hint text-muted small">
-                      {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT" | translate }}
-                    </div>
+                    <!-- OBRS-1238: `[attr.disabled]` rather than disabling the CONTROL -
+                    both radios share the one `isAdult` control, so disabling it would
+                    take the adult option away too. The server refuses this booking on its
+                    own; what this line buys is the reason arriving before the payment
+                    step instead of after it. -->
+                    @if (childBoardingBlocked) {
+                      <div class="fare-category-hint text-danger small">
+                        {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_NO_TICKET_DESK" | translate }}
+                      </div>
+                    } @else {
+                      <div class="fare-category-hint text-muted small">
+                        {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT" | translate }}
+                      </div>
+                    }
                   </div>
                   <!-- OBRS-1239: numbered here, not a bare "passenger information",
                   because this block repeats once per passenger. -->
@@ -116,8 +128,9 @@
                     group.get('firstName')?.dirty)
                 "
                         />
+                        <!-- OBRS-1952: one branch per rule — see booker-info-form. -->
                         @if (
-                          group.get('firstName')?.errors &&
+                          group.get('firstName')?.hasError('required') &&
                           (group.get('firstName')?.touched ||
                           group.get('firstName')?.dirty)
                           ) {
@@ -127,10 +140,39 @@
                             {{ "PASSENGER_INFO.FORM.FIRST_NAME_REQUIRED" | translate }}
                           </div>
                         }
+                        @if (
+                          group.get('firstName')?.hasError('minlength') &&
+                          (group.get('firstName')?.touched ||
+                          group.get('firstName')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                          </div>
+                        }
+                        @if (
+                          group.get('firstName')?.hasError('maxlength') &&
+                          (group.get('firstName')?.touched ||
+                          group.get('firstName')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                          </div>
+                        }
                       </div>
                       <!-- Middle name, when present -->
                       <div class="col-12 col-md-6">
-                        <label for="middleName-{{ i }}">
+                        <label
+                          for="middleName-{{ i }}"
+                          [class.label-error]="
+                            group.get('middleName')?.errors &&
+                            (group.get('middleName')?.touched ||
+                              group.get('middleName')?.dirty)
+                          "
+                          >
                           {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
                         </label>
                         <input
@@ -138,7 +180,35 @@
                           id="middleName-{{ i }}"
                           formControlName="middleName"
                           autocomplete="section-passenger-{{ i }} additional-name"
+                          [class.form-error]="
+                            group.get('middleName')?.errors &&
+                            (group.get('middleName')?.touched ||
+                              group.get('middleName')?.dirty)
+                          "
                           />
+                          <!-- OBRS-1952: optional, but length-checked once filled — see booker-info-form. -->
+                          @if (
+                            group.get('middleName')?.hasError('minlength') &&
+                            (group.get('middleName')?.touched ||
+                            group.get('middleName')?.dirty)
+                            ) {
+                            <div
+                              class="text-error"
+                              >
+                              {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                            </div>
+                          }
+                          @if (
+                            group.get('middleName')?.hasError('maxlength') &&
+                            (group.get('middleName')?.touched ||
+                            group.get('middleName')?.dirty)
+                            ) {
+                            <div
+                              class="text-error"
+                              >
+                              {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                            </div>
+                          }
                         </div>
                         <!-- Last name -->
                         <div class="col-12 col-md-6">
@@ -165,7 +235,7 @@
                 "
                             />
                             @if (
-                              group.get('lastName')?.errors &&
+                              group.get('lastName')?.hasError('required') &&
                               (group.get('lastName')?.touched ||
                               group.get('lastName')?.dirty)
                               ) {
@@ -173,6 +243,28 @@
                                 class="text-error"
                                 >
                                 {{ "PASSENGER_INFO.FORM.LAST_NAME_REQUIRED" | translate }}
+                              </div>
+                            }
+                            @if (
+                              group.get('lastName')?.hasError('minlength') &&
+                              (group.get('lastName')?.touched ||
+                              group.get('lastName')?.dirty)
+                              ) {
+                              <div
+                                class="text-error"
+                                >
+                                {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                              </div>
+                            }
+                            @if (
+                              group.get('lastName')?.hasError('maxlength') &&
+                              (group.get('lastName')?.touched ||
+                              group.get('lastName')?.dirty)
+                              ) {
+                              <div
+                                class="text-error"
+                                >
+                                {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
                               </div>
                             }
                           </div>

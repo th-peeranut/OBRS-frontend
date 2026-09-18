@@ -222,15 +222,26 @@
                     (click)="onSelectFareCategory('adult')">
                     {{ 'STAFF.SELL.FARE_CATEGORY_ADULT' | translate }}
                   </button>
+                  <!-- OBRS-1238: disabled rather than hidden - a clerk who cannot find the
+                  button would ask why, and the answer is the line below it. -->
                   <button type="button"
                     class="fare-tile rounded px-3 py-1"
                     [class.fare-tile--active]="fareCategory === 'child'"
                     [attr.aria-pressed]="fareCategory === 'child'"
+                    [disabled]="childSaleBlocked"
                     (click)="onSelectFareCategory('child')">
                     {{ 'STAFF.SELL.FARE_CATEGORY_CHILD' | translate }}
                   </button>
                 </div>
-                @if (fareCategory === 'child') {
+                @if (childSaleBlocked) {
+                  <div class="text-danger small text-center mb-3" role="status">
+                    {{ 'STAFF.SELL.CHILD_NO_TICKET_DESK' | translate }}
+                  </div>
+                } @else if (ticketDeskCatalogueUnavailable) {
+                  <div class="ticket-desk-warning small text-center mb-3" role="status">
+                    {{ 'STAFF.SELL.CHILD_DESK_CATALOGUE_UNAVAILABLE' | translate }}
+                  </div>
+                } @else if (fareCategory === 'child') {
                   <div class="text-muted small text-center mb-3">
                     {{ 'PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT' | translate }}
                   </div>
@@ -294,13 +305,20 @@
                     <span class="fs-5 fw-semibold text-center" style="min-width:2rem" aria-live="polite">{{ childCount }}</span>
                     <button type="button"
                       class="btn btn-sm btn-outline-secondary rounded-circle"
-                      [disabled]="childCount >= passengerCount"
+                      [disabled]="childCount >= passengerCount || childSaleBlocked"
                       [attr.aria-label]="'STAFF.SELL.CHILD_COUNT_INCREASE' | translate"
                       (click)="incrementChildCount()">
                       <i class="bi bi-plus" aria-hidden="true"></i>
                     </button>
                   </div>
-                  @if (childCount > 0) {
+                  <!-- OBRS-1238: the OPEN-seating twin of the fare tiles above. Only the
+                  PLUS button is blocked - decrementing a count the clerk already entered
+                  has to stay possible, or a stop change would trap the sale. -->
+                  @if (childSaleBlocked) {
+                    <div class="text-danger small text-center" role="status">
+                      {{ 'STAFF.SELL.CHILD_NO_TICKET_DESK' | translate }}
+                    </div>
+                  } @else if (childCount > 0) {
                     <div class="text-muted small text-center">
                       {{ 'PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT' | translate }}
                     </div>

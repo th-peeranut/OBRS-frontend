@@ -6,7 +6,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { RouteDetailPanelComponent, SegmentDisplayLine } from './route-detail-panel.component';
 import { AdminSharedModule } from '../../../admin-shared.module';
-import { SegmentRow, StopPoint } from '../routes.mappers';
+import { SegmentPivotRow, SegmentRow, StopPoint } from '../routes.mappers';
 
 const STOP_A: StopPoint = {
   slug: 'stop-a',
@@ -580,7 +580,10 @@ describe('RouteDetailPanelComponent (template)', () => {
     }
   });
 
-  it('emits editSegment with the segment of the vehicle type whose button was clicked', () => {
+  // OBRS-1034: ONE Edit button per stop pair, emitting the whole pivot row. It
+  // used to be one button per priced vehicle type, and both opened the same
+  // dialog - which now edits every vehicle type of the pair in one save.
+  it('emits editSegment once per row, carrying every vehicle type of the pair', () => {
     const van = makeSegment({ id: 1, vehicleTypeSlug: 'van', vehicleTypeName: 'Van', fare: 100 });
     const minibus = makeSegment({
       id: 2,
@@ -594,11 +597,34 @@ describe('RouteDetailPanelComponent (template)', () => {
     component.editSegment.subscribe(editSpy);
 
     const buttons = fixture.debugElement.queryAll(By.css('.admin-table tbody .edit-fare-btn'));
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].nativeElement.getAttribute('aria-label')).toBe(
+      'ADMIN.COMMON.EDIT - Beta'
+    );
+
+    buttons[0].nativeElement.click();
+
+    expect(editSpy).toHaveBeenCalledTimes(1);
+    const row: SegmentPivotRow = editSpy.calls.mostRecent().args[0];
+    expect(row.destination).toBe('Beta');
+    expect(row.fares.map((cell) => cell.segment)).toEqual([van, minibus]);
+  });
+
+  it('still shows one Edit button on a pair priced for only one vehicle type', () => {
+    render([
+      makeSegment({ id: 1, vehicleTypeSlug: 'van', vehicleTypeName: 'Van', fare: 100 }),
+      makeSegment({
+        id: 2,
+        vehicleTypeSlug: 'minibus',
+        vehicleTypeName: 'Minibus',
+        toStopSlug: 'gamma',
+        destination: 'Gamma',
+        fare: 140,
+      }),
+    ]);
+
+    const buttons = fixture.debugElement.queryAll(By.css('.admin-table tbody .edit-fare-btn'));
     expect(buttons.length).toBe(2);
-
-    buttons[1].nativeElement.click();
-
-    expect(editSpy).toHaveBeenCalledWith(minibus);
   });
 
   it('exposes the collapse state on the group header button via aria-expanded', () => {
