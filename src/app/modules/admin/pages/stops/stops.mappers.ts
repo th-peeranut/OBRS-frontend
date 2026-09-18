@@ -51,6 +51,8 @@ export interface StopRow {
   statusCode: string;
   stopType: string;
   stopTypeCode: string;
+  /** OBRS-1954: does this stop have a ticket desk (i.e. may a child ticket board here)? */
+  hasTicketDesk: boolean;
 }
 
 /** One locale's editable content for a stop. */
@@ -90,6 +92,9 @@ export function toStopRow(dto: AdminStopSummaryDto, locale: string): StopRow {
     statusCode: getAdminLookupCode(dto.status),
     stopType: getAdminLookupLabel(dto.stopType, locale) ?? '',
     stopTypeCode: getAdminLookupCode(dto.stopType),
+    // OBRS-1954: absent reads as OFF, matching the column's own NOT NULL DEFAULT FALSE -
+    // an unclassified stop does not sell child tickets.
+    hasTicketDesk: dto.hasTicketDesk === true,
   };
 }
 

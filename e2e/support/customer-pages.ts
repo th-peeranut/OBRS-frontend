@@ -571,6 +571,24 @@ export interface CustomerPage {
    * entry's name promises. `mustRender` is what turns that into a failure.
    */
   storeOverride?: () => Record<string, unknown>;
+  /**
+   * Run against the loaded, seeded page before anything is measured (OBRS-1959).
+   *
+   * A seed puts the page in the state a customer ARRIVES in. Some controls only
+   * exist in a state the customer DRIVES the page into, and a disabled control
+   * is skipped by this gate on purpose (WCAG exempts it), so a control that is
+   * disabled for as long as the sweep looks at it is a control the gate reports
+   * on without ever measuring. `.promo-code-input` sat in exactly that hole:
+   * 1.35:1 in both themes, on a public booking page, invisible to eleven months
+   * of green runs because it is `[disabled]` until both forms are valid.
+   *
+   * Keep these short and keep them about REACHING a state, not asserting one --
+   * every selector typed here is a fixture that can rot, which is why the entry
+   * that uses one also names the control in `mustRender` with its enabled state
+   * spelled out. That pairing is what turns a rotted fixture into a red gate
+   * instead of a quiet narrowing (the OBRS-938 rule, applied to state).
+   */
+  prepare?: (page: Page) => Promise<void>;
 }
 
 /** OBRS-862. Local YYYY-MM-DD, `offset` days from today. */
@@ -745,8 +763,31 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     // passenger-info-form's own phone field is not rendered -- the same
     // one-passenger fixture narrowness OBRS-795 tracks, restated for invariant C.
     minPlaceholders: 2,
-    mustRender: ['.btn-next'],
+    // OBRS-1959: `.promo-code-input:not([disabled])` is the state clause. The field itself has
+    // rendered on this page since OBRS-109 and the gate still never measured it, because it is
+    // disabled until both forms are valid and a disabled control is exempt. Naming the ENABLED
+    // element here means a `prepare` that stops working reds the gate instead of quietly handing
+    // back a sweep that skipped the control.
+    mustRender: ['.btn-next', '.promo-code-input:not([disabled])'],
     hoverTargets: ['.btn-next', '.btn-back'],
+    prepare: async (page) => {
+      // Both cards have to be valid before the summary enables the promo field. Fill by id: the
+      // ids are what the page's own labels point at, so they are load-bearing already.
+      for (const [selector, value] of [
+        ['#booker-firstName', 'สมชาย'],
+        ['#booker-lastName', 'รักดี'],
+        ['#booker-phoneNumber', '0812345678'],
+        ['#firstName-0', 'สมชาย'],
+        ['#lastName-0', 'รักดี'],
+      ] as const) {
+        const field = page.locator(selector);
+        if ((await field.count()) > 0 && (await field.first().isVisible())) {
+          await field.first().fill(value);
+          await field.first().blur();
+        }
+      }
+      await flushAngular(page);
+    },
   },
   {
     key: 'payment',

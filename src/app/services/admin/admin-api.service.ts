@@ -417,6 +417,12 @@ export interface AdminStopSummaryDto {
   slug: string;
   status?: AdminStopLookupDto;
   stopType?: AdminStopLookupDto;
+  /**
+   * OBRS-1238/OBRS-1954: does this stop have a ticket desk - the flag that decides
+   * whether a CHILD ticket may board here. Optional because a cached `GET /api/stops`
+   * body (served `public, max-age=300`) can predate the field.
+   */
+  hasTicketDesk?: boolean;
   translations?: AdminTranslationCollection;
   createdAt?: string;
   updatedAt?: string;
@@ -2137,6 +2143,21 @@ export class AdminApiService {
    */
   updateStopLabels(id: number, payload: AdminStopLabelPayload): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(`${this.baseUrl}/private/stops/${id}/labels`, payload);
+  }
+
+  /**
+   * OBRS-1954: turns a stop's ticket desk on or off - the flag OBRS-1238's child-boarding guard
+   * reads. `hasRole('OWNER')`, like `updateStopLabels` above and unlike the ADMIN full-replace:
+   * where a desk stands is the operator's own operational fact even though the place is not.
+   *
+   * <p>Its own endpoint rather than a field on {@link AdminStopUpdatePayload}, for the reason that
+   * payload's own doc gives: that body is the ADMIN full-replace of platform-wide reference data,
+   * and an owner sending it gets a 403.
+   */
+  updateStopTicketDesk(id: number, hasTicketDesk: boolean): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/stops/${id}/ticket-desk`, {
+      hasTicketDesk,
+    });
   }
 
   /**

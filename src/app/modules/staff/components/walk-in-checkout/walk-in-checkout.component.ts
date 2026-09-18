@@ -16,6 +16,8 @@ import {
   THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
 import { formatMoney } from '../../../../shared/lib/money-display';
+import { trimmedRequiredValidator } from '../../../../shared/validators/trimmed-required.validator';
+import { trimmedLengthValidator } from '../../../../shared/validators/trimmed-length.validator';
 
 export interface WalkInCheckoutPayload {
   contact: {
@@ -79,8 +81,10 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   ) {
     this.contactForm = this.fb.group({
       title: [''],
-      firstName: ['', [Validators.required, Validators.maxLength(100)]],
-      lastName: ['', [Validators.required, Validators.maxLength(100)]],
+      // OBRS-1957: `ContactReqDto` is `@NotBlank @Size(min = 2, max = 50)`, so maxLength(100) let a
+      // 60-character name reach the counter's 400 and nothing at all stopped a 1-character one.
+      firstName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
+      lastName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
       phoneNumber: ['', [Validators.required, separatorTolerantPattern(this.phonePattern)]],
       identityCardNumber: ['', [Validators.pattern(this.idCardPattern)]],
       // OBRS-197: email is now OPTIONAL for walk-in/offline channels — the
@@ -184,8 +188,11 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     const payload: WalkInCheckoutPayload = {
       contact: {
         title: title.length > 0 ? title : null,
-        firstName: String(v.firstName ?? ''),
-        lastName: String(v.lastName ?? ''),
+        // OBRS-1957: sent trimmed because that is the length the form validates. Left raw, a
+        // padded name passes 2..50 here and reaches `@Size(max = 50)` — which counts the raw
+        // string — as a 400 at the counter, with a queue behind it.
+        firstName: String(v.firstName ?? '').trim(),
+        lastName: String(v.lastName ?? '').trim(),
         // OBRS-691: the control may carry display dashes (regrouped on blur) —
         // the backend stores/validates bare digits only.
         phoneNumber: stripPhoneSeparators(v.phoneNumber ?? ''),
@@ -215,6 +222,10 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
       if (fieldName === 'phoneNumber') return 'STAFF.VALIDATION.THAI_MOBILE_INVALID';
       if (fieldName === 'identityCardNumber') return 'STAFF.VALIDATION.ID_CARD_INVALID';
     }
+    // OBRS-1957: the names carry a length rule now, and FIELD_INVALID cannot tell staff whether
+    // what they typed is too short or too long.
+    if (errors['minlength']) return 'STAFF.VALIDATION.NAME_TOO_SHORT';
+    if (errors['maxlength']) return 'STAFF.VALIDATION.NAME_TOO_LONG';
     return 'STAFF.VALIDATION.FIELD_INVALID';
   }
 
