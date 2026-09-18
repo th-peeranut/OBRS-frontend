@@ -763,6 +763,27 @@ body.is-dark {
     color: $dk-text-muted !important;
   }
 
+  // OBRS-1951 — the open-seating banner above a trip list. Its light fill is
+  // $secondary-light-blue (#d9e1f1) with $secondary-blue text on it: left alone
+  // in dark mode that is a near-white blob on the dark panel, the §2.4.0 /
+  // OBRS-520 failure exactly. Repainted onto the card surface, with the accent
+  // kept for the title and the icon so the banner still reads as a note and not
+  // as another row. Unscoped and `!important` for the same reason as the notice
+  // above: these are component styles, so Angular emits the selector with an
+  // `_ngcontent` attribute on every part and an unaided global rule loses.
+  .open-seating-banner {
+    background-color: $dk-bg-card !important;
+  }
+
+  .open-seating-banner__icon,
+  .open-seating-banner__title {
+    color: $dk-accent !important;
+  }
+
+  .open-seating-banner__body {
+    color: $dk-text-muted !important;
+  }
+
   // OBRS-752. The blanket rule above calls forcing a button label light
   // "harmless". It WAS, while every brand fill was #4bc2f7 and 1.9:1 in dark
   // mode -- a label colour cannot rescue a button that fails by that margin.

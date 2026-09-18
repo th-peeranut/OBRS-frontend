@@ -93,7 +93,9 @@
                   </div>
                 }
               </div>
-              <!-- xx hours xx minutes -->
+              <!-- xx hours xx minutes, with the pickup-dropoff distance estimate collapsed onto
+                   the same line (OBRS-1948): the duration is what the customer decides on, the
+                   distance is supporting detail, so it is a smaller, lighter span in brackets. -->
               <div class="body-subheader-text">
                 {{
                 getDurationHours(
@@ -109,15 +111,12 @@
                 )
                 }}
                 {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
-              </div>
-              <!-- ~X km (authoritative pickup-dropoff distance estimate; duration is redundant with the clock-time duration above) -->
-              @if (findTripEstimate(departureSchedule, false) | async; as est) {
-                @if (est.distanceKm != null) {
-                  <div class="body-estimate-text">
-                    ≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}
-                  </div>
+                @if (findTripEstimate(departureSchedule, false) | async; as est) {
+                  @if (est.distanceKm != null) {
+                    <span class="body-estimate-text">(≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }})</span>
+                  }
                 }
-              }
+              </div>
               <!-- xx:xx time -->
               <div class="card-body-detail-station mt-2">
                 <div class="body-header-text">
@@ -289,7 +288,8 @@
                       }
                     </div>
                   }
-                  <!-- xx hours xx minutes -->
+                  <!-- xx hours xx minutes, with the return leg's distance estimate collapsed onto
+                       the same line (OBRS-1948) -- see the outbound leg above. -->
                   <div class="body-subheader-text">
                     {{
                     getDurationHours(
@@ -305,15 +305,12 @@
                     )
                     }}
                     {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
-                  </div>
-                  <!-- ~X km (authoritative pickup-dropoff distance estimate, swapped for the return leg; duration is redundant with the clock-time duration above) -->
-                  @if (findTripEstimate(returnSchedule, true) | async; as est) {
-                    @if (est.distanceKm != null) {
-                      <div class="body-estimate-text">
-                        ≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}
-                      </div>
+                    @if (findTripEstimate(returnSchedule, true) | async; as est) {
+                      @if (est.distanceKm != null) {
+                        <span class="body-estimate-text">(≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }})</span>
+                      }
                     }
-                  }
+                  </div>
                   <!-- xx:xx time -->
                   <div class="card-body-detail-station mt-2">
                     <div class="body-header-text">

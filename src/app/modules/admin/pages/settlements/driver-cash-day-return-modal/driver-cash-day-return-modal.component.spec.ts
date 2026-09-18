@@ -647,4 +647,71 @@ describe('DriverCashDayReturnModalComponent', () => {
       expect(component['canConfirm']).toBeTrue();
     });
   });
+
+  // ── OBRS-1149: the signed-off figures read back ───────────────────────
+  // Everything asserted here was already on the wire and already written to
+  // `driver_cash_days` by `returnDay()`; until this card the RETURNED branch
+  // printed one sentence ("already returned") and nothing else, so a shortfall
+  // the owner had personally signed for could not be looked up the next day.
+  describe('a RETURNED day shows what was signed off', () => {
+    const SIGNED_OFF: DriverCashDayRespDto = {
+      ...DETAIL,
+      status: 'RETURNED',
+      returnedAmount: '380.00',
+      returnedAt: '2026-08-24T19:00:00+07:00',
+      returnedByUserId: 9,
+      returnedByName: 'Owner',
+      discrepancy: '-120.00',
+      discrepancyReason: 'เงินหายระหว่างทาง',
+    };
+
+    function showReturned(overrides: Partial<DriverCashDayRespDto> = {}): HTMLElement {
+      component.detail = { ...SIGNED_OFF, ...overrides };
+      component.ngOnChanges({});
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('[data-testid="driver-cash-returned-summary"]');
+    }
+
+    it('renders the returned amount, the difference, its reason, who took it and when', () => {
+      const box = showReturned();
+      expect(box.querySelector('[data-testid="driver-cash-returned-amount"]')!.textContent).toContain('380');
+      expect(box.querySelector('[data-testid="driver-cash-returned-discrepancy"]')!.textContent).toContain('120');
+      expect(box.querySelector('[data-testid="driver-cash-returned-discrepancy-reason"]')!.textContent)
+        .toContain('เงินหายระหว่างทาง');
+      expect(box.querySelector('[data-testid="driver-cash-returned-by"]')!.textContent).toContain('Owner');
+      expect(box.querySelector('[data-testid="driver-cash-returned-at"]')).not.toBeNull();
+    });
+
+    it('says which side the difference is on instead of leaving a bare signed number', () => {
+      const short = showReturned();
+      expect(short.querySelector('[data-testid="driver-cash-returned-discrepancy-side"]')!.textContent)
+        .toContain('DISCREPANCY_SHORT');
+      expect(
+        short.querySelector('[data-testid="driver-cash-returned-discrepancy"] .settlement-nt-negative')
+      ).not.toBeNull();
+
+      const over = showReturned({ dayId: 2, discrepancy: '50.00', returnedAmount: '550.00' });
+      expect(over.querySelector('[data-testid="driver-cash-returned-discrepancy-side"]')!.textContent)
+        .toContain('DISCREPANCY_OVER');
+      expect(
+        over.querySelector('[data-testid="driver-cash-returned-discrepancy"] .settlement-nt-negative')
+      ).toBeNull();
+    });
+
+    it('hides the difference row on a day that balanced, the same rule the breakdown rows follow', () => {
+      const box = showReturned({ dayId: 3, discrepancy: '0.00', discrepancyReason: null, returnedAmount: '500.00' });
+      expect(box.querySelector('[data-testid="driver-cash-returned-discrepancy"]')).toBeNull();
+      expect(box.querySelector('[data-testid="driver-cash-returned-amount"]')!.textContent).toContain('500');
+    });
+
+    it('does not render the signed-off box while the day is still OPEN', () => {
+      component.detail = DETAIL;
+      component.ngOnChanges({});
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="driver-cash-returned-summary"]')
+      ).toBeNull();
+    });
+  });
+
 });

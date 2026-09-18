@@ -75,3 +75,57 @@
   font-style: italic;
   font-weight: 400;
 }
+
+// OBRS-1619. Only --admin-outline, --admin-muted and --admin-primary appear below, and that is a
+// constraint rather than a preference: the block above records what happened when this file asked
+// for token names that do not exist in src/ -- they take their fallback silently and the surface
+// renders wrong with nothing to say so. `npm run test:theme-tokens` is what catches an invented one.
+
+// The payee name IS the control that opens the bills, so it has to look like one without becoming
+// a button-shaped object inside a table cell.
+.payee-spend-drill {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--admin-primary);
+  text-align: start;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.payee-spend-row-open {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: -2px;
+}
+
+.payee-spend-bills-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.payee-spend-bills-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.payee-spend-bills-close {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--admin-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.payee-spend-bills-table {
+  border-top: 1px solid var(--admin-outline);
+}

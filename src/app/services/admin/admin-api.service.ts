@@ -26,7 +26,10 @@ import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interfa
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { VehiclePlReportDto } from '../../shared/interfaces/vehicle-pl-report.interface';
-import { PayeeSpendReportDto } from '../../shared/interfaces/payee-spend-report.interface';
+import {
+  PayeeBillListDto,
+  PayeeSpendReportDto,
+} from '../../shared/interfaces/payee-spend-report.interface';
 import { PartUnitPriceReportDto } from '../../shared/interfaces/part-unit-price-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
@@ -567,6 +570,28 @@ export interface AdminScheduleSetDto {
   updatedAt?: string;
   route?: AdminRouteDto;
   vehicleType?: AdminVehicleTypeDto;
+}
+
+// OBRS-1172: response of POST /api/private/schedule-set/extend — one
+// extended source→new set pair per active schedule set the operator held.
+export interface ScheduleSetExtendedSetDto {
+  sourceScheduleSetId: number;
+  newScheduleSetId: number;
+  route: string;
+  frequency: string;
+  startDate: string;
+  endDate: string;
+}
+
+// OBRS-1172: response of POST /api/private/schedule-set/extend. `schedulesCreated`
+// can legitimately be 0 (every trip in the new window already existed) — that is
+// not a failure, see SchedulesPageComponent.extendTimetableWindow().
+export interface ScheduleSetExtendRespDto {
+  setsExtended: number;
+  newStartDate: string;
+  newEndDate: string;
+  schedulesCreated: number;
+  extendedSets: ScheduleSetExtendedSetDto[];
 }
 
 export interface AdminDriverInfoDto {
@@ -2221,6 +2246,16 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-1172: extends every active schedule set by one more period (no
+  // request body) — the "extend the window" button the OBRS-1159 low-timetable
+  // email now points operators at instead of the DB runbook.
+  extendTimetableWindow(): Observable<ResponseAPI<ScheduleSetExtendRespDto>> {
+    return this.postRequest<ScheduleSetExtendRespDto>(
+      `${this.baseUrl}/private/schedule-set/extend`,
+      {}
+    );
+  }
+
   // TODO: implement server-side pagination in the admin UI; size=100 silently caps results
   //
   // OBRS-727: backend gate is @PreAuthorize("hasRole('OWNER')") — same role as the
@@ -2519,6 +2554,39 @@ export class AdminApiService {
     }
     return this.getRequest<PayeeSpendReportDto>(
       `${this.baseUrl}/private/admin/reports/expense-by-payee`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1619 AC1 — the bills behind one line of the report above.
+   *
+   * `payeeId === null` is the "not recorded" bucket and sends NO `payeeId` param: that bucket has
+   * no id, so there is no value to send. The year/month/category passed here are the report's own
+   * filter, unchanged — the backend re-resolves the window from them, which is what keeps the two
+   * screens under the same period.
+   */
+  getPayeeBills(
+    payeeId: number | null,
+    year: number | null,
+    month: number | null,
+    category: string | null
+  ): Observable<ResponseAPI<PayeeBillListDto>> {
+    let params = new HttpParams();
+    if (payeeId !== null) {
+      params = params.set('payeeId', String(payeeId));
+    }
+    if (year !== null) {
+      params = params.set('year', String(year));
+      if (month !== null) {
+        params = params.set('month', String(month));
+      }
+    }
+    if (category !== null) {
+      params = params.set('category', category);
+    }
+    return this.getRequest<PayeeBillListDto>(
+      `${this.baseUrl}/private/admin/reports/expense-by-payee/bills`,
       params
     );
   }

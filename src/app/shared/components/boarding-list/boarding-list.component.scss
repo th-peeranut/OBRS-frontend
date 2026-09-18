@@ -230,7 +230,7 @@
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.55);
   color: var(--accent-contrast);
-  font-size: 12px;
+  font-size: $font-size-xs;
   font-weight: 700;
 
   .material-symbols-outlined {

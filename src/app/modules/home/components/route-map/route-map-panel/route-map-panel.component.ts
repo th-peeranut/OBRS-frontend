@@ -257,10 +257,13 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   @Input() routeMeta: RouteMeta | null = null;
   /** Localized title for the user marker; supplied by the parent. */
   @Input() userMarkerTitle = 'You are here';
-
-  // Emitted after geolocation resolves so the parent can auto-select the nearest
-  // pickup and feed straight-line distances into the stop list.
-  @Output() userLocated = new EventEmitter<UserLocatedEvent>();
+  /**
+   * OBRS-1214: the user's resolved position, now owned by the parent
+   * (`route-map-home`) since the "use my location" button moved off this map
+   * overlay onto the pickup list, which renders before this panel ever mounts.
+   * Drives the user marker + camera framing — see {@link applyUserLocation}.
+   */
+  @Input() userLocation: google.maps.LatLngLiteral | null = null;
 
   // Marker clicks drive selection the same way the left-hand list does — the
   // parent (route-map-home) feeds these back in as selectedPickupSlug/Stop, so
@@ -298,17 +301,19 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   private drawFailures = 0;
 
   // ---------------------------------------------------------------------------
-  // "Use my location" state
+  // "Use my location" state — `userLocation` itself is now the `@Input` above.
   // ---------------------------------------------------------------------------
 
-  /** True while a geolocation request is in flight (drives the button spinner). */
-  locating = false;
-
-  /** Last geolocation failure reason, surfaced to the user. Null when none. */
-  locationError: 'denied' | 'unavailable' | null = null;
-
-  /** The user's resolved position, or null before they tap "Use my location". */
-  userLocation: google.maps.LatLngLiteral | null = null;
+  /**
+   * OBRS-1214 self-fix. `applyUserLocation` has two triggers precisely
+   * because `onTilesLoaded` fires on EVERY tile reload, not just the first
+   * (pans/zooms/marker updates/direction changes all cause more of them) —
+   * without this flag, each one would re-run `frameUserAndPickups()` and
+   * snap the camera back over the user's own pan/zoom. True once framing has
+   * run for the current `userLocation`; reset in `ngOnChanges` whenever a
+   * fresh value arrives so re-locating still reframes.
+   */
+  private locationFramed = false;
 
   /** Stable marker options for the user pin — only reassigned when userLocation changes. */
   userMarkerOptions: MarkerPin | null = null;
@@ -435,80 +440,25 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   // ---------------------------------------------------------------------------
-  // "Use my location" → nearest pickup
+  // "Use my location" → user marker + camera framing
   // ---------------------------------------------------------------------------
 
   /**
-   * Resolve the user's current position via the browser Geolocation API, drop a
-   * "you are here" marker, frame the map around the user + pickup stops, and emit
-   * straight-line distances (plus the nearest pickup slug) to the parent.
-   *
-   * Geolocation callbacks may fire outside Angular's zone depending on the
-   * browser, so the handlers are re-entered via NgZone.run to guarantee change
-   * detection picks up the state changes.
+   * OBRS-1214: rebuild the user marker and re-frame the camera. Called from
+   * BOTH of the two events that can supply the missing half of the pair,
+   * whichever happens second: `userLocation` arriving as an `@Input`
+   * (ngOnChanges), or the map finishing its first draw (`onTilesLoaded`). The
+   * second trigger matters because the real path is now "tap the button
+   * before the map ever mounts" — the button no longer lives on the map — so
+   * `this.map` is typically still unset when `userLocation` first arrives.
    */
-  useMyLocation(): void {
-    if (!('geolocation' in navigator)) {
-      this.locationError = 'unavailable';
+  private applyUserLocation(): void {
+    if (!this.map || !this.userLocation || this.locationFramed) {
       return;
     }
-
-    this.locating = true;
-    this.locationError = null;
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) =>
-        this.zone.run(() =>
-          this.onLocationResolved(pos.coords.latitude, pos.coords.longitude)
-        ),
-      (err) =>
-        this.zone.run(() => {
-          this.locating = false;
-          this.locationError =
-            err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable';
-        }),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
-  }
-
-  private onLocationResolved(lat: number, lng: number): void {
-    this.locating = false;
-    this.userLocation = { lat, lng };
     this.userMarkerOptions = this.buildUserMarkerOptions(this.userLocation);
-    this.emitDistances();
     this.frameUserAndPickups();
-  }
-
-  /**
-   * Compute straight-line (haversine) distances from the user to every pickup
-   * stop with coordinates, find the nearest, and emit both to the parent.
-   * No-op when the user hasn't located yet — lets ngOnChanges re-emit safely
-   * after a direction toggle changes the pickup set.
-   */
-  private emitDistances(): void {
-    if (!this.userLocation) {
-      return;
-    }
-    const distancesKm: Record<string, number> = {};
-    let nearestPickupSlug: string | null = null;
-    let nearestDist = Number.POSITIVE_INFINITY;
-
-    for (const stop of this.pickupStops) {
-      if (stop.latitude === null || stop.longitude === null) {
-        continue;
-      }
-      const km = this.haversineKm(this.userLocation, {
-        lat: stop.latitude,
-        lng: stop.longitude,
-      });
-      distancesKm[stop.slug] = km;
-      if (km < nearestDist) {
-        nearestDist = km;
-        nearestPickupSlug = stop.slug;
-      }
-    }
-
-    this.userLocated.emit({ nearestPickupSlug, distancesKm });
+    this.locationFramed = true;
   }
 
   /** Frame the map to include the user and all pickup stops with coordinates. */
@@ -525,23 +475,6 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       }
     }
     this.map.fitBounds(bounds, 48);
-  }
-
-  /** Great-circle distance between two lat/lng points, in kilometres. */
-  private haversineKm(
-    a: google.maps.LatLngLiteral,
-    b: google.maps.LatLngLiteral
-  ): number {
-    const R = 6371; // Earth radius in km
-    const toRad = (deg: number) => (deg * Math.PI) / 180;
-    const dLat = toRad(b.lat - a.lat);
-    const dLng = toRad(b.lng - a.lng);
-    const lat1 = toRad(a.lat);
-    const lat2 = toRad(b.lat);
-    const h =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(h));
   }
 
   private buildUserMarkerOptions(pos: google.maps.LatLngLiteral): MarkerPin {
@@ -664,10 +597,6 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       // Stop changes affect map center, polyline path, AND all markers.
       this.recomputeMapData();
       this.recomputeMarkers();
-      // If the user has already located, the pickup set just changed (e.g. a
-      // direction toggle) — recompute distances against the new stops so the
-      // list badges and nearest-pickup highlight stay correct.
-      this.emitDistances();
       // A stop set arriving/changing can be what flips `hasCoordinates` (and so
       // `showMap`) true for the first time — e.g. maps finished loading before
       // the stops did. Re-evaluate so that mount is watched too (OBRS-1085).
@@ -682,6 +611,15 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       if (dropoffSelectionChanged) {
         this.recomputeDropoffMarkers();
       }
+    }
+
+    // OBRS-1214: `userLocation` arriving (or changing) is the first of the two
+    // triggers `applyUserLocation` needs — see its own doc comment for the second.
+    // A fresh value means a fresh "locate me" tap, so it must reframe again —
+    // reset the once-per-location guard (see `locationFramed`'s own comment).
+    if ('userLocation' in changes) {
+      this.locationFramed = false;
+      this.applyUserLocation();
     }
   }
 
@@ -712,6 +650,10 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   onTilesLoaded(): void {
     this.tilesConfirmed = true;
     this.clearTilesWatchdog();
+    // OBRS-1214: the second of applyUserLocation's two triggers — the common
+    // real path, since the button that supplies `userLocation` no longer
+    // lives on the map and is typically tapped before this ever fires.
+    this.applyUserLocation();
   }
 
   /**

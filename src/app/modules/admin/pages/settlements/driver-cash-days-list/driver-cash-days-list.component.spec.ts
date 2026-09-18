@@ -78,6 +78,44 @@ describe('DriverCashDaysListComponent', () => {
     expect(chip).not.toBeNull();
   });
 
+  // OBRS-1149 — the discrepancy column. `discrepancy` reached this row DTO
+  // from the day it existed and nothing rendered it, so a day the owner signed
+  // off as short looked exactly like a day that balanced.
+  it('renders the signed-off shortfall, and which side it is on, for a RETURNED row', () => {
+    component.contentState = 'data';
+    component.items = [makeRow({ status: 'RETURNED', returnedAmount: '380.00', discrepancy: '-120.00' })];
+    fixture.detectChanges();
+    const cell = fixture.nativeElement.querySelector('[data-testid="driver-cash-day-discrepancy-cell"]');
+    expect(cell.textContent).toContain('120');
+    expect(cell.textContent).toContain('DISCREPANCY_SHORT');
+    expect(cell.querySelector('.settlement-nt-negative')).not.toBeNull();
+  });
+
+  it('reads a surplus as OVER, not as a bare number', () => {
+    component.contentState = 'data';
+    component.items = [makeRow({ status: 'RETURNED', returnedAmount: '550.00', discrepancy: '50.00' })];
+    fixture.detectChanges();
+    const cell = fixture.nativeElement.querySelector('[data-testid="driver-cash-day-discrepancy-cell"]');
+    expect(cell.textContent).toContain('DISCREPANCY_OVER');
+    expect(cell.querySelector('.settlement-nt-negative')).toBeNull();
+  });
+
+  it('leaves the cell empty on a day that balanced', () => {
+    component.contentState = 'data';
+    component.items = [makeRow({ status: 'RETURNED', returnedAmount: '500.00', discrepancy: '0.00' })];
+    fixture.detectChanges();
+    const cell = fixture.nativeElement.querySelector('[data-testid="driver-cash-day-discrepancy-cell"]');
+    expect(cell.textContent.trim()).toBe('');
+  });
+
+  it('leaves the cell empty on a day that is still OPEN', () => {
+    component.contentState = 'data';
+    component.items = [makeRow({ status: 'OPEN', discrepancy: null })];
+    fixture.detectChanges();
+    const cell = fixture.nativeElement.querySelector('[data-testid="driver-cash-day-discrepancy-cell"]');
+    expect(cell.textContent.trim()).toBe('');
+  });
+
   it('emits rowClick with the dayId on the View button', () => {
     component.contentState = 'data';
     component.items = [makeRow({ dayId: 7, status: 'RETURNED' })];
