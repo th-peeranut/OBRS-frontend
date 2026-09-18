@@ -84,7 +84,13 @@
                 <div
                   class="text-error"
                   >
-                  {{ "REGISTER.FIRSTNAME_REQUIRED" | translate }}
+                  @if (getForm('firstName')?.hasError('required')) {
+                    {{ "REGISTER.FIRSTNAME_REQUIRED" | translate }}
+                  } @else if (getForm('firstName')?.hasError('minlength')) {
+                    {{ "REGISTER.NAME_TOO_SHORT" | translate }}
+                  } @else if (getForm('firstName')?.hasError('maxlength')) {
+                    {{ "REGISTER.NAME_TOO_LONG" | translate }}
+                  }
                 </div>
               }
             </div>
@@ -100,7 +106,19 @@
                 formControlName="middleName"
                 autocomplete="additional-name"
                 [placeholder]="'REGISTER.MIDDLENAME_PLACEHOLDER' | translate"
+            [class.form-error]="
+              getForm('middleName')?.errors &&
+              (getForm('middleName')?.touched || getForm('middleName')?.dirty)
+            "
                 />
+                @if (
+                  getForm('middleName')?.hasError('maxlength') &&
+                  (getForm('middleName')?.touched || getForm('middleName')?.dirty)
+                  ) {
+                  <div class="text-error">
+                    {{ "REGISTER.NAME_TOO_LONG" | translate }}
+                  </div>
+                }
               </div>
               <div class="col-12 col-md-4">
                 <!-- Last name -->
@@ -133,7 +151,13 @@
                     <div
                       class="text-error"
                       >
-                      {{ "REGISTER.LASTNAME_REQUIRED" | translate }}
+                      @if (getForm('lastName')?.hasError('required')) {
+                        {{ "REGISTER.LASTNAME_REQUIRED" | translate }}
+                      } @else if (getForm('lastName')?.hasError('minlength')) {
+                        {{ "REGISTER.NAME_TOO_SHORT" | translate }}
+                      } @else if (getForm('lastName')?.hasError('maxlength')) {
+                        {{ "REGISTER.NAME_TOO_LONG" | translate }}
+                      }
                     </div>
                   }
                 </div>

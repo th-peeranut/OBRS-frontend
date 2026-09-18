@@ -231,7 +231,6 @@ async function fillPassengerForm(page: Page): Promise<void> {
   await page.fill('#booker-lastName', 'Doe');
   await page.fill('#booker-phoneNumber', '0812345678');
   await page.fill('#booker-email', 'john.doe@example.com');
-  await page.locator('#booker-gender_male').click();
   await page.locator('#title-0 .dropdown-btn').click();
   await page.locator('#title-0 .dropdown-option').first().click();
   await page.fill('#firstName-0', 'John');

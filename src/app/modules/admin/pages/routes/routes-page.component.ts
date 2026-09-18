@@ -16,6 +16,7 @@ import { AddSegmentModalComponent } from './add-segment-modal/add-segment-modal.
 import {
   Option,
   RouteRow,
+  SegmentPivotRow,
   SegmentRow,
   StopPoint,
   toRouteRow,
@@ -294,8 +295,8 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     this.addSegmentModal.open();
   }
 
-  protected openSegmentEditModal(segment: SegmentRow): void {
-    this.segmentEditModal.open(segment);
+  protected openSegmentEditModal(row: SegmentPivotRow): void {
+    this.segmentEditModal.open(row);
   }
 
   protected onSegmentSaved(): void {

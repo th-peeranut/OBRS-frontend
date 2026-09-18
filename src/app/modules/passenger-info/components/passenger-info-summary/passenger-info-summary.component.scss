@@ -98,7 +98,7 @@
 }
 
 .card-footer {
-  font-size: $font-size-md;
+  font-size: $font-size-xl;
   font-weight: bold;
   display: flex;
   justify-content: space-between;
@@ -109,6 +109,9 @@
   // promo code is applied — same modifier pattern as payment-summary.
   &--subtle {
     font-weight: normal;
+    // OBRS-1948: Subtotal/Promo-discount are LINE ITEMS, not the total -- they keep the
+    // line-item size while .card-footer itself steps up to $font-size-xl.
+    font-size: $font-size-md;
   }
 
   &--discount {
@@ -294,8 +297,18 @@ hr {
 }
 
 @media (max-width: 768px) {
-  .card-body-summary,
+  .card-body-summary {
+    font-size: $font-size-base;
+  }
+
+  // OBRS-1948: the total keeps a step over the line items and over the $font-size-base
+  // .btn-next here too, not only on desktop. The subtle rows are line items, so they
+  // follow .card-body-summary down.
   .card-footer {
+    font-size: $font-size-lg;
+  }
+
+  .card-footer--subtle {
     font-size: $font-size-base;
   }
 
@@ -364,7 +377,6 @@ hr {
   .btn-next,
   .btn-back {
     height: 48px;
-    font-size: 15px;
   }
 }
 

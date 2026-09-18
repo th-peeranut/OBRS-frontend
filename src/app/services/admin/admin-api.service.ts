@@ -385,7 +385,6 @@ export interface InspectionItemReorderReqDto {
 export interface AdminRouteDto {
   id: number;
   slug: string;
-  code?: string;
   status?: string | AdminStatusDto;
   createdAt?: string;
   updatedAt?: string;
@@ -418,6 +417,12 @@ export interface AdminStopSummaryDto {
   slug: string;
   status?: AdminStopLookupDto;
   stopType?: AdminStopLookupDto;
+  /**
+   * OBRS-1238/OBRS-1954: does this stop have a ticket desk - the flag that decides
+   * whether a CHILD ticket may board here. Optional because a cached `GET /api/stops`
+   * body (served `public, max-age=300`) can predate the field.
+   */
+  hasTicketDesk?: boolean;
   translations?: AdminTranslationCollection;
   createdAt?: string;
   updatedAt?: string;
@@ -571,6 +576,28 @@ export interface AdminScheduleSetDto {
   updatedAt?: string;
   route?: AdminRouteDto;
   vehicleType?: AdminVehicleTypeDto;
+}
+
+// OBRS-1172: response of POST /api/private/schedule-set/extend — one
+// extended source→new set pair per active schedule set the operator held.
+export interface ScheduleSetExtendedSetDto {
+  sourceScheduleSetId: number;
+  newScheduleSetId: number;
+  route: string;
+  frequency: string;
+  startDate: string;
+  endDate: string;
+}
+
+// OBRS-1172: response of POST /api/private/schedule-set/extend. `schedulesCreated`
+// can legitimately be 0 (every trip in the new window already existed) — that is
+// not a failure, see SchedulesPageComponent.extendTimetableWindow().
+export interface ScheduleSetExtendRespDto {
+  setsExtended: number;
+  newStartDate: string;
+  newEndDate: string;
+  schedulesCreated: number;
+  extendedSets: ScheduleSetExtendedSetDto[];
 }
 
 export interface AdminDriverInfoDto {
@@ -2119,6 +2146,21 @@ export class AdminApiService {
   }
 
   /**
+   * OBRS-1954: turns a stop's ticket desk on or off - the flag OBRS-1238's child-boarding guard
+   * reads. `hasRole('OWNER')`, like `updateStopLabels` above and unlike the ADMIN full-replace:
+   * where a desk stands is the operator's own operational fact even though the place is not.
+   *
+   * <p>Its own endpoint rather than a field on {@link AdminStopUpdatePayload}, for the reason that
+   * payload's own doc gives: that body is the ADMIN full-replace of platform-wide reference data,
+   * and an owner sending it gets a 403.
+   */
+  updateStopTicketDesk(id: number, hasTicketDesk: boolean): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/stops/${id}/ticket-desk`, {
+      hasTicketDesk,
+    });
+  }
+
+  /**
    * OBRS-1678: opens a new stop. `POST /private/stops` has existed since OBRS-1022 and no screen
    * had ever called it - adding a stop was not possible from the UI for ANY role, ADMIN included.
    */
@@ -2221,6 +2263,16 @@ export class AdminApiService {
   generateSchedulesFromSet(id: number): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(
       `${this.baseUrl}/private/schedule-set/${id}/generate-schedules`,
+      {}
+    );
+  }
+
+  // OBRS-1172: extends every active schedule set by one more period (no
+  // request body) — the "extend the window" button the OBRS-1159 low-timetable
+  // email now points operators at instead of the DB runbook.
+  extendTimetableWindow(): Observable<ResponseAPI<ScheduleSetExtendRespDto>> {
+    return this.postRequest<ScheduleSetExtendRespDto>(
+      `${this.baseUrl}/private/schedule-set/extend`,
       {}
     );
   }

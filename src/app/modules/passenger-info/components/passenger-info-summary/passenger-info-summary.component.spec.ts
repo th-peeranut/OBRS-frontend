@@ -59,4 +59,75 @@ describe('PassengerInfoSummaryComponent', () => {
       expect(component.getKidCount(undefined)).toBe(0);
     });
   });
+
+  // OBRS-1943: the seatless chip used to be drawn on `!passengerSeat &&
+  // !passengerSeatReturn` alone, so an OPEN journey — where seats are always
+  // null — told every passenger "not chosen yet". RED before the fix: the OPEN
+  // case below returned the NO_SEAT key.
+  describe('seatless chip wording follows seatingMode (OBRS-1943)', () => {
+    const OPEN_KEY = 'PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE';
+    const NO_SEAT_KEY = 'PASSENGER_INFO.SUMMARY.NO_SEAT';
+
+    function legs(...modes: (string | undefined)[]): Schedule[] {
+      return modes.map((seatingMode) => ({ seatingMode }) as Schedule);
+    }
+
+    const seatless = {} as PassengerInfo;
+
+    it('OPEN leg + no seat → the open-seating wording, not "not chosen yet"', () => {
+      expect(component.seatlessChipKey(seatless, legs('OPEN'))).toBe(OPEN_KEY);
+    });
+
+    it('ASSIGNED leg + no seat → still "not chosen yet" (must not regress)', () => {
+      expect(component.seatlessChipKey(seatless, legs('ASSIGNED'))).toBe(
+        NO_SEAT_KEY
+      );
+    });
+
+    it('ASSIGNED leg + a seat picked → no chip at all', () => {
+      const picked = { passengerSeat: 'A1' } as PassengerInfo;
+      expect(component.seatlessChipKey(picked, legs('ASSIGNED'))).toBeNull();
+      const pickedReturn = { passengerSeatReturn: 'B2' } as PassengerInfo;
+      expect(component.seatlessChipKey(pickedReturn, legs('OPEN'))).toBeNull();
+    });
+
+    it('a missing/unknown seatingMode is treated as ASSIGNED, never OPEN', () => {
+      expect(component.seatlessChipKey(seatless, legs(undefined))).toBe(
+        NO_SEAT_KEY
+      );
+      expect(component.seatlessChipKey(seatless, null)).toBe(NO_SEAT_KEY);
+      expect(component.seatlessChipKey(seatless, [])).toBe(NO_SEAT_KEY);
+    });
+
+    it('a mixed round trip keeps "not chosen yet" — the ASSIGNED leg still offers a seat', () => {
+      expect(component.seatlessChipKey(seatless, legs('OPEN', 'ASSIGNED'))).toBe(
+        NO_SEAT_KEY
+      );
+      expect(component.seatlessChipKey(seatless, legs('OPEN', 'OPEN'))).toBe(
+        OPEN_KEY
+      );
+    });
+  });
+});
+
+/**
+ * OBRS-1955. The promo field used to be disabled by `isNextDisabled`, so the day that input
+ * stopped meaning "the form is incomplete" the promo field would have come alive with it — which
+ * is not what the owner asked for, and which the customer-contrast gate caught (an enabled promo
+ * input exposes a 1.35:1 border, under the AA floor of 3). The two questions are separate inputs
+ * now, and the new one fails SAFE: a caller that forgets it leaves the field disabled.
+ */
+describe('PassengerInfoSummaryComponent — promo field vs Next button (OBRS-1955)', () => {
+  it('starts with the promo field disabled, not enabled', () => {
+    const component = new PassengerInfoSummaryComponent(
+      createStoreStub(),
+      createRouterStub(),
+      createStoreStub(),
+      createTranslateStub()
+    );
+
+    expect(component.isFormIncomplete)
+      .withContext('a caller that never sets it must not open the promo field')
+      .toBeTrue();
+  });
 });

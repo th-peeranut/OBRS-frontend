@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { PassengerInfoComponent } from './passenger-info.component';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
@@ -5,10 +6,14 @@ import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version
 import {
   createAnalyticsServiceStub,
   createRouterStub,
+  createScheduleServiceStub,
   createStoreStub,
   createTranslateStub,
 } from '../../testing/test-stubs';
 import { PassengerInfoSummaryComponent } from './components/passenger-info-summary/passenger-info-summary.component';
+import { BookerInfoFormComponent } from './components/booker-info-form/booker-info-form.component';
+import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
+import { FormBuilder } from '@angular/forms';
 
 describe('PassengerInfoComponent', () => {
   let component: PassengerInfoComponent;
@@ -478,5 +483,312 @@ describe('PassengerInfoComponent idempotency key (OBRS-25)', () => {
 
     const [firstKey, secondKey] = keysFrom(createBooking);
     expect(secondKey).not.toBe(firstKey);
+  });
+});
+
+/**
+ * OBRS-1952, end of the chain: the two child forms are the REAL components here, not stubs, so
+ * this is the whole path the customer walked in the 2026-09-17 report — a one-character surname
+ * that the browser waved through and the server answered with a bare "ข้อมูลไม่ผ่านการตรวจสอบ".
+ * With the length rule in place the request is never made at all.
+ */
+describe('PassengerInfoComponent — a too-short name never reaches createBooking (OBRS-1952)', () => {
+  function pageWith(createBooking: jasmine.Spy, lastName: string): PassengerInfoComponent {
+    const component = new PassengerInfoComponent(
+      createStoreStub(),
+      createRouterStub(),
+      { createBooking, setActiveBookingId: () => undefined } as never,
+      createTranslateStub(),
+      { success: () => undefined, error: () => undefined } as never,
+      createAnalyticsServiceStub()
+    );
+    spyOn(component as any, 'setBookingStore').and.stub();
+
+    const booker = new BookerInfoFormComponent(new FormBuilder());
+    booker.bookerForm.patchValue({
+      firstName: 'Somchai',
+      lastName,
+      phoneNumber: '0812345678',
+    });
+
+    const passengers = new PassengerInfoFormComponent(
+      createStoreStub(),
+      createRouterStub(),
+      new FormBuilder(),
+      createTranslateStub(),
+      createScheduleServiceStub()
+    );
+    passengers.ngOnInit();
+    if (passengers.passengerData.length === 0) {
+      passengers.insertPassenger(true);
+    }
+    passengers.passengerData.at(0).patchValue({ firstName: 'Somchai', lastName });
+
+    (component as any).bookerInfoFormComponent = booker;
+    (component as any).passengerInfoFormComponent = passengers;
+    return component;
+  }
+
+  it('does not call createBooking when the surname is one character', async () => {
+    const createBooking = jasmine.createSpy('createBooking');
+    const component = pageWith(createBooking, 'T');
+
+    await component.onSubmitPassengerInfo();
+
+    expect(createBooking).not.toHaveBeenCalled();
+  });
+
+  it('marks the offending control invalid rather than failing silently somewhere else', async () => {
+    const createBooking = jasmine.createSpy('createBooking');
+    const component = pageWith(createBooking, 'T');
+
+    await component.onSubmitPassengerInfo();
+
+    const booker = (component as any).bookerInfoFormComponent as BookerInfoFormComponent;
+    expect(booker.bookerForm.get('lastName')?.hasError('minlength')).toBeTrue();
+    expect(booker.bookerForm.get('lastName')?.touched)
+      .withContext('markAllAsTouched() ran, so the inline error is on screen')
+      .toBeTrue();
+  });
+});
+
+/**
+ * OBRS-1955. Two endings used to be silent or unhelpful: a form the client itself refused just
+ * `return`ed, leaving an inline error the customer could not see; and a 400 that NAMED the fields
+ * it refused was collapsed into one "ข้อมูลไม่ผ่านการตรวจสอบ" modal. Both are asserted from the
+ * component's own entry point, not from a helper.
+ */
+describe('PassengerInfoComponent — validation that points at the field (OBRS-1955)', () => {
+  let alertError: jasmine.Spy;
+  let host: HTMLElement;
+
+  function componentWith(createBooking: jasmine.Spy): PassengerInfoComponent {
+    alertError = jasmine.createSpy('error');
+    const component = new PassengerInfoComponent(
+      createStoreStub(),
+      createRouterStub(),
+      { createBooking, setActiveBookingId: () => undefined } as never,
+      { instant: (key: string) => key } as never,
+      { success: () => undefined, error: alertError } as never,
+      createAnalyticsServiceStub()
+    );
+    spyOn(component as any, 'setBookingStore').and.stub();
+    // Same shortcut the OBRS-25 harness above takes: `createStoreStub()` yields `of(null)`, so the
+    // real `buildBookingPayload` returns null and the request is never made - which would make
+    // every assertion below pass against a component that does nothing.
+    spyOn(component as any, 'buildBookingPayload').and.returnValue(
+      Promise.resolve({ scheduleId: 1 })
+    );
+    (component as any).passengerInfoFormComponent = {
+      validateAndGetPassengerInfo: () => [{ firstName: 'A' } as unknown as PassengerInfo],
+    };
+    (component as any).bookerInfoFormComponent = {
+      validateAndGetBooker: () => ({ firstName: 'A' } as unknown as PassengerInfo),
+    };
+    return component;
+  }
+
+  /** The page's own markup is not under test here — only that the scroll/focus finds it. */
+  function renderHost(): { invalid: HTMLInputElement; valid: HTMLInputElement } {
+    host = document.createElement('app-passenger-info');
+    // Taken out of the document's flow: a stray block element in <body> for the length of one
+    // spec changes the document height, and AnalyticsConsentBannerComponent's resize spec reads
+    // exactly that. `position: fixed` still focuses and still reports a rect.
+    host.style.position = 'fixed';
+    host.style.top = '0';
+    host.style.left = '0';
+    const valid = document.createElement('input');
+    valid.id = 'booker-firstName';
+    valid.setAttribute('formControlName', 'firstName');
+    const invalid = document.createElement('input');
+    invalid.id = 'booker-lastName';
+    invalid.setAttribute('formControlName', 'lastName');
+    invalid.classList.add('ng-invalid');
+    // Angular marks the <form> and every group wrapper ng-invalid too, and they come first in
+    // DOM order - the selector has to skip them or it focuses nothing (OBRS-1955).
+    const formWrapper = document.createElement('form');
+    formWrapper.classList.add('ng-invalid');
+    host.append(formWrapper, valid, invalid);
+    document.body.appendChild(host);
+    return { invalid, valid };
+  }
+
+  function badRequest(errors: unknown[]): HttpErrorResponse {
+    return new HttpErrorResponse({
+      status: 400,
+      error: {
+        status: 400,
+        message: 'ข้อมูลไม่ผ่านการตรวจสอบ',
+        errorCode: 'VALIDATION_FAILED',
+        errors,
+      },
+    });
+  }
+
+  afterEach(() => {
+    host?.remove();
+  });
+
+  it('takes the customer to the first control the client itself refused', async () => {
+    const { invalid } = renderHost();
+    const component = componentWith(jasmine.createSpy('createBooking'));
+    (component as any).passengerInfoFormComponent = {
+      validateAndGetPassengerInfo: () => null,
+    };
+
+    await component.onSubmitPassengerInfo();
+
+    expect(document.activeElement).toBe(invalid);
+  });
+
+  it('names the client-refused fields in the same list the server path fills', async () => {
+    renderHost();
+    const component = componentWith(jasmine.createSpy('createBooking'));
+    (component as any).passengerInfoFormComponent = {
+      validateAndGetPassengerInfo: () => null,
+    };
+
+    await component.onSubmitPassengerInfo();
+
+    expect(component.serverFieldErrors.map((e) => e.controlId)).toEqual(['booker-lastName']);
+    // No reason: the inline message under the field is the reason, and the customer is now
+    // looking at it.
+    expect(component.serverFieldErrors[0].reason).toBe('');
+  });
+
+  it('never calls the API when the client refused', async () => {
+    renderHost();
+    const createBooking = jasmine.createSpy('createBooking');
+    const component = componentWith(createBooking);
+    (component as any).bookerInfoFormComponent = { validateAndGetBooker: () => null };
+
+    await component.onSubmitPassengerInfo();
+
+    expect(createBooking).not.toHaveBeenCalled();
+  });
+
+  it('lists the fields a 400 named, and shows no generic modal on top of them', async () => {
+    renderHost();
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValue(
+        throwError(() =>
+          badRequest([
+            {
+              field: 'contact.lastName',
+              rejectedValue: 'T',
+              reason: 'ต้องมีความยาวระหว่าง 2 ถึง 50 ตัวอักษร',
+            },
+          ])
+        )
+      );
+    const component = componentWith(createBooking);
+
+    await component.onSubmitPassengerInfo();
+
+    expect(component.serverFieldErrors.length).toBe(1);
+    expect(component.serverFieldErrors[0].reason).toBe(
+      'ต้องมีความยาวระหว่าง 2 ถึง 50 ตัวอักษร'
+    );
+    expect(component.serverFieldErrors[0].controlId).toBe('booker-lastName');
+    expect(alertError).not.toHaveBeenCalled();
+  });
+
+  it('focuses the first field the server named', async () => {
+    const { invalid } = renderHost();
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValue(
+        throwError(() =>
+          badRequest([{ field: 'contact.lastName', rejectedValue: 'T', reason: 'too short' }])
+        )
+      );
+
+    await componentWith(createBooking).onSubmitPassengerInfo();
+
+    expect(document.activeElement).toBe(invalid);
+  });
+
+  it('keeps the modal when the 400 names no field — silence would be worse', async () => {
+    renderHost();
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValue(throwError(() => badRequest([])));
+    const component = componentWith(createBooking);
+
+    await component.onSubmitPassengerInfo();
+
+    expect(component.serverFieldErrors).toEqual([]);
+    expect(alertError).toHaveBeenCalled();
+  });
+
+  it('still alerts on an error that is not a field-level rejection', async () => {
+    renderHost();
+    const createBooking = jasmine.createSpy('createBooking').and.returnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 500,
+            error: { message: 'Something broke', errorCode: 'REQUEST_FAILED' },
+          })
+      )
+    );
+    const component = componentWith(createBooking);
+
+    await component.onSubmitPassengerInfo();
+
+    expect(component.serverFieldErrors).toEqual([]);
+    expect(alertError).toHaveBeenCalledWith('Something broke');
+  });
+
+  /**
+   * OBRS-1955 review finding: `suppressGlobalErrorAlert` used to also set `SKIP_AUTH_LOGOUT`.
+   * Suppressing the alert on EVERY booking would therefore have left an expired session with no
+   * refresh, no logout and no notice, on the one call that holds the customer's seats. The two
+   * are separate arguments now, and this pins which one this page asks for.
+   */
+  it('suppresses the alert on every booking but keeps the 401 recovery', async () => {
+    renderHost();
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValue(throwError(() => badRequest([])));
+
+    await componentWith(createBooking).onSubmitPassengerInfo();
+
+    const [, suppressAlert, , skipAuthLogout] = createBooking.calls.mostRecent().args;
+    expect(suppressAlert).withContext('the page renders its own failure').toBeTrue();
+    expect(skipAuthLogout).withContext('a 401 must still be recovered or told').toBeFalse();
+  });
+
+  it('lets the promo-preview race keep the opt-out OBRS-109 gave it', async () => {
+    renderHost();
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValue(throwError(() => badRequest([])));
+    const component = componentWith(createBooking);
+    component.onPromoApplied({ code: 'SAVE10' } as never);
+
+    await component.onSubmitPassengerInfo();
+
+    expect(createBooking.calls.mostRecent().args[3]).toBeTrue();
+  });
+
+  it('clears the previous refusal when the customer submits again', async () => {
+    renderHost();
+    const createBooking = jasmine
+      .createSpy('createBooking')
+      .and.returnValues(
+        throwError(() =>
+          badRequest([{ field: 'contact.lastName', rejectedValue: 'T', reason: 'too short' }])
+        ),
+        throwError(() => badRequest([]))
+      );
+    const component = componentWith(createBooking);
+
+    await component.onSubmitPassengerInfo();
+    expect(component.serverFieldErrors.length).toBe(1);
+
+    await component.onSubmitPassengerInfo();
+    expect(component.serverFieldErrors).toEqual([]);
   });
 });
