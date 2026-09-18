@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
   SHOW_BLOCKING_LOADING,
   SKIP_AUTH_LOGOUT,
+  SKIP_GLOBAL_ERROR_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import { AuthService } from '../../auth/auth.service';
 
@@ -77,6 +78,37 @@ describe('BookingService', () => {
 
       const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings`);
       expect(req.request.method).toBe('POST');
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    // OBRS-25: the header the guard on both create doors reads. Asserted on the GUEST door
+    // because that is the lane the defect lived in - an online booking carries no seat choice,
+    // so a retried request is assigned the next free seat and becomes a second real booking.
+    it('sends the caller-owned Idempotency-Key on the guest door', () => {
+      authStub.isAuthenticated = () => false;
+
+      service.createBooking(PAYLOAD, false, 'KEY-FROM-CALLER').subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings`);
+      expect(req.request.headers.get('Idempotency-Key')).toBe('KEY-FROM-CALLER');
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    it('sends the caller-owned Idempotency-Key on the private door too', () => {
+      authStub.isAuthenticated = () => true;
+
+      service.createBooking(PAYLOAD, false, 'KEY-FROM-CALLER').subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings`);
+      expect(req.request.headers.get('Idempotency-Key')).toBe('KEY-FROM-CALLER');
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    it('still sends a key when the caller supplies none, so a double submit is covered', () => {
+      service.createBooking(PAYLOAD).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings`);
+      expect(req.request.headers.get('Idempotency-Key')).toBeTruthy();
       req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
     });
 
@@ -235,7 +267,33 @@ describe('BookingService', () => {
       // error alert suppressed so a PROMO_CODE_* rejection renders inline, and OBRS-908
       // needs the screen held. Combining them into one context is where one gets lost.
       expect(req.request.context.get(SHOW_BLOCKING_LOADING)).toBeTrue();
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    /**
+     * OBRS-1955. This assertion used to read `SKIP_AUTH_LOGOUT` -> true, because suppressing the
+     * alert also suppressed the 401 recovery. OBRS-1955 shows the refused fields above the form
+     * for EVERY booking, so every booking asks for the alert to be suppressed — and if the two
+     * were still bundled, a customer whose session expired mid-booking would get no refresh, no
+     * force-logout and no notice, on the one call that holds their seats.
+     */
+    it('suppressing the alert does NOT buy silence on a 401', () => {
+      authStub.isAuthenticated = () => false;
+      service.createBooking(PAYLOAD, true).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings`);
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeFalse();
+      req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
+    });
+
+    it('the promo-preview path can still ask for it, explicitly', () => {
+      authStub.isAuthenticated = () => false;
+      service.createBooking(PAYLOAD, true, 'key-1', true).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings`);
       expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
       req.flush({ code: 201, message: 'Created', data: { bookingId: 1, bookingNumber: 'BK1' } });
     });
 

@@ -1,5 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpContext,
+  HttpHeaders,
+  HttpParams,
+} from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import {
@@ -33,6 +38,7 @@ import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
+import { generateIdempotencyKey } from '../../shared/lib/idempotency-key';
 import { normalizeSeatAssignments } from '../../shared/lib/seat-number';
 import { map, Observable } from 'rxjs';
 import {
@@ -139,15 +145,28 @@ export class BookingService {
    * office or a campus behind one address on a shared quota that exists for callers
    * the server cannot identify - and it can identify these.
    *
-   * @param suppressGlobalErrorAlert OBRS-109 (#37): pass `true` only when
-   *   `payload.promotionCode` is set — the caller then owns rendering a
-   *   PROMO_CODE_* rejection inline on the reverted promo field instead of
-   *   the generic global alert (and must show its own fallback alert for any
-   *   other error, since the interceptor is opted out for this call).
+   * @param suppressGlobalErrorAlert OBRS-109 (#37): the caller owns rendering the failure —
+   *   a PROMO_CODE_* rejection inline on the reverted promo field, or (OBRS-1955) the list of
+   *   refused fields above the form — instead of the generic global alert. It must then show
+   *   its own fallback for every other error, since the interceptor is opted out for this call.
+   * @param skipAuthLogout OBRS-1955: SEPARATE from the flag above, and `false` unless the
+   *   caller means it. Until this card the two travelled together, so opting out of the alert
+   *   also opted out of the 401 recovery (OBRS-855's silent refresh, OBRS-187's force-logout and
+   *   its "session expired" notice) — which was intended only for the promo-preview path bundled
+   *   into this create call. A customer whose session expires mid-booking must still be
+   *   recovered or told; a booking that merely renders its own 400 must not buy that silence.
+   * @param idempotencyKey OBRS-25: both endpoints now accept `Idempotency-Key` and
+   *   answer a repeat of the same key with the booking it already made. The key is
+   *   the CALLER's to own across a retry — a key minted per attempt protects nothing,
+   *   since a retry after a network timeout would carry a new one and book again.
+   *   Omitting it still sends a key (same shape as `PaymentService`), which covers a
+   *   double-submit but not a retry.
    */
   createBooking(
     payload: BookingPayload,
-    suppressGlobalErrorAlert = false
+    suppressGlobalErrorAlert = false,
+    idempotencyKey?: string,
+    skipAuthLogout = false
   ): Observable<ResponseAPI<CreateBookingResponse>> {
     const url = this.authService.isAuthenticated()
       ? `${environment.apiUrl}/api/private/bookings`
@@ -160,10 +179,13 @@ export class BookingService {
     // BLOCKING_LOADING_DELAY_MS, so a fast confirm stays as silent as every other call.
     return this.http
       .post<ResponseAPI<CreateBookingResponse>>(url, payload, {
-        context: (suppressGlobalErrorAlert
-          ? this.silentErrorContext()
-          : new HttpContext()
-        ).set(SHOW_BLOCKING_LOADING, true),
+        headers: new HttpHeaders({
+          'Idempotency-Key': idempotencyKey ?? generateIdempotencyKey(),
+        }),
+        context: new HttpContext()
+          .set(SKIP_GLOBAL_ERROR_ALERT, suppressGlobalErrorAlert)
+          .set(SKIP_AUTH_LOGOUT, skipAuthLogout)
+          .set(SHOW_BLOCKING_LOADING, true),
       })
       .pipe(
         map((response) => ({
@@ -171,18 +193,6 @@ export class BookingService {
           data: this.normalizeCreateBooking(response.data),
         }))
       );
-  }
-
-  // Opts out of the global error alert only (the loading dialog behavior is
-  // unchanged) so the caller can handle a PROMO_CODE_* rejection inline. Also
-  // opts out of the force-logout (OBRS-187): a 401 here can be a transient
-  // blip on the promo-preview path bundled into this create call, and the
-  // caller already owns rendering the rejection inline — see silentContext()
-  // below for the ordinary (non-promo) booking calls, which do NOT opt out.
-  private silentErrorContext(): HttpContext {
-    return new HttpContext()
-      .set(SKIP_GLOBAL_ERROR_ALERT, true)
-      .set(SKIP_AUTH_LOGOUT, true);
   }
 
   // Coerce the intake response to the canonical shape in one place. bookingId

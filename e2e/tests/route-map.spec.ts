@@ -438,6 +438,148 @@ test.describe('Route Map – Success State', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Test suite: "use my location" moved onto the pickup list (OBRS-1214)
+//
+// Mobile viewport: the button's whole point is to render on the default
+// pickup tab, ahead of the still-gated map tab (OBRS-1211) — a claim that
+// only means something on the 3-tab mobile layout the desktop 3-column
+// layout does not have.
+//
+// A dedicated payload with TWO pickups (one exactly on the stubbed
+// geolocation fix, one far away) so "nearest" is a real distinction, not the
+// only-option case `successPayload` above would give it.
+// ---------------------------------------------------------------------------
+
+const locateMePayload = {
+  code: 200,
+  message: 'OK',
+  data: {
+    route: {
+      slug: 'chonburi_bangkok',
+      titleLocalized: { en: 'Chonburi to Bangkok', th: 'ชลบุรี ถึง กรุงเทพฯ', zh: '春武里至曼谷' },
+      totalDistanceKm: 80,
+      durationMinMinutes: 90,
+      durationMaxMinutes: 120,
+      originProvinceLabel: 'Chonburi',
+      destinationProvinceLabel: 'Bangkok',
+    },
+    pickup: [
+      {
+        order: 1,
+        slug: 'pickup-far',
+        name: 'Pickup Far',
+        address: 'Far Road',
+        approxTime: '05:00',
+        latitude: 20.0,
+        longitude: 100.0,
+        primaryPhotoUrl: STUB_PHOTO,
+        googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=20.0,100.0',
+      },
+      {
+        order: 2,
+        slug: 'pickup-near',
+        name: 'Pickup Near',
+        address: 'Near Road',
+        approxTime: '05:30',
+        latitude: 13.1,
+        longitude: 100.1,
+        primaryPhotoUrl: STUB_PHOTO,
+        googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=13.1,100.1',
+      },
+    ],
+    dropoff: [
+      {
+        order: 3,
+        slug: 'bangkok',
+        name: 'Bangkok Station',
+        address: '456 Bangkok Road',
+        approxTime: '06:30',
+        latitude: 13.76,
+        longitude: 100.5,
+        primaryPhotoUrl: STUB_PHOTO,
+        googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=13.76,100.5',
+      },
+    ],
+  },
+};
+
+test.describe('Route Map – use my location on the pickup list (OBRS-1214)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ page }) => {
+    await setupCommonMocks(page);
+    await page.route('**/api/routes/*/pickup-dropoff', (route) =>
+      route.fulfill({ json: locateMePayload })
+    );
+  });
+
+  // AC#1: visible on the default (pickup) tab without ever touching the map tab.
+  test('AC#1: the locate-me button is visible on the default pickup tab', async ({ page }) => {
+    await page.goto('/');
+    await waitForRouteMapLoaded(page);
+
+    // Still on the pickup tab (index 0) — never tapped the map tab.
+    const pickupTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Pickup' }).first();
+    await expect(pickupTab).toHaveClass(/p-tab-active/);
+
+    await expect(page.locator('.locate-me-inline-btn')).toBeVisible();
+  });
+
+  // AC#2 + AC#3: granting location resolves the nearest pickup and never mounts the map.
+  test('AC#2/AC#3: locating selects the nearest pickup and never requests Google Maps', async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation({ latitude: 13.1, longitude: 100.1 });
+
+    const mapsRequests: string[] = [];
+    page.on('request', (req) => {
+      if (req.url().includes('maps.googleapis.com')) {
+        mapsRequests.push(req.url());
+      }
+    });
+
+    await page.goto('/');
+    await waitForRouteMapLoaded(page);
+
+    await page.locator('.locate-me-inline-btn').click();
+
+    // Distance badge appears and the near stop is the one selected.
+    const nearRow = page.locator('.stop-row', { hasText: 'Pickup Near' });
+    await expect(nearRow.locator('.stop-distance')).toBeVisible();
+    await expect(nearRow).toHaveClass(/stop-row--selected/);
+
+    // AC#3, positive-control half: gating still holds — the map tab was never
+    // touched, so no <app-route-map-panel> mounted (this environment's
+    // mapsApiKey is blank regardless, which is why the network assertion
+    // below cannot by itself distinguish this from a defect — see the AC#3
+    // network assertion's comment).
+    await expect(page.locator('app-route-map-panel')).toHaveCount(0);
+    const pickupTab = page.locator('.p-tablist-tab-list .p-tab').filter({ hasText: 'Pickup' }).first();
+    await expect(pickupTab).toHaveClass(/p-tab-active/);
+
+    // AC#3, network half, exactly as the card asks: a 0-count assertion, not
+    // "no error". NOTE: this lane's mapsApiKey is always '' (environment.base.ts),
+    // so route-map-panel's ngOnInit returns before ever calling
+    // maps.googleapis.com regardless of this card's fix — the DOM assertion
+    // above is this test's actual positive control.
+    expect(mapsRequests).toHaveLength(0);
+  });
+
+  // AC#4: no permission granted → Chromium headless auto-denies with
+  // PERMISSION_DENIED, no prompt UI involved.
+  test('AC#4: without location permission, LOCATION_DENIED is shown', async ({ page }) => {
+    await page.goto('/');
+    await waitForRouteMapLoaded(page);
+
+    await page.locator('.locate-me-inline-btn').click();
+
+    await expect(page.getByText('Location access denied')).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Test suite: EMPTY state
 // ---------------------------------------------------------------------------
 

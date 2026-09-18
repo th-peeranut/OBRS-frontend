@@ -38,9 +38,20 @@ export class RouteStopListComponent implements OnChanges {
   @Input() confirmMode: 'per-side' | 'pair' = 'per-side';
   /** Whether BOTH sides are chosen. Only read in 'pair' mode - the list cannot know this. */
   @Input() canConfirm = false;
+  /**
+   * OBRS-1214. Shows the "use my location" control above the list. Defaults to
+   * `false` so it stays off the dropoff list and the change-stop dialog
+   * (`confirmMode="per-side"`) - only the two home-page pickup call sites opt in.
+   */
+  @Input() showLocateMe = false;
+  /** True while a geolocation request is in flight (drives the button spinner). */
+  @Input() locating = false;
+  /** Last geolocation failure reason, surfaced to the user. Null when none. */
+  @Input() locationError: 'denied' | 'unavailable' | null = null;
 
   @Output() stopSelected = new EventEmitter<RouteStop>();
   @Output() confirmClicked = new EventEmitter<void>();
+  @Output() locateMeClicked = new EventEmitter<void>();
 
   ngOnChanges(_changes: SimpleChanges): void {}
 

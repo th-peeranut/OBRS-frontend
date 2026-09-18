@@ -41,6 +41,16 @@ that happens to be the resting state, not an unmade one. -->
     [placeholder]="'ADMIN.PAYEE_SPEND_REPORT.FILTER_CATEGORY' | translate"
     (valueChange)="onCategoryChange($event)"
   ></app-admin-dropdown>
+
+  <!-- OBRS-1619 AC2. [params] carries the filters that are SET and nothing else: sending no `year`
+  is how "every year" is said to this endpoint, the same way the screen's own fetch says it. -->
+  <app-export-button
+    class="ms-auto"
+    datasetKey="payee-spend"
+    requiredRole="owner"
+    label="ADMIN.PAYEE_SPEND_REPORT.EXPORT_LABEL"
+    [params]="exportParams"
+  ></app-export-button>
 </section>
 
 <!-- The window in words. The dropdowns carry their FIELD NAMES as placeholders (3.1 rule 2), so
@@ -121,8 +131,19 @@ report must never grow. -->
       </thead>
       <tbody>
         @for (row of rows; track row.payeeId) {
-          <tr>
-            <td class="payee-spend-name">{{ row.payeeName }}</td>
+          <!-- OBRS-1619 AC1: the payee's name IS the control. A button rather than a click handler
+          on the <tr> so it is reachable from the keyboard and announces itself as expandable. -->
+          <tr [class.payee-spend-row-open]="isOpenRow(row.payeeId)">
+            <td class="payee-spend-name">
+              <button
+                type="button"
+                class="payee-spend-drill"
+                [attr.aria-expanded]="isOpenRow(row.payeeId)"
+                (click)="openBills(row.payeeId)"
+              >
+                {{ row.payeeName }}
+              </button>
+            </td>
             <td class="payee-spend-work">{{ workText(row) }}</td>
             <td class="text-end">{{ row.billCount }}</td>
             <td class="text-end">{{ money(row.totalAmount) }}</td>
@@ -131,9 +152,18 @@ report must never grow. -->
         <!-- The bills nobody recorded a payee for. A ROW, deliberately: dropping it would make the
         total above look like the whole of the period's spend. -->
         @if (unassignedRow) {
-          <tr class="payee-spend-unassigned">
+          <tr class="payee-spend-unassigned" [class.payee-spend-row-open]="isOpenRow(null)">
             <td class="payee-spend-name">
-              {{ 'ADMIN.PAYEE_SPEND_REPORT.UNASSIGNED' | translate }}
+              <!-- AC1's last bullet: this row drills down like any other. It sends no payeeId
+              because it has none, not because it is a special case on the screen. -->
+              <button
+                type="button"
+                class="payee-spend-drill"
+                [attr.aria-expanded]="isOpenRow(null)"
+                (click)="openBills(null)"
+              >
+                {{ 'ADMIN.PAYEE_SPEND_REPORT.UNASSIGNED' | translate }}
+              </button>
               <small class="admin-muted d-block">
                 {{ 'ADMIN.PAYEE_SPEND_REPORT.UNASSIGNED_HINT' | translate }}
               </small>
@@ -154,4 +184,63 @@ report must never grow. -->
       </tfoot>
     </table>
   </div>
+
+  <!-- OBRS-1619 AC1 — the second screen. It sits UNDER the table rather than over it so the
+  filters that produced it stay on screen while it is read: the reader can see the window the list
+  is under without dismissing anything. -->
+  @if (drillDownOpen) {
+    <section class="admin-card mt-3 payee-spend-bills">
+      <header class="payee-spend-bills-head">
+        <h3 class="payee-spend-bills-title">
+          {{ 'ADMIN.PAYEE_SPEND_REPORT.BILLS_TITLE' | translate: { payee: drillDownTitle } }}
+        </h3>
+        <button type="button" class="payee-spend-bills-close" (click)="closeBills()">
+          {{ 'ADMIN.PAYEE_SPEND_REPORT.BILLS_CLOSE' | translate }}
+        </button>
+      </header>
+
+      @if (drillDownLoading) {
+        <p class="admin-muted">{{ 'ADMIN.PAYEE_SPEND_REPORT.BILLS_LOADING' | translate }}</p>
+      } @else if (drillDownError) {
+        <p class="admin-error">{{ drillDownError }}</p>
+      } @else if (drillDownBills.length === 0) {
+        <p class="admin-muted">{{ 'ADMIN.PAYEE_SPEND_REPORT.BILLS_EMPTY' | translate }}</p>
+      } @else {
+        <div class="admin-table-wrap">
+          <table class="admin-table payee-spend-bills-table">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_BILL_DATE' | translate }}</th>
+                <th scope="col">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_BILL_NO' | translate }}</th>
+                <th scope="col">{{ 'ADMIN.PAYEE_SPEND_REPORT.COL_WORK' | translate }}</th>
+                <th scope="col" class="text-end">
+                  {{ 'ADMIN.PAYEE_SPEND_REPORT.COL_TOTAL' | translate }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (bill of drillDownBills; track bill.expenseId) {
+                <tr>
+                  <td>{{ bill.expenseDate }}</td>
+                  <!-- A bill with no receipt number on it is ordinary; a dash says so without
+                  inventing one. -->
+                  <td>{{ bill.receiptNo || '—' }}</td>
+                  <td class="payee-spend-work">{{ billWorkText(bill) }}</td>
+                  <td class="text-end">{{ money(bill.amount) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>{{ 'ADMIN.PAYEE_SPEND_REPORT.TOTAL_ROW' | translate }}</td>
+                <td></td>
+                <td class="text-end">{{ drillDown?.billCount }}</td>
+                <td class="text-end">{{ money(drillDown?.totalAmount) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    </section>
+  }
 }

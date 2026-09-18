@@ -26,7 +26,10 @@ import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interfa
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { VehiclePlReportDto } from '../../shared/interfaces/vehicle-pl-report.interface';
-import { PayeeSpendReportDto } from '../../shared/interfaces/payee-spend-report.interface';
+import {
+  PayeeBillListDto,
+  PayeeSpendReportDto,
+} from '../../shared/interfaces/payee-spend-report.interface';
 import { PartUnitPriceReportDto } from '../../shared/interfaces/part-unit-price-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
@@ -568,6 +571,28 @@ export interface AdminScheduleSetDto {
   updatedAt?: string;
   route?: AdminRouteDto;
   vehicleType?: AdminVehicleTypeDto;
+}
+
+// OBRS-1172: response of POST /api/private/schedule-set/extend — one
+// extended source→new set pair per active schedule set the operator held.
+export interface ScheduleSetExtendedSetDto {
+  sourceScheduleSetId: number;
+  newScheduleSetId: number;
+  route: string;
+  frequency: string;
+  startDate: string;
+  endDate: string;
+}
+
+// OBRS-1172: response of POST /api/private/schedule-set/extend. `schedulesCreated`
+// can legitimately be 0 (every trip in the new window already existed) — that is
+// not a failure, see SchedulesPageComponent.extendTimetableWindow().
+export interface ScheduleSetExtendRespDto {
+  setsExtended: number;
+  newStartDate: string;
+  newEndDate: string;
+  schedulesCreated: number;
+  extendedSets: ScheduleSetExtendedSetDto[];
 }
 
 export interface AdminDriverInfoDto {
@@ -1244,6 +1269,22 @@ export interface AdminExpenseDto {
    * `getExpenseReceiptUrl()` below, which exchanges it for a short-lived signed URL on demand.
    */
   receiptFileRef?: string | null;
+}
+
+/**
+ * OBRS-1891: what `GET /private/expenses/pending` returns now — a salesperson's one field
+ * submission (a gas bill: fuel + toll + driver wage + parking, `groupType: 'SETTLE_BILL'`, keyed
+ * by `settleId`) folds every `AdminExpenseDto` row it produced into one group, instead of the
+ * owner seeing five unrelated rows from one bill. `SINGLE` is the pre-OBRS-1891 shape unchanged —
+ * one expense, `settleId: null`, `expenses.length === 1`.
+ */
+export interface PendingExpenseGroupDto {
+  groupType: 'SETTLE_BILL' | 'SINGLE';
+  settleId: number | null;
+  totalAmount: number;
+  expenseDate: string;
+  vehicleId: number | null;
+  expenses: AdminExpenseDto[];
 }
 
 /** OBRS-845: `GET /private/expenses/{id}/receipt/url` 200 body. `url` is a short-lived SIGNED
@@ -2206,6 +2247,16 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-1172: extends every active schedule set by one more period (no
+  // request body) — the "extend the window" button the OBRS-1159 low-timetable
+  // email now points operators at instead of the DB runbook.
+  extendTimetableWindow(): Observable<ResponseAPI<ScheduleSetExtendRespDto>> {
+    return this.postRequest<ScheduleSetExtendRespDto>(
+      `${this.baseUrl}/private/schedule-set/extend`,
+      {}
+    );
+  }
+
   // TODO: implement server-side pagination in the admin UI; size=100 silently caps results
   //
   // OBRS-727: backend gate is @PreAuthorize("hasRole('OWNER')") — same role as the
@@ -2504,6 +2555,39 @@ export class AdminApiService {
     }
     return this.getRequest<PayeeSpendReportDto>(
       `${this.baseUrl}/private/admin/reports/expense-by-payee`,
+      params
+    );
+  }
+
+  /**
+   * OBRS-1619 AC1 — the bills behind one line of the report above.
+   *
+   * `payeeId === null` is the "not recorded" bucket and sends NO `payeeId` param: that bucket has
+   * no id, so there is no value to send. The year/month/category passed here are the report's own
+   * filter, unchanged — the backend re-resolves the window from them, which is what keeps the two
+   * screens under the same period.
+   */
+  getPayeeBills(
+    payeeId: number | null,
+    year: number | null,
+    month: number | null,
+    category: string | null
+  ): Observable<ResponseAPI<PayeeBillListDto>> {
+    let params = new HttpParams();
+    if (payeeId !== null) {
+      params = params.set('payeeId', String(payeeId));
+    }
+    if (year !== null) {
+      params = params.set('year', String(year));
+      if (month !== null) {
+        params = params.set('month', String(month));
+      }
+    }
+    if (category !== null) {
+      params = params.set('category', category);
+    }
+    return this.getRequest<PayeeBillListDto>(
+      `${this.baseUrl}/private/admin/reports/expense-by-payee/bills`,
       params
     );
   }
@@ -2967,8 +3051,8 @@ export class AdminApiService {
     );
   }
 
-  getPendingExpenses(): Observable<ResponseAPI<AdminExpenseDto[]>> {
-    return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses/pending`);
+  getPendingExpenses(): Observable<ResponseAPI<PendingExpenseGroupDto[]>> {
+    return this.getRequest<PendingExpenseGroupDto[]>(`${this.baseUrl}/private/expenses/pending`);
   }
 
   approveExpense(id: number): Observable<ResponseAPI<unknown>> {
@@ -2978,6 +3062,19 @@ export class AdminApiService {
   /** The reason is required by the backend — a bounced row must say why. */
   rejectExpense(id: number, rejectionReason: string): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/${id}/reject`, {
+      rejectionReason,
+    });
+  }
+
+  /** OBRS-1891: the whole-bill counterpart to `approveExpense`/`rejectExpense` above — rules on
+   * every `AdminExpenseDto` a `SETTLE_BILL` group folds together, in one call, keyed by `settleId`
+   * rather than an individual expense id. */
+  approveExpenseSettle(settleId: number): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/settles/${settleId}/approve`, {});
+  }
+
+  rejectExpenseSettle(settleId: number, rejectionReason: string): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/expenses/settles/${settleId}/reject`, {
       rejectionReason,
     });
   }

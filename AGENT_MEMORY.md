@@ -4865,3 +4865,67 @@ The rule this is an instance of (DEV-GOTCHAS, Confirmed, 2+ occurrences): *a com
 WRONG MECHANISM for a right conclusion becomes the next reader's false premise.* A sentence of
 the form "the backend rejects X with a 400" is a claim about another repository — it gets a
 `file:line` from that repository, or it does not get written.
+
+## 2026-09-15 — OBRS-1172 QA (local lane): all 14 manual-test items PASSED
+
+`schedule-extend-window-btn` on `SchedulesPageComponent` — verified against a local backend/DB
+(`obrs1172qa`) with AFTER served on `:4517` and BEFORE (a second worktree detached at `origin/dev`
+`dca2e26b`) served on the same port, one at a time. All 14 items in
+`docs/manual-tests/MANUAL-TEST-OBRS-1172-extend-timetable-window.md` passed, DOM-measured (0/1
+counts on `.schedule-extend-window-btn`, never eyeballed):
+- item 1: 0 buttons on `origin/dev`, with a positive control (Add button count 1) on the same
+  selector family so a typo'd selector would have failed loud.
+- item 2: exact text `ขยายตารางเดินรถอีกหนึ่งช่วง` in the same toolbar as Add.
+- item 3: 0 buttons on the Trips tab.
+- item 4: Cancel on the confirm dialog fired 0 `POST /schedule-set/extend` requests (network
+  listener, not just "the alert closed").
+- item 10: mid-flight `disabled` attribute is present (Playwright's `getAttribute` returns `""`,
+  not `null`, for a true boolean attribute) — proved by delaying the response 2s via
+  `page.route()` (test-side interception only, no app change) so the window was actually
+  observable instead of racing a <50ms local response.
+
+Reused `admin-critical-paths.spec.ts`'s own selector conventions (`.admin-page-intro
+.admin-btn-primary`, `app-admin-dropdown` + `.admin-dropdown-option`, `.swal2-*`) for the new
+scratch specs below rather than re-deriving them.
+
+**Did NOT run `admin-critical-paths.spec.ts` itself** — it is a deliberate SIT-LIVE lane
+(`docs/adr/0001-admin-e2e-hits-real-sit-backend.md`; `sit-sweep.ts`'s `SIT_API` is hardcoded, no
+local override), and this pass was scoped local-only with SIT off-limits. Ran
+`ng test --include=**/schedules-page.component.spec.ts` instead: 34 of 34 SUCCESS (real
+`Executed N of N`, not a green tail over 0 specs).
+
+The capture drivers were COMMITTED, renamed to `e2e/capture-obrs-1172-*.mjs` to match the dozens of
+per-card `capture-obrs-NNNN-*.mjs` drivers already in that directory (`before`, `setup`, `resume`,
+`extend1`, `press`, `seed-collision`); only genuine scratch (`dbg-login*.mjs`, `fe-*.log`) was
+deleted. Screenshots/video were captured to `e2e-evidence/` (gitignored),
+uploaded to the Jira card via the REST attachments endpoint, then deleted locally per
+`jira-and-evidence-contract.md`.
+
+## OBRS-1214 scrutinize self-fix: `onTilesLoaded()` re-firing camera framing forever
+
+Reviewing OBRS-1214 ("use my location" moved from the map overlay to the pickup list),
+found `route-map-panel.component.ts`'s new `applyUserLocation()` was wired into BOTH
+`ngOnChanges` (when `userLocation` @Input changes) AND `onTilesLoaded()` — added so the
+camera still frames correctly when the user locates before the still-gated map ever
+mounts (OBRS-1211). The bug: `(tilesloaded)` from `@angular/google-maps` fires on EVERY
+tile reload, not just the first draw (see FRONTEND-GOTCHAS.md:174 — same gotcha, new
+call site) — including pans, zooms, marker recomputes, and direction toggles. With no
+guard, every one of those re-ran `frameUserAndPickups()` → `this.map.fitBounds(...)`,
+snapping the camera back over the user's own manual pan/zoom, for as long as
+`userLocation` stayed set (forever after the first "locate me" click — nothing resets
+it). The old dev code only ever called the equivalent (`frameUserAndPickups()` from
+`onLocationResolved()`) once per click.
+
+Fix: added a `private locationFramed = false` guard read at the top of
+`applyUserLocation()` (skip if already true) and reset to `false` only in `ngOnChanges`
+when a genuinely new `userLocation` value arrives — so `onTilesLoaded()` still catches
+the case where the map wasn't mounted yet when the location resolved, but stops
+re-framing on every subsequent tile reload once it has. 16 lines, one file
+(`route-map-panel.component.ts`), narrow suite re-verified green (189/189).
+
+Lesson for future two-trigger "whichever fires second" patterns: if either trigger can
+fire MORE than once over the component's lifetime (a lifecycle event, not just an
+@Input change), the combined handler needs its own once-per-logical-event guard —
+"first ngOnChanges + first onXyz" is not naturally idempotent, because one half is
+naturally repeating.
+

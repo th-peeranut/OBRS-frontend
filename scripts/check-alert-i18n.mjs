@@ -15,11 +15,19 @@
 // message looks like. This catches the `?? 'Payment failed'` fallback form too -- two of
 // those were live and neither was in the original defect report.
 //
-// Deliberately NOT checked: alertService.confirm({...}) object fields. Every confirm()
-// call site today already translates, but the argument is an object literal rather than
-// a message expression, so folding it in here would mean parsing object properties for
-// no live defect. If a raw confirm() title ever ships, extend MESSAGE_METHODS-style
-// handling to it rather than widening the regex until it guesses.
+// Object-literal arguments ARE checked (OBRS-1837). alertService.confirm({...}) -- and
+// promptText({...}) -- take an options object, and this gate read only the first argument
+// as a single message expression, so every string inside that object was invisible to it.
+// Done the way the note that stood here demanded: by extending MESSAGE_METHODS-style
+// handling with a list of the FIELDS a user reads (MESSAGE_FIELDS), NOT by widening the
+// regex until it guesses. Widening was measured and is not viable -- the surviving-literal
+// regex run over a whole object literal reports an apostrophe inside a `//` comment, and
+// `icon: 'warning'` / `inputType: 'tel'`, none of which a user ever reads.
+//
+// Named limit: a literal INSIDE a template interpolation is not read --
+// `title: `${cond ? 'Owner cancel' : 'Customer cancel'}`` passes. Blanking the whole
+// `${...}` span is what keeps the real translate-call-plus-newline templates quiet.
+// No call site does this today (0 of 29); if one appears, read the span, do not blank it.
 //
 // Reads .ts files with fs -- no Angular/Karma bundling -- so it is fast and runs before
 // `npm ci`, adding no GitHub Actions minutes beyond the step itself (OBRS-474/507 keep
@@ -51,6 +59,25 @@ const MESSAGE_METHODS = [
   'permissionDenied',
   'showLoading',
 ];
+
+// Methods whose first argument is an OPTIONS OBJECT rather than the message itself.
+// promptText is listed although no production call site exists yet -- it arrives with
+// OBRS-1802, which had not merged when this was written (measured: 0 hits for
+// `alertService.promptText` under src/). The self-test fixtures below cover it, so the
+// name is exercised on every run instead of sitting here unverified until that lands.
+const OBJECT_ARG_METHODS = ['confirm', 'promptText'];
+
+// The fields of that object a user actually reads. Everything else a caller may pass --
+// `icon`, `input`, `inputType`, `multiline`, `reverseButtons` -- is a SweetAlert enum or
+// flag, never prose, and flagging `icon: 'warning'` is exactly the false positive that
+// kept this rule from being written at all.
+const MESSAGE_FIELDS = new Set([
+  'title',
+  'text',
+  'inputLabel',
+  'confirmButtonText',
+  'cancelButtonText',
+]);
 
 /** Files the rule does not apply to: tests assert on literals by design. */
 function isCheckedFile(path) {
@@ -149,9 +176,168 @@ function stripTranslateCalls(argText) {
   }
 }
 
+/** Split on top-level separators only -- a comma nested in a call/object/array/string
+ *  belongs to a value, not to the property list. Same matcher shape as firstArgument(). */
+function splitTopLevel(text, separator) {
+  const parts = [];
+  let depth = 0;
+  let quote = null;
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === '\\') i += 1;
+      else if (ch === quote) quote = null;
+    } else if (ch === "'" || ch === '"' || ch === '`') quote = ch;
+    else if (ch === '(' || ch === '[' || ch === '{') depth += 1;
+    else if (ch === ')' || ch === ']' || ch === '}') depth -= 1;
+    else if (ch === separator && depth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
+}
+
+/**
+ * `{ title: X, icon: 'warning' }` -> [{key:'title', value:'X'}, {key:'icon', ...}].
+ * Spreads and shorthand are skipped: neither carries a literal of its own.
+ */
+function objectProperties(objText) {
+  const open = objText.indexOf('{');
+  const close = objText.lastIndexOf('}');
+  if (open === -1 || close <= open) return [];
+  const out = [];
+  for (const raw of splitTopLevel(objText.slice(open + 1, close), ',')) {
+    const part = raw.trim();
+    if (!part || part.startsWith('...')) continue;
+    const pieces = splitTopLevel(part, ':');
+    if (pieces.length < 2) continue;
+    out.push({
+      key: pieces[0].trim().replace(/^['"`]|['"`]$/g, ''),
+      value: pieces.slice(1).join(':').trim(),
+    });
+  }
+  return out;
+}
+
+/**
+ * One file's worth of rule 1. Split out from the file loop ONLY so the self-test at the
+ * bottom drives the real code path rather than a copy of it -- a self-test that
+ * re-implements the scan proves the copy works, not the gate.
+ */
+/**
+ * Everything a template literal INTERPOLATES is an expression, not prose -- blank the
+ * `${...}` spans so only the static text between them is judged.
+ */
+function stripInterpolations(text) {
+  let out = '';
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === '$' && text[i + 1] === '{') {
+      let depth = 0;
+      let j = i + 1;
+      for (; j < text.length; j += 1) {
+        if (text[j] === '{') depth += 1;
+        else if (text[j] === '}') {
+          depth -= 1;
+          if (depth === 0) break;
+        }
+      }
+      i = j;
+      continue;
+    }
+    out += text[i];
+  }
+  return out;
+}
+
+/**
+ * The literal a user would READ, or null. Applied to options-object fields only.
+ *
+ * Why the letter test: `text: `${translate.instant('K')}\n${lines}`` is a real and correct
+ * call site (expense-batch-page) -- once the translate call is blanked and the
+ * interpolations removed, all that is left of that template is a newline. A bare
+ * LITERAL match reports the whole template and that is a FALSE positive, which AC-4
+ * forbids. A quoted run with no letter in it cannot be a sentence anyone reads.
+ */
+function untranslatedProse(value) {
+  const stripped = stripInterpolations(stripTranslateCalls(value));
+  for (const match of stripped.matchAll(LITERAL_ALL)) {
+    // Drop escape sequences BEFORE looking for a letter: the 'n' of a newline escape is
+    // not prose, and reporting that escape as a hardcoded string is a false positive.
+    const body = match[0].slice(1, -1).replace(/\\./g, '');
+    if (HAS_LETTER.test(body)) return match[0];
+  }
+  return null;
+}
+
+function scanAlertCalls(source, rel, problems) {
+  let plain = 0;
+  let objectArg = 0;
+  let parsedProps = 0;
+
+  for (const match of source.matchAll(CALL)) {
+    const method = match[1];
+    const openParen = match.index + match[0].length - 1;
+    const argText = readCallArguments(source, openParen);
+    if (argText === null) continue;
+    const line = source.slice(0, match.index).split('\n').length;
+
+    if (OBJECT_ARG_METHODS.includes(method)) {
+      // Comments first: the measured false positive began at an apostrophe inside a prose
+      // comment ("the dialog's own close affordance") and ran to the next quote several
+      // properties later. stripComments keeps string bodies, which is what this needs --
+      // the literals ARE the subject.
+      const first = stripComments(firstArgument(argText)).trim();
+      // Anything else (a variable holding the options) carries no literal at this site.
+      if (!first.startsWith('{')) continue;
+      objectArg += 1;
+      const props = objectProperties(first);
+      // Reaching `{` proves only that the argument LOOKS like an options object. Every real
+      // call site carries at least `title` (the type at alert.service.ts makes it required),
+      // so zero parsed properties means the scanner lost the text -- an unbalanced paren in a
+      // comment (`// ...  :)`) or a regex literal's `//` can do it -- and the call would then
+      // sail through inspected-but-unread. Fail loudly instead of going quiet.
+      if (props.length === 0) {
+        problems.push(
+          `${rel}:${line}  alertService.${method}({ ... }) parsed to ZERO properties -- ` +
+            'the gate cannot see inside this call site'
+        );
+        continue;
+      }
+      parsedProps += props.length;
+      for (const { key, value } of props) {
+        if (!MESSAGE_FIELDS.has(key)) continue;
+        const surviving = untranslatedProse(value);
+        if (surviving) {
+          problems.push(
+            `${rel}:${line}  alertService.${method}({ ${key}: ... }) is handed the literal ${surviving}`
+          );
+        }
+      }
+    } else {
+      plain += 1;
+      const surviving = stripTranslateCalls(firstArgument(argText)).match(LITERAL);
+      if (surviving) {
+        problems.push(`${rel}:${line}  alertService.${method}(...) is handed the literal ${surviving[0]}`);
+      }
+    }
+  }
+
+  return { plain, objectArg, parsedProps };
+}
+
 const LITERAL = /'[^']*'|"[^"]*"|`[^`]*`/;
+const LITERAL_ALL = new RegExp(LITERAL.source, 'g');
+// Any UNICODE letter, not [A-Za-z]. This app ships th/zh, and inline Thai/Chinese
+// prose in .ts is a sanctioned pattern here (auth.interceptor.ts keeps a th/zh map
+// feeding alertService.warning). With an ASCII-only test the SAME Thai string was
+// reported in error('...') and waved through in confirm({ title: '...' }) -- one gate
+// returning opposite verdicts on one literal.
+const HAS_LETTER = /\p{L}/u;
 const CALL = new RegExp(
-  `alertService\\s*\\.\\s*(${MESSAGE_METHODS.join('|')})\\s*\\(`,
+  `alertService\\s*\\.\\s*(${[...MESSAGE_METHODS, ...OBJECT_ARG_METHODS].join('|')})\\s*\\(`,
   'g'
 );
 
@@ -283,6 +469,7 @@ const envelopeProblems = [];
 const dottedProblems = [];
 const allowlistHits = new Map(ENVELOPE_ALLOWLIST.map((e) => [e.suffix, 0]));
 let callsChecked = 0;
+let objectCallsChecked = 0;
 let envelopeFilesChecked = 0;
 let wireCodeFilesChecked = 0;
 
@@ -334,21 +521,9 @@ const staleAllowlist = process.argv[2]
 for (const file of FILES) {
   const source = readFileSync(file, 'utf8');
   const rel = relative(join(SRC_DIR, '..', '..'), file).replace(/\\/g, '/');
-
-  for (const match of source.matchAll(CALL)) {
-    const openParen = match.index + match[0].length - 1;
-    const argText = readCallArguments(source, openParen);
-    if (argText === null) continue;
-    callsChecked += 1;
-
-    const surviving = stripTranslateCalls(firstArgument(argText)).match(LITERAL);
-    if (surviving) {
-      const line = source.slice(0, match.index).split('\n').length;
-      problems.push(
-        `${rel}:${line}  alertService.${match[1]}(...) is handed the literal ${surviving[0]}`
-      );
-    }
-  }
+  const counts = scanAlertCalls(source, rel, problems);
+  callsChecked += counts.plain;
+  objectCallsChecked += counts.objectArg;
 }
 
 let failed = false;
@@ -356,7 +531,7 @@ let failed = false;
 if (problems.length > 0) {
   failed = true;
   console.error(
-    `hardcoded alert string gate FAILED (${problems.length} of ${callsChecked} call sites):`
+    `hardcoded alert string gate FAILED (${problems.length} of ${callsChecked + objectCallsChecked} call sites):`
   );
   for (const p of problems) console.error(`  - ${p}`);
   console.error(
@@ -408,6 +583,16 @@ if (staleAllowlist.length > 0) {
 // files that read wire error codes), so an import rename or a moved directory
 // could empty the population and leave a gate that passes vacuously. Count the
 // POSITIVE side and fail if it is zero.
+if (objectCallsChecked === 0 && !process.argv[2]) {
+  failed = true;
+  console.error(
+    '::error::the object-literal half of rule 1 inspected NOTHING. It exists because ' +
+      'alertService.confirm({...}) fields were invisible to this gate (OBRS-1837); if no ' +
+      'call site parses as an options object any more, OBJECT_ARG_METHODS or the argument ' +
+      'shape has moved and this half is passing vacuously.'
+  );
+}
+
 if (envelopeFilesChecked === 0 || (wireCodeFilesChecked === 0 && !process.argv[2])) {
   failed = true;
   console.error(
@@ -417,12 +602,230 @@ if (envelopeFilesChecked === 0 || (wireCodeFilesChecked === 0 && !process.argv[2
   );
 }
 
+// ---------------------------------------------------------------------------
+// Self-test (OBRS-1837). Runs on EVERY invocation, against the real scan.
+//
+// The object-literal half of rule 1 exists because nobody could say what this gate
+// could and could not see -- the fields of alertService.confirm({...}) were invisible
+// for as long as the rule existed, and the note at the top of this file recorded that
+// as a deliberate exemption rather than a blind spot. A gate whose failure path is
+// never exercised is indistinguishable from one that cannot fail, so these fixtures
+// pin BOTH directions: what must be caught, and what must stay quiet.
+//
+// Each fixture also asserts the options object was actually PARSED (objectArg === 1).
+// Without that, a fixture that silently failed to parse would sail through the
+// must-NOT-catch half and prove nothing at all.
+const SELF_TEST = [
+  {
+    name: 'confirm(): a bare title literal is caught',
+    catches: 'title',
+    source: [
+      "    this.alertService.confirm({",
+      "      title: 'Delete this booking?',",
+      "      text: this.translate.instant('A'),",
+      "      confirmButtonText: this.translate.instant('B'),",
+      "      cancelButtonText: this.translate.instant('C'),",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // promptText has no production call site yet (it arrives with OBRS-1802), so this
+    // fixture is the only thing exercising that name. Delete it and the method is
+    // listed but unproven.
+    name: 'promptText(): a bare inputLabel literal is caught, while inputType stays out of it',
+    catches: 'inputLabel',
+    source: [
+      "    this.alertService.promptText({",
+      "      title: this.translate.instant('A'),",
+      "      inputLabel: 'Phone number',",
+      "      inputType: 'tel',",
+      "      confirmButtonText: this.translate.instant('B'),",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    name: 'confirm(): a ?? fallback literal is caught',
+    catches: 'cancelButtonText',
+    source: [
+      "    this.alertService.confirm({",
+      "      title: this.translate.instant('A'),",
+      "      text: this.translate.instant('B'),",
+      "      confirmButtonText: this.translate.instant('C'),",
+      "      cancelButtonText: this.label ?? 'Cancel',",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // icon: 'warning' is a SweetAlert enum. Flagging it is the false positive that kept
+    // this rule unwritten.
+    name: 'confirm(): fully translated, with Swal enums and flags, stays quiet',
+    catches: null,
+    source: [
+      "    this.alertService.confirm({",
+      "      title: this.translate.instant('A'),",
+      "      text: this.translate.instant('B'),",
+      "      confirmButtonText: this.translate.instant('C'),",
+      "      cancelButtonText: this.translate.instant('D'),",
+      "      icon: 'warning',",
+      "      multiline: true,",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // A gate that reads prose as [A-Za-z] is blind in the two languages this app ships.
+    // Measured before the fix: this exact string was reported inside error('...') and
+    // waved through here -- one gate, opposite verdicts, one literal.
+    name: 'confirm(): Thai prose in a title is caught, same as English',
+    catches: 'title',
+    source: [
+      "    this.alertService.confirm({",
+      "      title: 'ยืนยันการยกเลิกการจอง?',",
+      "      text: this.translate.instant('B'),",
+      "      confirmButtonText: this.translate.instant('C'),",
+      "      cancelButtonText: this.translate.instant('D'),",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // text is the dialog BODY and 34 of 36 parsed sites use it, but no fixture pinned it:
+    // deleting only 'text' from MESSAGE_FIELDS left the whole gate green.
+    name: 'confirm(): a text field literal is caught',
+    catches: 'text',
+    source: [
+      "    this.alertService.confirm({",
+      "      title: this.translate.instant('A'),",
+      "      text: 'This cannot be undone.',",
+      "      confirmButtonText: this.translate.instant('C'),",
+      "      cancelButtonText: this.translate.instant('D'),",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // Same hole as the one above: removing a SINGLE field from the list is the realistic
+    // regression, and emptying the whole Set was the only mutation the fixtures caught.
+    name: 'confirm(): a confirmButtonText literal is caught',
+    catches: 'confirmButtonText',
+    source: [
+      "    this.alertService.confirm({",
+      "      title: this.translate.instant('A'),",
+      "      text: this.translate.instant('B'),",
+      "      confirmButtonText: 'Delete it',",
+      "      cancelButtonText: this.translate.instant('D'),",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // readCallArguments counts parens only, so the ':)' closes the call early and the object
+    // text is lost. Measured before the fix: the site was COUNTED as inspected while zero
+    // properties parsed, and the hardcoded title went unreported. Going quiet is the one
+    // failure mode a gate must never have.
+    name: 'confirm(): a call the scanner cannot read is reported, not passed',
+    // The ONE fixture where zero parsed properties is the expected state -- it is the
+    // defect being pinned, so the parsedProps guard below must not apply to it.
+    unreadable: true,
+    catches: 'ZERO properties',
+    source: [
+      "    this.alertService.confirm({",
+      "      // the owner asked for this one :)",
+      "      title: 'Delete this booking?',",
+      "      text: this.translate.instant('B'),",
+      "      confirmButtonText: this.translate.instant('C'),",
+      "      cancelButtonText: this.translate.instant('D'),",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // The same apostrophe, but now with a REAL literal behind it. Without comment
+    // stripping the quote opened at `dialog's` swallows the property boundaries and
+    // `title` stops parsing as a key at all -- so the bare literal is MISSED. A gate
+    // that goes quiet on a defect is worse than one that shouts at a comment, and the
+    // must-NOT-catch twin below cannot detect that direction on its own (measured:
+    // removing stripComments leaves it passing).
+    name: 'a prose apostrophe in a comment must not HIDE a real literal',
+    catches: 'title',
+    source: [
+      "    this.alertService.confirm({",
+      "      // Reuses the dialog's own close affordance, not a new _CANCEL key.",
+      "      title: 'Delete this booking?',",
+      "      text: this.translate.instant('B'),",
+      "      confirmButtonText: this.translate.instant('C'),",
+      "      cancelButtonText: this.translate.instant('D'),",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // THE measured false positive, verbatim: firstArgument() handed the whole object to a
+    // regex, which opened a literal at the apostrophe in `dialog's` and closed it at the
+    // next quote -- reporting a string that does not exist. Comments are stripped first.
+    name: 'promptText(): an apostrophe in a prose comment does not become a literal',
+    catches: null,
+    source: [
+      "    this.alertService.promptText({",
+      "      title: this.translate.instant('A'),",
+      "      // Reuses the dialog's own close affordance, not a new _CANCEL key.",
+      "      cancelButtonText: this.translate.instant('B'),",
+      "      inputType: 'tel',",
+      "    });",
+    ].join('\n'),
+  },
+  {
+    // The real expense-batch-page call. Once the translate calls are blanked and the
+    // interpolations removed, all that survives is an escaped newline -- not prose.
+    name: 'confirm(): a template of translate calls, a newline and interpolations stays quiet',
+    catches: null,
+    source: [
+      "    this.alertService.confirm({",
+      "      title: saved,",
+      "      text: `${this.translate.instant('A', { n: plans.length })}\\n${lines}`,",
+      "      confirmButtonText: this.translate.instant('B'),",
+      "      cancelButtonText: this.translate.instant('C'),",
+      "      icon: 'success',",
+      "    });",
+    ].join('\n'),
+  },
+];
+
+for (const fixture of SELF_TEST) {
+  const found = [];
+  const counts = scanAlertCalls(fixture.source, 'self-test', found);
+
+  // objectArg alone proves only that the argument began with `{`. parsedProps is the real
+  // guarantee: without it a fixture whose text the scanner lost would sail through the
+  // must-NOT-catch half and pin nothing.
+  if (counts.objectArg !== 1 || (!fixture.unreadable && counts.parsedProps < 2)) {
+    failed = true;
+    console.error(
+      `::error::self-test '${fixture.name}': the options object was not parsed ` +
+        `(objectArg=${counts.objectArg}, parsedProps=${counts.parsedProps}). ` +
+        'The fixture proves nothing in this state.'
+    );
+    continue;
+  }
+
+  if (fixture.catches) {
+    if (!found.some((f) => f.includes(fixture.catches))) {
+      failed = true;
+      console.error(
+        `::error::self-test '${fixture.name}': expected a finding on ` +
+          `'${fixture.catches}' and got ${found.length}. The gate can no longer go red ` +
+          'on the very shape it was written for.'
+      );
+    }
+  } else if (found.length > 0) {
+    failed = true;
+    console.error(
+      `::error::self-test '${fixture.name}': expected NO finding, got ${found.length}: ` +
+        found.join('; ')
+    );
+  }
+}
 if (failed) {
   process.exit(1);
 }
 
 console.log(
-  `hardcoded alert string gate OK: all ${callsChecked} AlertService message call sites are translated.`
+  `hardcoded alert string gate OK: all ${callsChecked} AlertService message call sites and ` +
+    `${objectCallsChecked} options-object call site(s) are translated.`
 );
 console.log(
   `envelope message gate OK: no 2xx envelope message is read as user-facing text ` +

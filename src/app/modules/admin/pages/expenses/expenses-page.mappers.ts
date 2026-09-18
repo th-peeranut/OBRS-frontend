@@ -4,6 +4,7 @@ import {
   AdminOwnerDto,
   AdminVehicleDto,
   CreateExpensePayload,
+  PendingExpenseGroupDto,
 } from '../../../../services/admin/admin-api.service';
 import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
 import { toDateControlValue, toDateInputValue } from '../../../../shared/lib/date-input-value';
@@ -384,6 +385,102 @@ export function toExpenseRow(
     source: dto.source ?? 'MANUAL',
     items: (dto.items ?? []).map(toExpenseItemRow),
     hasReceipt: !!dto.receiptFileRef,
+  };
+}
+
+/** OBRS-1891: one member line inside an expanded `SETTLE_BILL` approval row — category, amount
+ * and whatever note the salesperson left on that piece of the bill. No id: nothing here is ever
+ * acted on individually, only the whole group (AC-1/AC-2). */
+export interface ExpenseApprovalMemberRow {
+  categoryDisplay: string;
+  amount: number;
+  note: string;
+}
+
+/**
+ * OBRS-1891: one row of the approval lane — either a `SETTLE_BILL` (one salesperson field
+ * submission, several `AdminExpenseDto` rows folded under one `settleId`) or a `SINGLE` expense
+ * (the pre-OBRS-1891 shape, unchanged). `actionKey` is the composite busy/track key
+ * (`bill:<settleId>` / `exp:<id>`): a `settleId` and an expense `id` are two different tables'
+ * primary keys and can collide, so a bare number would let ruling on one bill disable an
+ * unrelated single row's buttons too.
+ */
+export interface ExpenseApprovalGroupRow {
+  groupType: 'SETTLE_BILL' | 'SINGLE';
+  actionKey: string;
+  /** Non-null only for `SETTLE_BILL` — the id `approveExpenseSettle`/`rejectExpenseSettle` act on. */
+  settleId: number | null;
+  /** Non-null only for `SINGLE` — the id `approveExpense`/`rejectExpense` act on. */
+  expenseId: number | null;
+  vehicleLabel: string;
+  expenseDateDisplay: string;
+  categoryDisplay: string;
+  totalAmount: number;
+  /** `SINGLE` only — the underlying expense's note. `''` for `SETTLE_BILL`: no single note
+   * applies to a bill made of several categories: each member's own note is on it instead (see
+   * `ExpenseApprovalMemberRow`). */
+  note: string;
+  /** `SETTLE_BILL` only — the bill's line items, for the expand/collapse detail row. `[]` for
+   * `SINGLE`. */
+  members: ExpenseApprovalMemberRow[];
+}
+
+/**
+ * OBRS-1891 AC-1: `PendingExpenseGroupDto` -> the approval lane's row shape. `gasBillLabel` is
+ * the pre-resolved `ADMIN.EXPENSES.APPROVAL.GAS_BILL` string (same `instant()`-ed-by-the-caller
+ * convention as `centralLabel`) — the category column's fixed text for a `SETTLE_BILL` row,
+ * standing in for the several real categories folded inside it.
+ */
+export function toExpenseApprovalGroupRow(
+  dto: PendingExpenseGroupDto,
+  vehicles: AdminVehicleDto[],
+  categoryOptions: Option[],
+  centralLabel: string,
+  gasBillLabel: string,
+  dateLang: string | null | undefined
+): ExpenseApprovalGroupRow {
+  const vehicle = dto.vehicleId !== null ? vehicles.find((v) => v.id === dto.vehicleId) : undefined;
+  const vehicleLabel =
+    dto.vehicleId === null ? centralLabel : vehicle ? vehiclePlateIdentifier(vehicle) : `#${dto.vehicleId}`;
+  const expenseDateDisplay = formatDisplayDate(dto.expenseDate, dateLang);
+
+  const categoryDisplayOf = (expense: AdminExpenseDto): string => {
+    const categoryLabel =
+      categoryOptions.find((option) => option.code === expense.category)?.label ?? expense.category;
+    return toExpenseCategoryDisplay(expense.category, expense.categoryOtherLabel, categoryLabel);
+  };
+
+  if (dto.groupType === 'SETTLE_BILL') {
+    return {
+      groupType: 'SETTLE_BILL',
+      actionKey: `bill:${dto.settleId}`,
+      settleId: dto.settleId,
+      expenseId: null,
+      vehicleLabel,
+      expenseDateDisplay,
+      categoryDisplay: gasBillLabel,
+      totalAmount: dto.totalAmount,
+      note: '',
+      members: dto.expenses.map((expense) => ({
+        categoryDisplay: categoryDisplayOf(expense),
+        amount: expense.amount,
+        note: expense.note ?? '',
+      })),
+    };
+  }
+
+  const single = dto.expenses[0];
+  return {
+    groupType: 'SINGLE',
+    actionKey: `exp:${single.id}`,
+    settleId: null,
+    expenseId: single.id,
+    vehicleLabel,
+    expenseDateDisplay,
+    categoryDisplay: categoryDisplayOf(single),
+    totalAmount: dto.totalAmount,
+    note: single.note ?? '',
+    members: [],
   };
 }
 

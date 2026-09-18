@@ -1,14 +1,23 @@
-import { FormBuilder } from '@angular/forms';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { By } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
+import { TranslateModule } from '@ngx-translate/core';
+import { DatePickerModule } from 'primeng/datepicker';
 import { BehaviorSubject, Subject, throwError } from 'rxjs';
 import { SchedulesPageComponent } from './schedules-page.component';
 import {
+  AdminApiService,
   AdminScheduleDto,
   AdminScheduleSetDto,
+  ScheduleSetExtendRespDto,
 } from '../../../../services/admin/admin-api.service';
+import { AlertService } from '../../../../shared/services/alert.service';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
-import { SchedulesData } from './schedules.store';
+import { SchedulesData, SchedulesStore } from './schedules.store';
 
 const SET_ROW = {
   kind: 'set' as const,
@@ -753,5 +762,219 @@ describe('SchedulesPageComponent null-handling (OBRS-506)', () => {
     expect((component as any).schedules)
       .withContext('a null emission must not leave the previous session\'s rows on screen')
       .toEqual([]);
+  });
+});
+
+// OBRS-1172: the "extend the window" button — email OBRS-1159 now points
+// operators at this exact button, so it must exist on the set tab, stay off
+// the schedule tab, and disable itself while the (deliberately slow) call
+// is in flight.
+describe('SchedulesPageComponent extend-window button (OBRS-1172, template)', () => {
+  let fixture: ComponentFixture<SchedulesPageComponent>;
+  let component: SchedulesPageComponent;
+  let adminApi: jasmine.SpyObj<AdminApiService>;
+  let alert: jasmine.SpyObj<AlertService>;
+  let extend$: Subject<ResponseAPI<ScheduleSetExtendRespDto>>;
+
+  const SAMPLE_RESULT: ScheduleSetExtendRespDto = {
+    setsExtended: 9,
+    newStartDate: '2026-10-01',
+    newEndDate: '2026-12-31',
+    schedulesCreated: 42,
+    extendedSets: [],
+  };
+
+  beforeEach(async () => {
+    extend$ = new Subject<ResponseAPI<ScheduleSetExtendRespDto>>();
+    adminApi = jasmine.createSpyObj<AdminApiService>('AdminApiService', [
+      'extendTimetableWindow',
+    ]);
+    adminApi.extendTimetableWindow.and.returnValue(extend$.asObservable());
+    alert = jasmine.createSpyObj<AlertService>('AlertService', [
+      'confirm',
+      'success',
+      'error',
+      'info',
+      'showLoading',
+      'hideLoading',
+    ]);
+    alert.confirm.and.resolveTo(true);
+    alert.success.and.resolveTo(undefined as never);
+    alert.info.and.resolveTo(undefined as never);
+    alert.error.and.resolveTo(undefined as never);
+
+    await TestBed.configureTestingModule({
+      declarations: [SchedulesPageComponent],
+      imports: [
+        CommonModule,
+        FormsModule,
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        DatePickerModule,
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+      providers: [
+        { provide: AdminApiService, useValue: adminApi },
+        { provide: AlertService, useValue: alert },
+        { provide: SchedulesStore, useValue: makeStoreStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SchedulesPageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges(); // runs ngOnInit
+  });
+
+  function extendButton() {
+    return fixture.debugElement.query(By.css('.schedule-extend-window-btn'));
+  }
+
+  it('is present on the "set" tab', () => {
+    expect((component as any).activeTab).toBe('set');
+    expect(extendButton())
+      .withContext('extend-window button must render on the set tab')
+      .not.toBeNull();
+  });
+
+  it('is absent on the "schedule" tab (0-count assertion)', () => {
+    (component as any).setActiveTab('schedule');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('.schedule-extend-window-btn')).length)
+      .withContext('extend-window button must not render on the schedule tab')
+      .toBe(0);
+  });
+
+  it('disables the rendered button while the call is in flight, then re-enables it', async () => {
+    const promise = (component as any).extendTimetableWindow();
+    await flush(); // let confirm() resolve; the call now sits pending on extend$
+    fixture.detectChanges();
+
+    expect(extendButton().nativeElement.disabled)
+      .withContext('button must be disabled while extendTimetableWindow() is in flight')
+      .toBeTrue();
+
+    extend$.next({ code: 200, message: 'OK', data: SAMPLE_RESULT });
+    extend$.complete();
+    await promise;
+    fixture.detectChanges();
+
+    expect(extendButton().nativeElement.disabled)
+      .withContext('button must re-enable once the call settles')
+      .toBeFalse();
+  });
+});
+
+// OBRS-1172: confirm/call/outcome logic, exercised the same way the rest of
+// this file drives SchedulesPageComponent — direct construction, no TestBed.
+describe('SchedulesPageComponent extendTimetableWindow — confirm/call/outcome (OBRS-1172)', () => {
+  const SAMPLE_RESULT: ScheduleSetExtendRespDto = {
+    setsExtended: 9,
+    newStartDate: '2026-10-01',
+    newEndDate: '2026-12-31',
+    schedulesCreated: 42,
+    extendedSets: [],
+  };
+
+  function makeExtendComponent(adminApi: Record<string, unknown>) {
+    const store = makeStoreStub();
+    const alert = {
+      confirm: jasmine.createSpy('confirm').and.resolveTo(true),
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+      info: jasmine.createSpy('info').and.resolveTo(undefined),
+      showLoading: jasmine.createSpy('showLoading'),
+      hideLoading: jasmine.createSpy('hideLoading'),
+    };
+    const component = new SchedulesPageComponent(
+      adminApi as any,
+      new FormBuilder(),
+      alert as any,
+      createTranslateStub(),
+      store as any
+    );
+    return { component, store, alert };
+  }
+
+  it('confirm-cancelled makes no HTTP call', async () => {
+    const extendSpy = jasmine.createSpy('extendTimetableWindow');
+    const { component, alert } = makeExtendComponent({ extendTimetableWindow: extendSpy });
+    alert.confirm.and.resolveTo(false);
+
+    await (component as any).extendTimetableWindow();
+
+    expect(extendSpy).not.toHaveBeenCalled();
+    expect(alert.success).not.toHaveBeenCalled();
+    expect(alert.error).not.toHaveBeenCalled();
+  });
+
+  it('confirm-accepted calls the service once and refreshes the table', async () => {
+    const extendSpy = jasmine
+      .createSpy('extendTimetableWindow')
+      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: SAMPLE_RESULT }));
+    const { component, store, alert } = makeExtendComponent({
+      extendTimetableWindow: extendSpy,
+    });
+
+    await (component as any).extendTimetableWindow();
+
+    expect(extendSpy).toHaveBeenCalledTimes(1);
+    expect(store.refresh).toHaveBeenCalledTimes(1);
+    expect(alert.success).toHaveBeenCalledWith('ADMIN.SCHEDULES.EXTEND_WINDOW_SUCCESS');
+  });
+
+  it('schedulesCreated===0 renders its own distinct message, not the plain success one', async () => {
+    const extendSpy = jasmine.createSpy('extendTimetableWindow').and.returnValue(
+      new BehaviorSubject({
+        code: 200,
+        message: 'OK',
+        data: { ...SAMPLE_RESULT, schedulesCreated: 0 },
+      })
+    );
+    const { component, alert } = makeExtendComponent({ extendTimetableWindow: extendSpy });
+
+    await (component as any).extendTimetableWindow();
+
+    expect(alert.info).toHaveBeenCalledWith('ADMIN.SCHEDULES.EXTEND_WINDOW_NO_NEW_TRIPS');
+    expect(alert.success).not.toHaveBeenCalled();
+  });
+
+  it('a 400 SCHEDULE_SET_EXTEND_ALREADY_COVERED renders the server message, not the generic failure', async () => {
+    const extendSpy = jasmine.createSpy('extendTimetableWindow').and.returnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: {
+              errorCode: 'SCHEDULE_SET_EXTEND_ALREADY_COVERED',
+              message: 'ตารางเดินรถครอบคลุมช่วงจองล่วงหน้าไว้แล้ว',
+            },
+          })
+      )
+    );
+    const { component, alert } = makeExtendComponent({ extendTimetableWindow: extendSpy });
+
+    await (component as any).extendTimetableWindow();
+
+    expect(alert.info).toHaveBeenCalledWith('ตารางเดินรถครอบคลุมช่วงจองล่วงหน้าไว้แล้ว');
+    expect(alert.error).not.toHaveBeenCalled();
+  });
+
+  it('any other failure keeps the existing generic AlertService.error() fallback', async () => {
+    const extendSpy = jasmine.createSpy('extendTimetableWindow').and.returnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: { errorCode: 'SCHEDULE_SET_EXTEND_NO_ACTIVE_SETS', message: 'no active sets' },
+          })
+      )
+    );
+    const { component, alert } = makeExtendComponent({ extendTimetableWindow: extendSpy });
+
+    await (component as any).extendTimetableWindow();
+
+    expect(alert.error).toHaveBeenCalledWith('no active sets');
+    expect(alert.info).not.toHaveBeenCalled();
   });
 });
