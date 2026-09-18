@@ -544,7 +544,14 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
           data: {
             id: 42,
             departureDateTime: '2026-07-10T08:00:00Z',
-            route: { id: 1, slug: 'bkk-cnx', code: 'BKK-CNX' },
+            route: {
+              id: 1,
+              slug: 'bkk-cnx',
+              translations: {
+                th: { label: 'กรุงเทพฯ-เชียงใหม่' },
+                en: { label: 'Bangkok - Chiang Mai' },
+              },
+            },
             vehicle: { id: 2, numberPlate: '1กก-1234' },
             driver: { id: 3, fullName: 'Somchai Driver' },
           },
@@ -557,7 +564,7 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
 
     expect(staffApiServiceStub.getScheduleById).toHaveBeenCalledWith(42);
     expect(component['tripHeader']).toEqual({
-      routeLabel: 'BKK-CNX',
+      routeLabel: 'Bangkok - Chiang Mai',
       departureDateTime: '10 Jul 2026 15:00',
       departureDateTimeRaw: '2026-07-10T08:00:00Z',
       vehicleLabel: '1กก-1234',
@@ -567,6 +574,47 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
       delayReason: null,
       assignedToMe: null,
     });
+  });
+
+  it('OBRS-1216: a route with no translation shows "-", never its slug (the slug is a key, not a name)', async () => {
+    const staffApiServiceStub = {
+      getScheduleById: jasmine.createSpy('getScheduleById').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { id: 42, route: { id: 1, slug: 'chonburi_bangkok' } },
+        })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+
+    await component['loadTripHeader'](42);
+
+    expect(component['tripHeader']?.routeLabel).toBe('-');
+  });
+
+  it('OBRS-1216: falls back to the th label when the active locale has no translation', async () => {
+    const staffApiServiceStub = {
+      getScheduleById: jasmine.createSpy('getScheduleById').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            id: 42,
+            route: {
+              id: 1,
+              slug: 'chonburi_bangkok',
+              translations: { th: { label: 'หนองชาก-บ้านบึง-กรุงเทพฯ' } },
+            },
+          },
+        })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+
+    await component['loadTripHeader'](42);
+
+    expect(component['tripHeader']?.routeLabel).toBe('หนองชาก-บ้านบึง-กรุงเทพฯ');
   });
 
   it('falls back to "-" per field when the schedule detail omits route/vehicle/driver', async () => {
@@ -644,7 +692,11 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
       getScheduleById: jasmine.createSpy('getScheduleById').and.callFake((id: number) =>
         id === 42
           ? staleSubject.asObservable()
-          : of({ code: 200, message: 'OK', data: { id, route: { slug: 'r99' } } })
+          : of({
+              code: 200,
+              message: 'OK',
+              data: { id, route: { slug: 'r99', translations: { en: { label: 'r99' } } } },
+            })
       ),
     };
     const component = createComponent(staffApiServiceStub);
@@ -654,7 +706,11 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
     expect(component['tripHeader']?.routeLabel).toBe('r99');
 
     // The slow response for the superseded scheduleId (42) arrives late.
-    staleSubject.next({ code: 200, message: 'OK', data: { id: 42, route: { slug: 'r42' } } });
+    staleSubject.next({
+      code: 200,
+      message: 'OK',
+      data: { id: 42, route: { slug: 'r42', translations: { en: { label: 'r42' } } } },
+    });
     staleSubject.complete();
     await staleCall;
 

@@ -28,7 +28,7 @@ import { finalize, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../services/alert.service';
-import { parseAdminStatus } from '../../../services/admin/admin-api.service';
+import { getAdminTranslationLabel, parseAdminStatus } from '../../../services/admin/admin-api.service';
 import {
   boardingScanErrorIcon,
   boardingScanErrorSeverity,
@@ -1236,7 +1236,16 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
 
       const schedule = response?.data;
       this.tripHeader = {
-        routeLabel: schedule?.route?.code ?? schedule?.route?.slug ?? '-',
+        // OBRS-1216: `route.code` was never on the wire (measured on prod
+        // `GET /api/routes`: id/slug/status/translations/createdAt/updatedAt),
+        // so this header always fell through to `slug` - a key, not a name.
+        // `translations` carries the renamed label (OBRS-1132) on the same
+        // object; degrades locale -> th -> en -> '-', never to the slug.
+        routeLabel:
+          getAdminTranslationLabel(schedule?.route?.translations, this.translate.currentLang) ??
+          getAdminTranslationLabel(schedule?.route?.translations, 'th') ??
+          getAdminTranslationLabel(schedule?.route?.translations, 'en') ??
+          '-',
         departureDateTime: schedule?.departureDateTime
           ? formatDisplayDateTime(schedule.departureDateTime, this.translate.currentLang)
           : '-',
