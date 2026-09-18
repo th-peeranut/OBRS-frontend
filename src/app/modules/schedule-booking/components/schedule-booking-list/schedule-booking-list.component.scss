@@ -280,8 +280,8 @@
       }
 
       .time {
-        font-size: $font-size-base;
-        font-weight: $font-weight-medium;
+        font-size: $font-size-md;
+        font-weight: bold;
         color: $text-softblack;
       }
 
@@ -341,7 +341,7 @@
       }
 
       .price {
-        font-size: $font-size-md;
+        font-size: $font-size-base;
         font-weight: bold;
         color: $text-softblack;
       }
