@@ -8,7 +8,7 @@ import {
 } from '../../../../../shared/interfaces/driver-cash.interface';
 import { formatDisplayDate, formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
 import { centsToDecimalString, toSignedCents } from '../../../../../shared/lib/money-cents';
-import { formatMoney } from '../../../../../shared/lib/money-display';
+import { discrepancySideKey, formatMoney } from '../../../../../shared/lib/money-display';
 
 /** `confirmRequested` payload — `POST /api/private/driver-cash/days/{dayId}/return`. */
 export interface DriverCashDayReturnPayload {
@@ -259,6 +259,19 @@ export class DriverCashDayReturnModalComponent implements OnChanges {
   protected isNegativeMoney(value: string): boolean {
     return Number(value) < 0;
   }
+
+  /**
+   * OBRS-1149 — the SIGNED-OFF difference read back off the day row, not the
+   * one the form above is computing while it is being typed. Same hide-at-zero
+   * rule as the breakdown rows, so an ordinary day that balanced shows no line.
+   */
+  protected get hasReturnedDiscrepancy(): boolean {
+    return this.isNonZero(this.detail?.discrepancy);
+  }
+
+  // OBRS-1149 — shared with the days-list column via money-display.ts so the
+  // short/over mapping can't drift between the two places that render it.
+  protected readonly discrepancySideKey = discrepancySideKey;
 
   protected get canConfirm(): boolean {
     return (
