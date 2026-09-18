@@ -89,3 +89,16 @@ function toFiniteAmount(value: number | string | null | undefined): number {
 function hasSatang(amount: number): boolean {
   return Math.round(amount * 100) % 100 !== 0;
 }
+
+/**
+ * OBRS-1149 — which side of a signed discrepancy a value reads as. Negative
+ * is cash SHORT, non-negative is cash OVER (`discrepancy = returned -
+ * expected`, `DriverCashService#returnDay`). Shared by the driver-cash days
+ * list and its return modal so the mapping cannot drift between the two
+ * places that render the same signed field.
+ */
+export function discrepancySideKey(value: string | null | undefined): string {
+  return Number(value) < 0
+    ? 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.DISCREPANCY_SHORT'
+    : 'ADMIN.SETTLEMENTS.DRIVER_CASH.RETURN.DISCREPANCY_OVER';
+}
