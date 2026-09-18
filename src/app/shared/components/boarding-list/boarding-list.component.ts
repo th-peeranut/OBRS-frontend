@@ -52,6 +52,7 @@ import {
 import { BoardingScanResultDto } from '../../interfaces/ticket-boarding.interface';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
 import { BoardingListStore } from './boarding-list.store';
+import { resolveStopLabel } from '../../pipes/stop-label.pipe';
 
 /** OBRS-100: supplementary trip-header data for the print manifest (and,
  * incidentally, informational display) — self-fetched by
@@ -672,13 +673,18 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * `filteredItems`: the dropdown's own options must not shrink once a stop is picked,
    * or the driver would have no way back to "all stops". `this.items` is read only —
    * never mutated (the store owns that array reference). */
-  protected get stopOptions(): { value: string }[] {
+  /** OBRS-1967: the option READS as the stop's name and still FILTERS by its slug — a getter,
+   * so switching language relabels the dropdown without refetching the manifest. */
+  protected get stopOptions(): { value: string; label: string }[] {
     const seen = new Set<string>();
-    const options: { value: string }[] = [];
+    const options: { value: string; label: string }[] = [];
     for (const item of this.items) {
       if (!seen.has(item.fromStop)) {
         seen.add(item.fromStop);
-        options.push({ value: item.fromStop });
+        options.push({
+          value: item.fromStop,
+          label: resolveStopLabel(item.fromStopLabels, item.fromStop, this.translate.currentLang),
+        });
       }
     }
     return options;
