@@ -14,6 +14,7 @@ import { BoardingListStore } from './boarding-list.store';
 import { AdminModalBackdropDirective } from '../../directives/admin-modal-backdrop.directive';
 import { createTranslateStub } from '../../../testing/test-stubs';
 import { TitleLabelPipe } from '../../pipes/title-label.pipe';
+import { StopLabelPipe } from '../../pipes/stop-label.pipe';
 import { TicketStatusLabelPipe } from '../../pipes/ticket-status-label.pipe';
 // OBRS-374: real app-admin-dropdown for the pickup-stop-filter wiring test below —
 // exercises the actual module resolution (SharedModule now imports AdminSharedModule).
@@ -2098,7 +2099,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   }): void {
     const roles = opts.roles ?? (opts.canControl ? ['salesperson'] : []);
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2222,7 +2223,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   // existing behavior this card deliberately preserves rather than replaces.
   it('OBRS-451 AC: tripHeader === null (self-fetch failed) hides the transition button for a DRIVER', fakeAsync(() => {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2402,7 +2403,7 @@ describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (Te
   }): void {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent, AdminModalBackdropDirective],
       providers: [
         BoardingListStore,
@@ -2530,7 +2531,7 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2732,7 +2733,7 @@ describe('BoardingListComponent — OBRS-1673 call-the-booker action (TestBed)',
 
   function render(items: BoardingListItemDto[]): void {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2823,7 +2824,7 @@ describe('BoardingListComponent — OBRS-374 pickup-stop filter (unit)', () => {
   it('stopOptions is distinct, first-appearance order — no .sort()', () => {
     const component = stopComponent();
 
-    expect(component['stopOptions']).toEqual([{ value: 'Stop B' }, { value: 'Stop A' }, { value: 'Stop C' }]);
+    expect(component['stopOptions']).toEqual([{ value: 'Stop B', label: 'Stop B' }, { value: 'Stop A', label: 'Stop A' }, { value: 'Stop C', label: 'Stop C' }]);
   });
 
   it('stopOptions stays derived from items, not filteredItems, so it does not shrink while filtered (the driver can still get back to "all stops")', () => {
@@ -2831,7 +2832,7 @@ describe('BoardingListComponent — OBRS-374 pickup-stop filter (unit)', () => {
 
     component['stopFilter'] = 'Stop A';
 
-    expect(component['stopOptions']).toEqual([{ value: 'Stop B' }, { value: 'Stop A' }, { value: 'Stop C' }]);
+    expect(component['stopOptions']).toEqual([{ value: 'Stop B', label: 'Stop B' }, { value: 'Stop A', label: 'Stop A' }, { value: 'Stop C', label: 'Stop C' }]);
   });
 
   it('narrows the table to only the chosen stop, compared with === on the raw value', () => {
@@ -2910,7 +2911,7 @@ describe('BoardingListComponent — OBRS-374 group headers + stop-filter dropdow
 
   function render(items: BoardingListItemDto[]): void {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -3072,7 +3073,7 @@ describe('BoardingListComponent — OBRS-374 print manifest keeps every stop whi
 
   beforeEach(fakeAsync(() => {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -3144,7 +3145,7 @@ describe('BoardingListComponent — OBRS-374 group header dark theme (measured)'
     // configureTestingModule() once a component has been created off the first.
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -3231,6 +3232,142 @@ describe('BoardingListComponent — OBRS-374 group header dark theme (measured)'
 });
 
 /**
+ * OBRS-1967. The manifest used to print the stop SLUG (`nong_chak`) in the from/to columns of a
+ * page that is otherwise entirely in Thai, because nothing ever resolved it. The row now carries
+ * the name per locale beside the slug, and the slug keeps its job as the grouping/filter key —
+ * so these assert BOTH halves: what the driver reads, and what the component still compares on.
+ */
+describe('BoardingListComponent — OBRS-1967 localized stop names (TestBed)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+  let fetches: number;
+
+  function render(items: BoardingListItemDto[]): void {
+    fetches = 0;
+    TestBed.configureTestingModule({
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => {
+              fetches += 1;
+              return of({ code: 200, message: 'OK', data: items });
+            },
+            getScheduleById: () =>
+              of({ code: 200, message: 'OK', data: { id: 42, status: 'scheduled' } }),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => true,
+            getRoles: () => ['salesperson'],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    TestBed.inject(TranslateService).use('th');
+    fixture = TestBed.createComponent(BoardingListComponent);
+    fixture.componentInstance.scheduleId = 42;
+    fixture.componentInstance.ngOnChanges({ scheduleId: {} as any });
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  function tableText(): string {
+    return (fixture.nativeElement.querySelector('tbody')?.textContent ?? '') as string;
+  }
+
+  const NONG_CHAK = {
+    fromStop: 'nong_chak',
+    fromStopLabels: { th: 'หนองชาก', en: 'Nong Chak' },
+    toStop: 'srinakarin',
+    toStopLabels: { th: 'ศรีนครินทร์', en: 'Srinakarin' },
+  };
+
+  it('prints the stop NAME in the from/to cells — never the slug the row is keyed by', fakeAsync(() => {
+    render([buildItem({ ticketId: 1, ...NONG_CHAK })]);
+    tick();
+    fixture.detectChanges();
+
+    expect(tableText()).toContain('หนองชาก');
+    expect(tableText()).toContain('ศรีนครินทร์');
+    // The defect itself: a Thai page that printed `nong_chak` at the passenger.
+    expect(tableText()).not.toContain('nong_chak');
+    expect(tableText()).not.toContain('srinakarin');
+  }));
+
+  it('re-renders the names when the reader switches language, without going back to the server', fakeAsync(() => {
+    render([buildItem({ ticketId: 1, ...NONG_CHAK })]);
+    tick();
+    fixture.detectChanges();
+    const fetchesAfterLoad = fetches;
+
+    TestBed.inject(TranslateService).use('en');
+    fixture.detectChanges();
+
+    expect(tableText()).toContain('Nong Chak');
+    expect(tableText()).not.toContain('หนองชาก');
+    // An impure pipe, not a refetch — the manifest is a driver's live working list.
+    expect(fetches).toBe(fetchesAfterLoad);
+  }));
+
+  it('falls back to the slug for a row the backend sent no name for', fakeAsync(() => {
+    render([buildItem({ ticketId: 1, fromStop: 'nong_chak', toStop: 'srinakarin' })]);
+    tick();
+    fixture.detectChanges();
+
+    // A blank cell would be worse than a slug: the driver still has to know which stop.
+    expect(tableText()).toContain('nong_chak');
+    expect(tableText()).toContain('srinakarin');
+  }));
+});
+
+/** OBRS-1967: the pickup filter reads as a name and still compares slugs. */
+describe('BoardingListComponent — OBRS-1967 pickup filter options (unit)', () => {
+  it('labels each option with the stop name while its value stays the slug', () => {
+    const component = createComponent(
+      { getScheduleById: jasmine.createSpy() },
+      createStoreStub([
+        buildItem({ ticketId: 1, fromStop: 'nong_chak', fromStopLabels: { en: 'Nong Chak' } }),
+        buildItem({ ticketId: 2, fromStop: 'nong_chak', fromStopLabels: { en: 'Nong Chak' } }),
+        buildItem({ ticketId: 3, fromStop: 'srinakarin' }),
+      ])
+    );
+
+    expect(component['stopOptions']).toEqual([
+      { value: 'nong_chak', label: 'Nong Chak' },
+      // No name for this one — the option still has to be pickable, so it reads as its slug.
+      { value: 'srinakarin', label: 'srinakarin' },
+    ]);
+  });
+
+  it('keeps filtering on the slug, not on what the option now reads as', () => {
+    const component = createComponent(
+      { getScheduleById: jasmine.createSpy() },
+      createStoreStub([
+        buildItem({ ticketId: 1, fromStop: 'nong_chak', fromStopLabels: { en: 'Nong Chak' } }),
+        buildItem({ ticketId: 2, fromStop: 'srinakarin' }),
+      ])
+    );
+
+    component['stopFilter'] = 'nong_chak';
+
+    expect(component['filteredItems'].map((i) => i.ticketId)).toEqual([1]);
+  });
+});
+
+/**
  * OBRS-1969. The status badge kept the language the manifest had been FETCHED in: the server
  * resolves `status.label` from the request's `Accept-Language` and the template printed that word
  * raw, so switching language re-read every other column and left the badge behind. The same row
@@ -3249,7 +3386,7 @@ describe('BoardingListComponent — OBRS-1969 ticket status follows the reader (
   function render(items: BoardingListItemDto[]): void {
     fetches = 0;
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, StopLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,

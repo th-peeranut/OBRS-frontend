@@ -347,8 +347,21 @@ export interface BoardingListItemDto {
    */
   passengerTitle?: string | null;
   passengerName: string;
+  /**
+   * OBRS-374/1659: the stop SLUG. It is a KEY, not a name - the table groups on it, the pickup
+   * filter compares against it and the backend ordered the rows by it. Render the
+   * matching *Labels bag instead (OBRS-1967).
+   */
   fromStop: string;
   toStop: string;
+  /**
+   * OBRS-1967: the stop name per locale, already resolved server-side for the operator running
+   * the trip. Optional because a locale with no translation row is simply absent from the bag -
+   * and the whole bag is absent for a legacy ticket whose `from_stop_id` was never written. Both
+   * cases land on the slug, via the `stopLabel` pipe.
+   */
+  fromStopLabels?: Record<string, string>;
+  toStopLabels?: Record<string, string>;
   status: {
     code: string;
     label: string;
