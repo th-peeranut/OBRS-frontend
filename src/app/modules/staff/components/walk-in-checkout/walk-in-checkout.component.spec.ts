@@ -71,6 +71,52 @@ describe('WalkInCheckoutComponent', () => {
     });
   });
 
+  // OBRS-1957: `ContactReqDto` is `@NotBlank @Size(min = 2, max = 50)`. The counter form asked for
+  // `required` + maxLength(100), so both ends of that rule were wrong at once — and a counter sale
+  // refused by the server is a queue of real people waiting while staff guess at the cause.
+  describe('name length matches ContactReqDto (OBRS-1957)', () => {
+    it('refuses a 1-character surname and says it is too short, not "invalid"', () => {
+      const comp = makeComponent();
+      const ctrl = comp['contactForm'].get('lastName');
+      ctrl?.setValue('ก');
+      ctrl?.markAsTouched();
+      expect(ctrl?.valid).toBeFalse();
+      expect(comp['fieldError']('lastName')).toBe('STAFF.VALIDATION.NAME_TOO_SHORT');
+    });
+
+    it('refuses a 51-character name that maxLength(100) used to wave through', () => {
+      const comp = makeComponent();
+      const ctrl = comp['contactForm'].get('firstName');
+      ctrl?.setValue('ก'.repeat(51));
+      ctrl?.markAsTouched();
+      expect(ctrl?.valid).toBeFalse();
+      expect(comp['fieldError']('firstName')).toBe('STAFF.VALIDATION.NAME_TOO_LONG');
+    });
+
+    it('counts the trimmed value, so " ก " is still one character', () => {
+      const comp = makeComponent();
+      const ctrl = comp['contactForm'].get('firstName');
+      ctrl?.setValue(' ก ');
+      expect(ctrl?.hasError('minlength')).toBeTrue();
+    });
+
+    it('still reports a blank field as required, not as too short', () => {
+      const comp = makeComponent();
+      const ctrl = comp['contactForm'].get('firstName');
+      ctrl?.setValue('   ');
+      ctrl?.markAsTouched();
+      expect(ctrl?.hasError('required')).toBeTrue();
+      expect(comp['fieldError']('firstName')).toBe('STAFF.VALIDATION.REQUIRED');
+    });
+
+    it('accepts a normal name', () => {
+      const comp = makeComponent();
+      const ctrl = comp['contactForm'].get('firstName');
+      ctrl?.setValue('สมชาย');
+      expect(ctrl?.valid).toBeTrue();
+    });
+  });
+
   describe('titleLabel localization', () => {
     const mr = { id: 1, nameThai: 'นาย', nameEnglish: 'Mr.', nameChinese: '先生' };
 
@@ -102,7 +148,7 @@ describe('WalkInCheckoutComponent', () => {
       comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       comp['contactForm'].patchValue({
-        title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: '',
+        title: 'Mr.', firstName: 'Somchai', lastName: 'Rakdee', phoneNumber: '0812345678', email: '',
       });
       expect((comp as any).canSell).toBeTrue();
     });
@@ -113,7 +159,7 @@ describe('WalkInCheckoutComponent', () => {
       comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       comp['contactForm'].patchValue({
-        title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: 'not-an-email',
+        title: 'Mr.', firstName: 'Somchai', lastName: 'Rakdee', phoneNumber: '0812345678', email: 'not-an-email',
       });
       expect((comp as any).canSell).toBeFalse();
     });
@@ -258,13 +304,33 @@ describe('WalkInCheckoutComponent', () => {
       expect(('pricePerSeat' as string) in emitted!).toBeFalse();
     });
 
+    // OBRS-1957: the names in these three fixtures were 'A'/'B'. They are refused for LENGTH
+    // now, so left alone this spec would have gone on passing for a reason its title does not
+    // claim — and the one above it, which asserts canSell is TRUE, would simply have gone red.
+    it('sends the contact names trimmed, which is the length the form validated', () => {
+      const comp = makeComponent();
+      comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 300;
+      fillValidContact(comp);
+      comp['contactForm'].patchValue({ firstName: '  สมชาย  ', lastName: '  รักดี  ' });
+
+      let emitted: Parameters<typeof comp['sell']['emit']>[0] | undefined;
+      comp.sell.subscribe((p) => { emitted = p; });
+      (comp as any).onSell();
+
+      expect(emitted).toBeDefined();
+      expect(emitted!.contact.firstName).toBe('สมชาย');
+      expect(emitted!.contact.lastName).toBe('รักดี');
+    });
+
     it('does not emit when the form is invalid (malformed email)', () => {
       const comp = makeComponent();
       comp.selectedSeats = ['B1'];
       comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       comp['contactForm'].patchValue({
-        title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: 'not-an-email',
+        title: 'Mr.', firstName: 'Somchai', lastName: 'Rakdee', phoneNumber: '0812345678', email: 'not-an-email',
       });
 
       let emitted: unknown;

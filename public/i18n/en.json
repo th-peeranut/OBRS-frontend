@@ -2816,6 +2816,8 @@
     "LASTNAME": "Last name",
     "LASTNAME_PLACEHOLDER": "Please enter your last name",
     "LASTNAME_REQUIRED": "Please enter your last name",
+    "NAME_TOO_SHORT": "Please enter at least 2 characters",
+    "NAME_TOO_LONG": "Please enter no more than 50 characters",
     "PDPA_CONSENT": "I consent to the collection and use of my personal data (PDPA)",
     "PDPA_CONSENT_REQUIRED": "You must accept the PDPA consent to continue",
     "EMAIL": "Email",
@@ -3641,6 +3643,8 @@
       "PHONE_INVALID": "Enter a valid 10-digit phone number (e.g. 0812345678).",
       "THAI_MOBILE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678). We text this number.",
       "ID_CARD_INVALID": "Enter a valid 13-digit ID card number.",
+      "NAME_TOO_SHORT": "Please enter at least 2 characters",
+      "NAME_TOO_LONG": "Please enter no more than 50 characters",
       "EMAIL_INVALID": "Enter a valid email address."
     },
     "CANCEL_BOOKING": {
