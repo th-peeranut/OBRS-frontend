@@ -4,7 +4,6 @@ import {
   AdminRouteStopDto,
   AdminSegmentBatchReqDto,
   AdminSegmentDto,
-  AdminSegmentReqDto,
   AdminStopDto,
   AdminStatusDto,
   AdminTranslationReqDto,
@@ -543,7 +542,8 @@ export function findStopPairProblem(
   return toStop.stopOrder <= fromStop.stopOrder ? 'stopOrder' : null;
 }
 
-/** A fare the owner typed for one vehicle type in the add-pair modal. */
+/** A fare the owner typed for one vehicle type - in the add-pair modal, and
+ *  (OBRS-1034) in the edit modal's one-input-per-vehicle-type form. */
 export interface NewSegmentFare {
   vehicleTypeSlug: string;
   fare: number;
@@ -605,34 +605,77 @@ export function toSegmentAppendPayload(
   };
 }
 
+/**
+ * OBRS-1034: re-prices ONE stop pair for EVERY vehicle type the owner edited,
+ * in one PUT.
+ *
+ * Same full-replace rule as {@link toSegmentAppendPayload}: each block must
+ * carry every existing pair of its vehicle type, because the backend deletes
+ * the whole (route, vehicleType) set and rebuilds it from what arrives
+ * (ADR-0122). Only the pair identified by `originalFromStopSlug` /
+ * `originalToStopSlug` takes the new from/to/fare; the rest keep theirs. The
+ * pair is matched on its stop slugs, never on `SegmentRow.id`, because the
+ * backend regenerates every segment id on each save, so the two vehicle types'
+ * rows for one pair share no id.
+ *
+ * A vehicle type with no fare in `fares` gets no block at all - that is what
+ * leaves a type the pair is not priced for untouched rather than deleted.
+ *
+ * `estimatedDurationMinutes` rides in the FIRST block only. It is not a
+ * property of a pair - the backend stores the destination stop's
+ * `route_stops.offset_minutes_from_origin` and derives every pair's duration
+ * from it - so ONE block stating it is the entire write, and the others send
+ * `undefined`, which `SegmentService.applyEstimatedDuration` returns early on.
+ *
+ * NOT because repeating it would be rejected: `SegmentUpdateReqDtoValidator`
+ * `.validateNoConflictingDurations` keys on the DESTINATION stop and compares
+ * the `(fromStop, duration)` couple, so it refuses only a destination the
+ * blocks DISAGREE about (`A->C 30` beside `B->C 20`); its own javadoc states
+ * that identical repeats stay legal precisely so OBRS-1033's batch may have
+ * "every block restate the same edit". Sending it once is the minimum correct
+ * payload, not an escape from a 400 - so if this ever needs to move, moving it
+ * is safe.
+ *
+ * The batch shape is used even for a single vehicle type: when the owner edits
+ * both fares, the two blocks must land in ONE transaction, or a rejection of
+ * the second leaves the first committed and the fare table half-saved.
+ */
 export function toSegmentUpdatePayload(
-  selectedSegment: SegmentRow,
+  originalFromStopSlug: string,
+  originalToStopSlug: string,
   editedFromStopSlug: string,
   editedToStopSlug: string,
-  editedFare: number,
+  fares: NewSegmentFare[],
   estimatedDurationMinutes: number,
   allSegments: SegmentRow[],
   selectedRouteSlug: string
-): AdminSegmentReqDto {
-  const segmentsOfVehicleType = allSegments.filter(
-    (segment) =>
-      normalizeVehicleTypeKey(segment.vehicleTypeSlug) ===
-      normalizeVehicleTypeKey(selectedSegment.vehicleTypeSlug)
-  );
-
+): AdminSegmentBatchReqDto {
   return {
     route: selectedRouteSlug,
-    vehicleType: selectedSegment.vehicleTypeSlug,
-    stopPairs: segmentsOfVehicleType.map((segment) => {
-      const isEditedSegment = segment.id === selectedSegment.id;
+    vehicleTypes: fares.map((entry, blockIndex) => {
+      const segmentsOfVehicleType = allSegments.filter(
+        (segment) =>
+          normalizeVehicleTypeKey(segment.vehicleTypeSlug) ===
+          normalizeVehicleTypeKey(entry.vehicleTypeSlug)
+      );
 
       return {
-        fromStop: isEditedSegment ? editedFromStopSlug : segment.fromStopSlug,
-        toStop: isEditedSegment ? editedToStopSlug : segment.toStopSlug,
-        fare: normalizeFareForSave(isEditedSegment ? editedFare : segment.fare),
-        estimatedDurationMinutes: isEditedSegment
-          ? normalizeDurationForSave(estimatedDurationMinutes)
-          : undefined,
+        vehicleType: entry.vehicleTypeSlug,
+        stopPairs: segmentsOfVehicleType.map((segment) => {
+          const isEditedPair =
+            segment.fromStopSlug === originalFromStopSlug &&
+            segment.toStopSlug === originalToStopSlug;
+
+          return {
+            fromStop: isEditedPair ? editedFromStopSlug : segment.fromStopSlug,
+            toStop: isEditedPair ? editedToStopSlug : segment.toStopSlug,
+            fare: normalizeFareForSave(isEditedPair ? entry.fare : segment.fare),
+            estimatedDurationMinutes:
+              isEditedPair && blockIndex === 0
+                ? normalizeDurationForSave(estimatedDurationMinutes)
+                : undefined,
+          };
+        }),
       };
     }),
   };

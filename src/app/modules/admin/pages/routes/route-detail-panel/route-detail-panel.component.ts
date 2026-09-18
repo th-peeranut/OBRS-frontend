@@ -63,7 +63,7 @@ export class RouteDetailPanelComponent implements OnChanges, OnDestroy {
   @Input() stops: StopPoint[] = [];
   @Input() allSegments: SegmentRow[] = [];
   @Input() isDetailLoading = false;
-  @Output() editSegment = new EventEmitter<SegmentRow>();
+  @Output() editSegment = new EventEmitter<SegmentPivotRow>();
   @Output() addSegment = new EventEmitter<void>();
 
   protected vehicleTypeOptions: VehicleTypeOption[] = [];
@@ -257,6 +257,13 @@ export class RouteDetailPanelComponent implements OnChanges, OnDestroy {
 
   protected trackByDisplayLine(_index: number, line: SegmentDisplayLine): string {
     return line.key;
+  }
+
+  /** Gates the row's Edit button. A row with no priced vehicle type cannot
+   *  exist today - `toSegmentPivotRows` only creates a row from a segment - but
+   *  the dialog has nothing to edit in that case, so the guard stays. */
+  protected hasPricedFare(row: SegmentPivotRow): boolean {
+    return row.fares.some((cell) => !!cell.segment);
   }
 
   protected formatFare(fare: number): string {

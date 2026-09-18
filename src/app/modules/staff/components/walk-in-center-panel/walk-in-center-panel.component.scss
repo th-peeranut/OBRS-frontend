@@ -229,3 +229,17 @@
     }
   }
 }
+
+// OBRS-1238: the strip shown when the ticket-desk catalogue could not be loaded.
+// NOT `.text-warning` like the jump-seat hint above it. Measured in-browser on this very
+// element, the Bootstrap #ffc107 on the white panel reads 1.63:1 - nowhere near the 4.5:1
+// AA floor the staff contrast gate holds the rest of this shell to. This uses instead the
+// chip pair `admin-theme.scss` keeps identical in BOTH shells (#673a00 on #ffdcbe = 7.44:1,
+// measured there by the same formula) - the move `.role-preview-banner` makes, for the same
+// reason. A themed foreground is only correct over a themed background.
+.ticket-desk-warning {
+  color: var(--admin-warning-text, #673a00);
+  background: var(--admin-warning-bg, #ffdcbe);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.5rem;
+}
