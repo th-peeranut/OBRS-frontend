@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DatePickerModule } from 'primeng/datepicker';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { BoardingListComponent } from './boarding-list.component';
@@ -14,6 +14,7 @@ import { BoardingListStore } from './boarding-list.store';
 import { AdminModalBackdropDirective } from '../../directives/admin-modal-backdrop.directive';
 import { createTranslateStub } from '../../../testing/test-stubs';
 import { TitleLabelPipe } from '../../pipes/title-label.pipe';
+import { TicketStatusLabelPipe } from '../../pipes/ticket-status-label.pipe';
 // OBRS-374: real app-admin-dropdown for the pickup-stop-filter wiring test below —
 // exercises the actual module resolution (SharedModule now imports AdminSharedModule).
 import { AdminSharedModule } from '../../../modules/admin/admin-shared.module';
@@ -2097,7 +2098,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   }): void {
     const roles = opts.roles ?? (opts.canControl ? ['salesperson'] : []);
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2221,7 +2222,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   // existing behavior this card deliberately preserves rather than replaces.
   it('OBRS-451 AC: tripHeader === null (self-fetch failed) hides the transition button for a DRIVER', fakeAsync(() => {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2401,7 +2402,7 @@ describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (Te
   }): void {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, ReactiveFormsModule, DatePickerModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent, AdminModalBackdropDirective],
       providers: [
         BoardingListStore,
@@ -2529,7 +2530,7 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2731,7 +2732,7 @@ describe('BoardingListComponent — OBRS-1673 call-the-booker action (TestBed)',
 
   function render(items: BoardingListItemDto[]): void {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -2909,7 +2910,7 @@ describe('BoardingListComponent — OBRS-374 group headers + stop-filter dropdow
 
   function render(items: BoardingListItemDto[]): void {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -3071,7 +3072,7 @@ describe('BoardingListComponent — OBRS-374 print manifest keeps every stop whi
 
   beforeEach(fakeAsync(() => {
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -3143,7 +3144,7 @@ describe('BoardingListComponent — OBRS-374 group header dark theme (measured)'
     // configureTestingModule() once a component has been created off the first.
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      imports: [TitleLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
       providers: [
         BoardingListStore,
@@ -3226,5 +3227,109 @@ describe('BoardingListComponent — OBRS-374 group header dark theme (measured)'
     ) as HTMLElement;
 
     expect(getComputedStyle(headerName()).color).not.toBe(getComputedStyle(plainRowCell).color);
+  }));
+});
+
+/**
+ * OBRS-1969. The status badge kept the language the manifest had been FETCHED in: the server
+ * resolves `status.label` from the request's `Accept-Language` and the template printed that word
+ * raw, so switching language re-read every other column and left the badge behind. The same row
+ * already carries `status.code`, which does not move with the reader — the word now comes from the
+ * catalogue, and the server's label stays as the fallback for a code this build has never met.
+ */
+describe('BoardingListComponent — OBRS-1969 ticket status follows the reader (TestBed)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+  let fetches: number;
+
+  const WORDS: Record<string, any> = {
+    th: { COMMON: { TICKET_STATUS: { confirmed: 'ยืนยันแล้ว', checked_in: 'เช็คอินแล้ว', no_show: 'ไม่มาขึ้นรถ' } } },
+    en: { COMMON: { TICKET_STATUS: { confirmed: 'Confirmed', checked_in: 'Checked in', no_show: 'No-show' } } },
+  };
+
+  function render(items: BoardingListItemDto[]): void {
+    fetches = 0;
+    TestBed.configureTestingModule({
+      imports: [TitleLabelPipe, TicketStatusLabelPipe, CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => {
+              fetches += 1;
+              return of({ code: 200, message: 'OK', data: items });
+            },
+            getScheduleById: () =>
+              of({ code: 200, message: 'OK', data: { id: 42, status: 'scheduled' } }),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => true,
+            getRoles: () => ['salesperson'],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('th', WORDS['th']);
+    translate.setTranslation('en', WORDS['en']);
+    translate.use('th');
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    fixture.componentInstance.scheduleId = 42;
+    fixture.componentInstance.ngOnChanges({ scheduleId: {} as any });
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  function tableText(): string {
+    return (fixture.nativeElement.querySelector('tbody')?.textContent ?? '') as string;
+  }
+
+  it('renders the badge from status.code in the active language, not from the label the server resolved at fetch time', fakeAsync(() => {
+    // The label is what a Thai-language fetch returned. An English reader must not see it.
+    render([buildItem({ ticketId: 1, status: { code: 'checked_in', label: 'เช็คอินแล้ว' } })]);
+    tick();
+    fixture.detectChanges();
+
+    expect(tableText()).toContain('เช็คอินแล้ว');
+  }));
+
+  it('re-renders the badge when the reader switches language, without going back to the server', fakeAsync(() => {
+    render([buildItem({ ticketId: 1, status: { code: 'checked_in', label: 'เช็คอินแล้ว' } })]);
+    tick();
+    fixture.detectChanges();
+    const fetchesAfterLoad = fetches;
+
+    TestBed.inject(TranslateService).use('en');
+    fixture.detectChanges();
+
+    expect(tableText()).toContain('Checked in');
+    // The defect: the fetch-time Thai word stayed on an otherwise English table.
+    expect(tableText()).not.toContain('เช็คอินแล้ว');
+    // An impure pipe, not a refetch — the manifest is a driver's live working list.
+    expect(fetches).toBe(fetchesAfterLoad);
+  }));
+
+  it('keeps the server word for a status code this build does not translate', fakeAsync(() => {
+    // Not a hypothetical guard: the server may add a status before the client ships its word, and
+    // a raw key or a blank badge on a driver's list is worse than the server's own label.
+    render([buildItem({ ticketId: 1, status: { code: 'boarded_late', label: 'ขึ้นรถสาย' } })]);
+    tick();
+    fixture.detectChanges();
+
+    expect(tableText()).toContain('ขึ้นรถสาย');
+    expect(tableText()).not.toContain('COMMON.TICKET_STATUS');
   }));
 });

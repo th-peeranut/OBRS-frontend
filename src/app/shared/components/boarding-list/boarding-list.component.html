@@ -381,7 +381,7 @@
                     <td>{{ item.toStop }}</td>
                     <td>
                       <span class="badge" [class.bg-success]="item.status.code === 'checked_in'" [class.bg-secondary]="item.status.code !== 'checked_in'">
-                        {{ item.status.label }}
+                        {{ item.status.code | ticketStatusLabel: item.status.label }}
                       </span>
                     </td>
                     <td>
@@ -671,7 +671,7 @@
               <td>{{ item.passengerTitle | titleLabel: item.passengerName }}</td>
               <td>{{ item.fromStop }}</td>
               <td>{{ item.toStop }}</td>
-              <td>{{ item.status.label }}</td>
+              <td>{{ item.status.code | ticketStatusLabel: item.status.label }}</td>
               <td>
                 @if (item.fareCategory) {
                   {{ (item.fareCategory === 'adult' ? 'PASSENGER_INFO.BADGE.ADULT' : 'PASSENGER_INFO.BADGE.CHILD') | translate }}

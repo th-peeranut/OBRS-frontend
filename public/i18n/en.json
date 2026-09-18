@@ -482,6 +482,11 @@
       "ASSOC_PROF": "Associate Professor",
       "ASST_PROF": "Assistant Professor"
     },
+    "TICKET_STATUS": {
+      "confirmed": "Confirmed",
+      "checked_in": "Checked in",
+      "no_show": "No-show"
+    },
     "APP_TITLE": "Book bus tickets online | NJ Phuyaipu",
     "NOT_SPECIFIED": "Not specified",
     "THEME_TOGGLE": "Toggle dark mode",

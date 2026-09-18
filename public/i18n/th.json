@@ -482,6 +482,11 @@
       "ASSOC_PROF": "รศ.",
       "ASST_PROF": "ผศ."
     },
+    "TICKET_STATUS": {
+      "confirmed": "ยืนยันแล้ว",
+      "checked_in": "เช็คอินแล้ว",
+      "no_show": "ไม่มาขึ้นรถ"
+    },
     "APP_TITLE": "จองตั๋วออนไลน์ คิวรถ NJ ผู้ใหญ่ปู",
     "NOT_SPECIFIED": "ไม่ระบุ",
     "THEME_TOGGLE": "สลับโหมดมืด",
