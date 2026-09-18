@@ -31,6 +31,7 @@ same rule as app-settlements-list. -->
               <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.VEHICLE' | translate }}</th>
               <th>{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</th>
               <th>{{ 'ADMIN.SETTLEMENTS.DRIVER_CASH.COL.EXPECTED' | translate }}</th>
+              <th>{{ 'ADMIN.SETTLEMENTS.CONFIRM.DISCREPANCY' | translate }}</th>
               <th>{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
             </tr>
           </thead>
@@ -42,6 +43,7 @@ same rule as app-settlements-list. -->
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+                  <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                   <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
                 </tr>
@@ -88,6 +90,20 @@ same rule as app-settlements-list. -->
                     }
                   </td>
                   <td>{{ formatMoney(item.expectedReturnAmount) }}</td>
+                  <!-- OBRS-1149: the only place a day whose cash did not add up
+                  is visible without opening it one by one. Blank on an OPEN day
+                  and on a day that balanced - a "0.00" in every row would bury
+                  the few rows this column exists for. -->
+                  <td data-testid="driver-cash-day-discrepancy-cell">
+                    @if (hasDiscrepancy(item)) {
+                      <span class="admin-emphasis" [class.settlement-nt-negative]="isNegativeMoney(item.discrepancy ?? '0')">
+                        {{ formatMoney(item.discrepancy) }}
+                      </span>
+                      <span class="admin-muted" data-testid="driver-cash-day-discrepancy-side">
+                        {{ discrepancySideKey(item.discrepancy) | translate }}
+                      </span>
+                    }
+                  </td>
                   <td>
                     <button
                       type="button"
@@ -101,7 +117,7 @@ same rule as app-settlements-list. -->
               }
               @if (items.length === 0) {
                 <tr class="admin-empty-row">
-                  <td colspan="6">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                  <td colspan="7">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
                 </tr>
               }
             }
