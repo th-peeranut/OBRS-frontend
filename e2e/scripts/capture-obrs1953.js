@@ -401,6 +401,57 @@ async function captureBefore(browser, viewport, name) {
   return { name, disclosureLinks: links, optionalFieldsInFirstView: FIELDS.length };
 }
 
+/**
+ * OBRS-1955 landed on dev while this card sat in review: it reads the offending controls
+ * out of the DOM (`app-passenger-info [formControlName].ng-invalid`) and focuses the first
+ * one. A control this card's disclosure link collapses is not in the DOM at all, and
+ * collapsing deliberately KEEPS the value - so "type a bad number, then collapse the
+ * section to be rid of it" would refuse the booking over a field that is nowhere on screen
+ * and name nothing. Invalid therefore outranks the traveler's collapse until the value is
+ * fixed or emptied.
+ */
+async function captureInvalidStaysOpen(browser, viewport, name) {
+  const { context, page } = await openPage(browser, viewport, [passenger()]);
+
+  await page.locator('#phoneNumber-disclosure-0').click();
+  await sleep(400);
+  await page.fill('#phoneNumber-0', '0812');
+  await page.locator('#firstName-0').click();
+  await sleep(400);
+
+  const invalidNow = await page.locator('#phoneNumber-0.ng-invalid').count();
+  if (invalidNow !== 1) {
+    throw new Error(`${TAG} ${name}: 0812 was accepted - nothing to prove here (ng-invalid count ${invalidNow})`);
+  }
+
+  // The traveler asks for it to be collapsed; it must refuse while it is blocking.
+  await page.locator('#phoneNumber-disclosure-0').click();
+  await sleep(400);
+  if (!(await visible(page, '#phoneNumber-0'))) {
+    throw new Error(`${TAG} ${name}: the collapse hid a field that is blocking the booking`);
+  }
+  const reachable = await page.locator('app-passenger-info [formControlName].ng-invalid#phoneNumber-0').count();
+  if (reachable !== 1) {
+    throw new Error(`${TAG} ${name}: OBRS-1955's selector cannot reach the offending control (count ${reachable})`);
+  }
+  const kept = await page.inputValue('#phoneNumber-0');
+  await assertClean(page, `${TAG} ${name} invalid-stays-open`);
+  await shoot(page, { ...viewport, name: `invalid-stays-open-${name}` });
+
+  // Emptying it is the way out - then the traveler's collapse applies again.
+  await page.fill('#phoneNumber-0', '');
+  await page.locator('#firstName-0').click();
+  await sleep(500);
+  if (await visible(page, '#phoneNumber-0')) {
+    throw new Error(`${TAG} ${name}: emptying the field did not let it collapse again`);
+  }
+  await assertClean(page, `${TAG} ${name} emptied-collapses`);
+  await shoot(page, { ...viewport, name: `emptied-collapses-${name}` });
+
+  await context.close();
+  return { name, keptWhileBlocking: kept, reachableByObrs1955Selector: reachable === 1 };
+}
+
 const DESKTOP = { width: 1400, height: 1100 };
 const MOBILE = { width: 390, height: 844 };
 
@@ -417,6 +468,8 @@ const MOBILE = { width: 390, height: 844 };
     out.mobile = await captureAfter(browser, MOBILE, 'mobile-390');
     out.restoredDesktop = await captureRestored(browser, DESKTOP, 'desktop');
     out.restoredMobile = await captureRestored(browser, MOBILE, 'mobile-390');
+    out.invalidDesktop = await captureInvalidStaysOpen(browser, DESKTOP, 'desktop');
+    out.invalidMobile = await captureInvalidStaysOpen(browser, MOBILE, 'mobile-390');
   }
 
   await browser.close();
