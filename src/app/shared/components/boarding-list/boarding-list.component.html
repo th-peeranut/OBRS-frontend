@@ -290,15 +290,16 @@
           </button>
         }
         <!-- OBRS-374: plain filter (no formControlName — precedent:
-        staff-schedules-page.component.html). valueKey/labelKey both point at "value"
-        because the option's label IS the raw stop string; placeholderSelectable stays
-        default true so picking the placeholder row clears back to "all stops". -->
+        staff-schedules-page.component.html). placeholderSelectable stays default true so
+        picking the placeholder row clears back to "all stops".
+        OBRS-1967: labelKey moved to "label" (the stop's name) while valueKey stays on the
+        SLUG — what the driver reads changed, what the filter compares did not. -->
         <app-admin-dropdown
           class="boarding-stop-filter"
           data-testid="boarding-stop-filter"
           [options]="stopOptions"
           valueKey="value"
-          labelKey="value"
+          labelKey="label"
           [placeholder]="'STAFF.BOARDING.STOP_FILTER.PLACEHOLDER' | translate"
           (valueChange)="stopFilter = $event">
         </app-admin-dropdown>
@@ -358,7 +359,7 @@
                   @if (i === 0 || filteredItems[i - 1].fromStop !== item.fromStop) {
                     <tr class="boarding-stop-group-row">
                       <td colspan="9" class="boarding-stop-group-cell">
-                        <span class="boarding-stop-group-name">{{ item.fromStop }}</span>
+                        <span class="boarding-stop-group-name">{{ item.fromStopLabels | stopLabel: item.fromStop }}</span>
                         <span class="boarding-stop-group-count text-muted small">
                           {{ 'STAFF.BOARDING.STOP_GROUP.COUNT' | translate: { boarded: groupBoardedCount(filteredItems, item.fromStop), total: groupTotalCount(filteredItems, item.fromStop) } }}
                         </span>
@@ -377,8 +378,8 @@
                     </td>
                     <td>{{ item.seatNumber }}</td>
                     <td>{{ item.passengerTitle | titleLabel: item.passengerName }}</td>
-                    <td>{{ item.fromStop }}</td>
-                    <td>{{ item.toStop }}</td>
+                    <td>{{ item.fromStopLabels | stopLabel: item.fromStop }}</td>
+                    <td>{{ item.toStopLabels | stopLabel: item.toStop }}</td>
                     <td>
                       <span class="badge" [class.bg-success]="item.status.code === 'checked_in'" [class.bg-secondary]="item.status.code !== 'checked_in'">
                         {{ item.status.label }}
@@ -658,7 +659,7 @@
             @if (i === 0 || items[i - 1].fromStop !== item.fromStop) {
               <tr class="boarding-stop-group-row boarding-manifest-print-group-row">
                 <td colspan="8" class="boarding-stop-group-cell">
-                  <span class="boarding-stop-group-name">{{ item.fromStop }}</span>
+                  <span class="boarding-stop-group-name">{{ item.fromStopLabels | stopLabel: item.fromStop }}</span>
                   <span class="boarding-stop-group-count">
                     {{ 'STAFF.BOARDING.STOP_GROUP.COUNT' | translate: { boarded: groupBoardedCount(items, item.fromStop), total: groupTotalCount(items, item.fromStop) } }}
                   </span>
@@ -669,8 +670,8 @@
               <td>{{ item.ticketNumber }}</td>
               <td>{{ item.seatNumber }}</td>
               <td>{{ item.passengerTitle | titleLabel: item.passengerName }}</td>
-              <td>{{ item.fromStop }}</td>
-              <td>{{ item.toStop }}</td>
+              <td>{{ item.fromStopLabels | stopLabel: item.fromStop }}</td>
+              <td>{{ item.toStopLabels | stopLabel: item.toStop }}</td>
               <td>{{ item.status.label }}</td>
               <td>
                 @if (item.fareCategory) {

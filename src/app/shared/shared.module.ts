@@ -69,6 +69,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
 // OBRS-910: the shared button-level pending/spinner indicator.
 import { PendingButtonDirective } from './directives/pending-button.directive';
 import { TitleLabelPipe } from './pipes/title-label.pipe';
+import { StopLabelPipe } from './pipes/stop-label.pipe';
 // OBRS-374: BoardingListComponent (declared below) needs app-admin-dropdown for its
 // pickup-stop filter. AdminSharedModule is the cycle-free module built for exactly this —
 // its own imports are TitleLabelPipe/CommonModule/FormsModule/ReactiveFormsModule/
@@ -109,6 +110,7 @@ import { AdminSharedModule } from '../modules/admin/admin-shared.module';
   ],
   imports: [
     TitleLabelPipe,
+    StopLabelPipe,
     CommonModule,
     RouterModule,
     FormsModule,
