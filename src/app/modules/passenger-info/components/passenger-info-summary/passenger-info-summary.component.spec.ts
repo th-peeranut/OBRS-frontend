@@ -109,3 +109,25 @@ describe('PassengerInfoSummaryComponent', () => {
     });
   });
 });
+
+/**
+ * OBRS-1955. The promo field used to be disabled by `isNextDisabled`, so the day that input
+ * stopped meaning "the form is incomplete" the promo field would have come alive with it — which
+ * is not what the owner asked for, and which the customer-contrast gate caught (an enabled promo
+ * input exposes a 1.35:1 border, under the AA floor of 3). The two questions are separate inputs
+ * now, and the new one fails SAFE: a caller that forgets it leaves the field disabled.
+ */
+describe('PassengerInfoSummaryComponent — promo field vs Next button (OBRS-1955)', () => {
+  it('starts with the promo field disabled, not enabled', () => {
+    const component = new PassengerInfoSummaryComponent(
+      createStoreStub(),
+      createRouterStub(),
+      createStoreStub(),
+      createTranslateStub()
+    );
+
+    expect(component.isFormIncomplete)
+      .withContext('a caller that never sets it must not open the promo field')
+      .toBeTrue();
+  });
+});

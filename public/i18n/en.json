@@ -3318,6 +3318,8 @@
       "MIDDLE_NAME_OPTIONAL": "Middle name (optional)",
       "LAST_NAME": "Last name",
       "LAST_NAME_REQUIRED": "Please enter your last name",
+      "NAME_TOO_SHORT": "Please enter at least 2 characters",
+      "NAME_TOO_LONG": "Please enter no more than 50 characters",
       "PHONE_NUMBER": "Phone number",
       "PHONE_NUMBER_PLACEHOLDER": "Please enter your phone number",
       "PHONE_NUMBER_REQUIRED": "Please enter your phone number",
@@ -3375,7 +3377,8 @@
     "ALERT": {
       "CREATE_SUCCESS": "Booking saved successfully",
       "CREATE_FAILED": "Unable to create the booking. Please try again.",
-      "CAPACITY_FULL": "This trip is fully booked. Please reduce the passenger count or choose another schedule."
+      "CAPACITY_FULL": "This trip is fully booked. Please reduce the passenger count or choose another schedule.",
+      "FIX_THESE_FIELDS": "Please correct the following before continuing:"
     }
   },
   "PAYMENT": {
