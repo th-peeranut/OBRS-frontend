@@ -100,6 +100,13 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
   submitting = false;
   /** Formatted net amount, shown in the payment step's note. */
   paymentAmountLabel = '';
+  /**
+   * OBRS-1997: the same net amount as `paymentAmountLabel`, unformatted, bound into the
+   * payment step's `[amountOverride]` so the summary it renders prices THIS change-stop's
+   * top-up instead of falling back to whatever booking/schedule the NgRx store happens to
+   * still hold from a previous flow.
+   */
+  paymentAmount: number | null = null;
 
   private booking: MyBookingDto | null = null;
   private stopsLookup: Record<string, number> = {};
@@ -188,6 +195,7 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
       this.paymentAmountLabel = estimate
         ? formatMoney(Math.abs(toAmountNumber(estimate.netAmount)), this.translate.currentLang)
         : '';
+      this.paymentAmount = estimate ? Math.abs(toAmountNumber(estimate.netAmount)) : null;
     });
 
     this.store
