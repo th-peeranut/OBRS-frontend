@@ -138,7 +138,13 @@
                     id="account-profile-middle-name"
                     formControlName="middleName"
                     autocomplete="additional-name"
+                    [class.form-error]="getForm('middleName')?.touched && getForm('middleName')?.errors"
                     />
+                    @if (getForm('middleName')?.touched && getForm('middleName')?.errors) {
+                      <div class="text-error">
+                        {{ "ACCOUNT.PROFILE_FIELD_LENGTH" | translate }}
+                      </div>
+                    }
                   </div>
                   <div class="mt-2">
                     <label for="account-profile-last-name">{{ "ACCOUNT.PROFILE_LAST_NAME_LABEL" | translate }}</label>

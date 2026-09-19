@@ -375,4 +375,45 @@ describe('AccountPageComponent', () => {
       expect(control?.value).toBe('0812345678');
     });
   });
+
+  // OBRS-1957: `onSubmit` sends `.trim()`ed names, so a rule measured on the RAW value is not the
+  // rule the server sees — " ก " passed minLength(2) here and came back a 400. middleName had no
+  // minimum at all while `UserProfileUpdateReqDto.middleName` is `@Size(min = 2, max = 50)`.
+  describe('profile name length is measured after trimming (OBRS-1957)', () => {
+    it('rejects " ก " although it is 3 raw characters', () => {
+      const { component } = create('user@example.com');
+      const control = component.profileForm.get('firstName');
+      control?.setValue(' ก ');
+      expect(control?.hasError('minlength')).toBeTrue();
+    });
+
+    it('rejects a 1-character middle name, which the DTO refuses', () => {
+      const { component } = create('user@example.com');
+      const control = component.profileForm.get('middleName');
+      control?.setValue('ก');
+      expect(control?.hasError('minlength')).toBeTrue();
+    });
+
+    it('leaves an empty middle name valid — it is optional', () => {
+      const { component } = create('user@example.com');
+      const control = component.profileForm.get('middleName');
+      control?.setValue('');
+      expect(control?.valid).toBeTrue();
+    });
+
+    it('rejects a 51-character surname', () => {
+      const { component } = create('user@example.com');
+      const control = component.profileForm.get('lastName');
+      control?.setValue('ก'.repeat(51));
+      expect(control?.hasError('maxlength')).toBeTrue();
+    });
+
+    it('still reports a whitespace-only name as required', () => {
+      const { component } = create('user@example.com');
+      const control = component.profileForm.get('firstName');
+      control?.setValue('   ');
+      expect(control?.hasError('required')).toBeTrue();
+      expect(control?.hasError('minlength')).toBeFalse();
+    });
+  });
 });

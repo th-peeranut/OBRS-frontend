@@ -21,6 +21,8 @@ import {
   stripPhoneSeparators,
   THAI_MOBILE_PATTERN,
 } from '../../shared/constants/thai-msisdn';
+import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
+import { trimmedLengthValidator } from '../../shared/validators/trimmed-length.validator';
 
 @Component({
     selector: 'app-register',
@@ -64,9 +66,13 @@ export class RegisterComponent implements OnDestroy {
   createForm() {
     this.registerForm = this.fb.group({
       title: [null],
-      firstName: ['', Validators.required],
-      middleName: [''],
-      lastName: ['', Validators.required],
+      // OBRS-1957: `SignUpReqDto` is `@Size(min = 2, max = 50)` on both names, so a 1-character
+      // first name reached the server as a 400 with nothing on screen pointing at the field.
+      // middleName is the one exception in that DTO — `@Size(max = 50)` with no minimum — so it
+      // keeps a max-only rule instead of the 2..50 the other forms use.
+      firstName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
+      middleName: ['', [trimmedLengthValidator(0, 50)]],
+      lastName: ['', [trimmedRequiredValidator, trimmedLengthValidator(2, 50)]],
       email: ['', [Validators.required, Validators.email]],
       // OBRS-409: this field had no pattern at all, while the backend only stores a Thai mobile
       // (OBRS-136/ADR-0079). Submitting produced a 400 — a dead end with no account created and
@@ -178,6 +184,13 @@ export class RegisterComponent implements OnDestroy {
       const registerPayload = {
         ...formValue,
         title: titleCode,
+        // OBRS-1957: the names are validated on their TRIMMED length, so they have to be SENT
+        // trimmed — otherwise " <50 chars> " passes 2..50 here and arrives 52 characters long,
+        // which `@Size(max = 50)` counts raw and refuses. The backend does no trimming of its
+        // own before validating; that is the client's job (UserProfile.java says so).
+        firstName: String(formValue.firstName ?? '').trim(),
+        middleName: String(formValue.middleName ?? '').trim(),
+        lastName: String(formValue.lastName ?? '').trim(),
         // OBRS-691: the control may carry display dashes (regrouped on blur) —
         // the backend stores/validates bare digits only.
         phoneNumber: stripPhoneSeparators(formValue.phoneNumber),

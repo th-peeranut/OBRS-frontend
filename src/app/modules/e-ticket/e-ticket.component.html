@@ -83,6 +83,30 @@
           </span>
         </aside>
       }
+
+      <!-- OBRS-1434 AC-2. BKS regulation 2547 clause 83 requires the conditions of
+      carriage to be printed on the back of the ticket or posted at the station; this
+      page carried NONE of them (measured on origin/dev: no policy/terms/refund/cancel
+      string anywhere in this template) while the paper ticket carries the flat "no
+      refunds" line that clause 79 forbids. One summary line plus the link to the
+      policy page that already exists, rather than the whole policy: the page is the
+      ticket, not the terms.
+
+      NOT gated on `!ticketIncomplete` like the note above it: that one interpolates a
+      booking number it may not have, this one states a condition that applies to the
+      booking either way.
+
+      Shares `.ticket-retrieval-note`'s box — same surface, same two themes, contrast
+      already measured there — but it is NOT in the print rule that hides that note:
+      a hyperlink prints as inert text, and the sentence beside it is the half clause
+      83 is about. -->
+      <aside class="ticket-conditions-note" data-testid="eticket-conditions">
+        <span class="material-symbols-outlined" [attr.translate]="'no'" aria-hidden="true">gavel</span>
+        <span class="ticket-retrieval-text">
+          {{ "E_TICKET.CONDITIONS_NOTE" | translate }}
+          <a routerLink="/refund-policy">{{ "E_TICKET.CONDITIONS_LINK" | translate }}</a>
+        </span>
+      </aside>
     </div>
   </div>
 </section>
