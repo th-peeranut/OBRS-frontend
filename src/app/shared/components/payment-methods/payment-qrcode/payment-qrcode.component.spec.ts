@@ -1124,6 +1124,134 @@ describe('PaymentQrcodeComponent - payment lock during maintenance (OBRS-1902)',
 });
 
 /**
+ * OBRS-1985 — the repro. `paymentIdempotencyKey` used to be instance state only, so every
+ * re-mount of the QR tab (tab switch, refresh, returning from the banking app after the tab
+ * was evicted) generated a FRESH key. A fresh key misses the backend's cached
+ * `responseSnapshot`, falls through to `validateBookingForPayment`, and throws
+ * `PAYMENT_IN_PROGRESS` over a QR the customer can no longer get back. These specs pin the
+ * fix: the key now survives a destroy + re-mount via `booking-context-storage.ts`, bound to
+ * the booking it was generated for.
+ */
+describe('PaymentQrcodeComponent - QR idempotency key survives a re-mount (OBRS-1985)', () => {
+  const CHARGE: PaymentResponse = {
+    id: 1,
+    bookingId: 10,
+    status: 'pending',
+    paymentMethod: 'qr_promptpay',
+    amount: '380',
+    currency: 'THB',
+    authorizeUri: 'https://pay.example/authorize',
+    transactionId: 'chrg_test_obrs1985',
+  };
+
+  afterEach(() => localStorage.clear());
+
+  function build(bookingId: number | null) {
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+      'getActiveBookingNumber',
+    ]);
+    bookingService.getActiveBookingId.and.returnValue(bookingId);
+    bookingService.getActiveBookingNumber.and.returnValue(null);
+    const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    paymentService.createPayment.and.returnValue(
+      of({ code: 200, message: 'OK', data: CHARGE }) as unknown as ReturnType<
+        PaymentService['createPayment']
+      >
+    );
+    const alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+    const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    translate.instant.and.callFake((key: string) => key);
+
+    const component = new PaymentQrcodeComponent(
+      router,
+      bookingService,
+      paymentService,
+      alertService,
+      translate,
+      { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService
+    );
+    return { component, paymentService, alertService };
+  }
+
+  const requestQr = (component: PaymentQrcodeComponent): Promise<void> =>
+    (
+      component as unknown as {
+        ensurePromptPayQrCode: (show?: boolean) => Promise<void>;
+      }
+    ).ensurePromptPayQrCode();
+
+  it('sends the SAME Idempotency-Key on a second mount for the same booking — the repro', async () => {
+    const first = build(10);
+    await requestQr(first.component);
+    const firstKey = first.paymentService.createPayment.calls.argsFor(0)[1];
+    first.component.ngOnDestroy();
+
+    const second = build(10);
+    await requestQr(second.component);
+    const secondKey = second.paymentService.createPayment.calls.argsFor(0)[1];
+    second.component.ngOnDestroy();
+
+    expect(firstKey).toBeTruthy();
+    expect(secondKey).toBe(firstKey);
+  });
+
+  it('gives a DIFFERENT booking its own key, never the previous booking\'s', async () => {
+    const first = build(10);
+    await requestQr(first.component);
+    const firstKey = first.paymentService.createPayment.calls.argsFor(0)[1];
+    first.component.ngOnDestroy();
+
+    const second = build(11);
+    await requestQr(second.component);
+    const secondKey = second.paymentService.createPayment.calls.argsFor(0)[1];
+    second.component.ngOnDestroy();
+
+    expect(secondKey).not.toBe(firstKey);
+  });
+
+  it('clears a RESTORED key that still fails, instead of replaying a dead key forever (AC5)', async () => {
+    const first = build(10);
+    await requestQr(first.component);
+    const firstKey = first.paymentService.createPayment.calls.argsFor(0)[1];
+    first.component.ngOnDestroy();
+
+    const second = build(10);
+    second.paymentService.createPayment.and.returnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: { errorCode: 'GATEWAY_ERROR', message: 'the charge is dead at the gateway' },
+          })
+      ) as unknown as ReturnType<PaymentService['createPayment']>
+    );
+    await requestQr(second.component);
+    // The retry was made with the restored (dead) key, not a fresh one — otherwise this would
+    // not be evidence the STORED key is dead.
+    expect(second.paymentService.createPayment.calls.argsFor(0)[1]).toBe(firstKey);
+    second.component.ngOnDestroy();
+
+    const third = build(10);
+    await requestQr(third.component);
+    const thirdKey = third.paymentService.createPayment.calls.argsFor(0)[1];
+    third.component.ngOnDestroy();
+
+    expect(thirdKey).not.toBe(firstKey);
+  });
+});
+
+/**
  * OBRS-1984 - the countdown is the booking's own hold deadline, not a constant.
  *
  * On PROD 2026-09-19 it restarted at 15:00 every time the customer switched payment tab

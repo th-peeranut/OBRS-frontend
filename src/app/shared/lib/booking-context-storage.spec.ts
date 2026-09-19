@@ -1,8 +1,12 @@
 import {
+  ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY,
   BOOKING_CONTEXT_KEY,
   BOOKING_CONTEXT_TTL_MS,
+  clearActiveBookingStorage,
+  clearActiveBookingPaymentIdempotencyKey,
   clearBookingContext,
   isBookingSelectionRestored,
+  readActiveBookingPaymentIdempotencyKey,
   readBookingContext,
   rememberBookingFilter,
   rememberBookingSearchPayload,
@@ -10,6 +14,7 @@ import {
   resetBookingContextRestoreFlag,
   restoreBookingFilter,
   restoreBookingSelection,
+  writeActiveBookingPaymentIdempotencyKey,
 } from './booking-context-storage';
 import {
   Schedule,
@@ -188,5 +193,49 @@ describe('booking-context-storage (OBRS-903)', () => {
     ]) {
       expect(keys.has(forbidden)).withContext(forbidden).toBeFalse();
     }
+  });
+});
+
+describe('active-booking PromptPay idempotency key (OBRS-1985)', () => {
+  afterEach(() => localStorage.clear());
+
+  it('round-trips a key for the booking it was written for', () => {
+    writeActiveBookingPaymentIdempotencyKey(10, 'idem-key-1');
+
+    expect(readActiveBookingPaymentIdempotencyKey(10)).toBe('idem-key-1');
+  });
+
+  it('returns null for a DIFFERENT booking id — a key must never cross bookings', () => {
+    writeActiveBookingPaymentIdempotencyKey(10, 'idem-key-1');
+
+    expect(readActiveBookingPaymentIdempotencyKey(11)).toBeNull();
+  });
+
+  it('returns null when nothing was ever written', () => {
+    expect(readActiveBookingPaymentIdempotencyKey(10)).toBeNull();
+  });
+
+  it('clearActiveBookingPaymentIdempotencyKey removes the stored key', () => {
+    writeActiveBookingPaymentIdempotencyKey(10, 'idem-key-1');
+
+    clearActiveBookingPaymentIdempotencyKey();
+
+    expect(readActiveBookingPaymentIdempotencyKey(10)).toBeNull();
+  });
+
+  it('clearActiveBookingStorage also removes the stored key (AC2, same as the payment grant)', () => {
+    writeActiveBookingPaymentIdempotencyKey(10, 'idem-key-1');
+
+    clearActiveBookingStorage();
+
+    expect(readActiveBookingPaymentIdempotencyKey(10)).toBeNull();
+    expect(localStorage.getItem(ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY)).toBeNull();
+  });
+
+  it('degrades to null when storage throws', () => {
+    writeActiveBookingPaymentIdempotencyKey(10, 'idem-key-1');
+    spyOn(localStorage, 'getItem').and.throwError('blocked');
+
+    expect(readActiveBookingPaymentIdempotencyKey(10)).toBeNull();
   });
 });

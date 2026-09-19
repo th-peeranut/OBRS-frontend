@@ -34,7 +34,7 @@ import { clearTtl, readWithTtl, writeWithTtl } from './ttl-storage';
 export const BOOKING_CONTEXT_KEY = 'obrs.booking_context';
 
 /**
- * The three keys `BookingService` uses for the booking currently being paid for. Declared here,
+ * The keys `BookingService` uses for the booking currently being paid for. Declared here,
  * beside the booking context, so that the session-ending paths can clear them without depending on
  * `BookingService` (security review 2026-09, FE-4): on a shared or kiosk browser the guest
  * payment grant (`active_booking_payment_grant`) is a capability to pay for - and fetch the
@@ -45,6 +45,12 @@ export const BOOKING_CONTEXT_KEY = 'obrs.booking_context';
  * callers), `NavbarComponent.onLogout()` (the CUSTOMER's sign-out button,
  * which calls `clearAuthData()` directly and never reaches `logout()`), and the interceptor's
  * forced logout on a real 401. Add a fourth session-ending path and it has to call this too.
+ *
+ * A fourth key joined the family for the same reason (OBRS-1985):
+ * `ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY` is a capability too, the same way the payment
+ * grant is — it is what lets a client replay `POST /api/payments` and get the previous
+ * person's cached QR back — so it must not survive to the next person on a shared browser
+ * either.
  */
 export const ACTIVE_BOOKING_ID_KEY = 'active_booking_id';
 export const ACTIVE_BOOKING_NUMBER_KEY = 'active_booking_number';
@@ -57,17 +63,82 @@ export const ACTIVE_BOOKING_PAYMENT_GRANT_KEY = 'active_booking_payment_grant';
  */
 export const ACTIVE_BOOKING_EXPIRES_AT_KEY = 'active_booking_expires_at';
 
-/** Forgets the booking-in-payment and its guest payment grant (FE-4). */
+/** Forgets the booking-in-payment, its guest payment grant, and its PromptPay idempotency key (FE-4, OBRS-1985). */
 export function clearActiveBookingStorage(): void {
   try {
     localStorage.removeItem(ACTIVE_BOOKING_ID_KEY);
     localStorage.removeItem(ACTIVE_BOOKING_NUMBER_KEY);
     localStorage.removeItem(ACTIVE_BOOKING_PAYMENT_GRANT_KEY);
+    localStorage.removeItem(ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY);
     localStorage.removeItem(ACTIVE_BOOKING_EXPIRES_AT_KEY);
   } catch {
     // storage unavailable (private mode / blocked): nothing to clear
   }
 }
+
+/**
+ * OBRS-1985: `payment-qrcode.component.ts` used to hold the PromptPay
+ * idempotency key it sends to `POST /api/payments` as instance state only, so
+ * every re-mount of the QR tab (tab switch, refresh, returning from the
+ * banking app after the tab was evicted) generated a FRESH key. A fresh key
+ * misses the backend's cached `responseSnapshot`
+ * (`PaymentService.resolveIdempotentRequest`) and falls through to
+ * `validateBookingForPayment`, which finds the still-`PENDING` row and throws
+ * `PAYMENT_IN_PROGRESS` over a QR the customer can no longer get back.
+ * Persisting it here, bound to the booking it was generated for, lets the next
+ * mount replay the SAME request and get the SAME cached QR back.
+ *
+ * Kept through `ttl-storage`, not a plain `localStorage` string like the three
+ * keys above, because — unlike them — this one has to expire on its own: the
+ * backend's own idempotency record lives 24h (`expiresAt = now.plusHours(24)`),
+ * so a key offered past that point buys nothing but a guaranteed miss. It is
+ * only ever written once, immediately after the key is generated, so the
+ * sliding refresh `ttl-storage` gives every OTHER entry never actually slides
+ * this one — in practice this is a fixed 24h window from creation, matching
+ * the backend's.
+ */
+export const ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY =
+  'active_booking_payment_idempotency_key';
+const ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY_TTL_MS = 24 * 60 * 60 * 1000;
+const ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY_VERSION = 1;
+
+interface StoredPaymentIdempotencyKey {
+  bookingId: number;
+  key: string;
+}
+
+/** Returns the stored key ONLY when it was generated for this same booking — a key
+ *  belonging to a different booking must never be sent, or the backend's request-params
+ *  hash check answers with `IDEMPOTENCY_MISMATCH` instead of the cached QR. */
+export function readActiveBookingPaymentIdempotencyKey(
+  bookingId: number
+): string | null {
+  const stored = readWithTtl<StoredPaymentIdempotencyKey>(
+    ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY,
+    ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY_TTL_MS,
+    ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY_VERSION
+  );
+  return stored && stored.bookingId === bookingId ? stored.key : null;
+}
+
+export function writeActiveBookingPaymentIdempotencyKey(
+  bookingId: number,
+  key: string
+): void {
+  writeWithTtl<StoredPaymentIdempotencyKey>(
+    ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY,
+    { bookingId, key },
+    ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY_VERSION
+  );
+}
+
+/** Called when a create-payment retry made with a RESTORED key still fails — that proves
+ *  the key is dead (backend record aged out, or the charge already dead at the gateway),
+ *  so it must not keep being replayed on every future mount. */
+export function clearActiveBookingPaymentIdempotencyKey(): void {
+  clearTtl(ACTIVE_BOOKING_PAYMENT_IDEMPOTENCY_KEY);
+}
+
 const BOOKING_CONTEXT_VERSION = 1;
 
 /**
