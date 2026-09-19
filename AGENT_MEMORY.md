@@ -4945,3 +4945,25 @@ either, because `'ready'` also hides the `TOTAL_UNAVAILABLE` hint. Fixed with an
 Lesson: when you add a condition to an existing early-return guard, ask whether your
 condition can BECOME false while the component stays mounted. If it can, the guard needs
 a re-arm; copying a guard whose condition is effectively static does not carry one.
+
+
+## OBRS-1984 (scrutinize self-fix) — the re-arm you add needs its OWN test, not the sibling's
+
+OBRS-1984 gave `payment-creditcard` an `ngOnChanges` re-arm so the panel picks up a hold
+deadline that only arrives with the refetched total (cold NgRx store after a refresh). It
+was the right hook — and it had zero coverage: all four new OBRS-1984 creditcard specs mount
+the panel with the deadline ALREADY in storage, so deleting the `startCountdown()` call out
+of `ngOnChanges` left the whole suite green (measured: `TOTAL: 22 SUCCESS` with the line
+removed). Added `picks up a deadline that only arrives with the refetched total`; with the
+line removed it now fails alone (`TOTAL: 1 FAILED, 22 SUCCESS`).
+
+Why it is easy to miss: the QR panel's identical re-arm is *masked* — `handlePromptPayResponse`
+calls `startCountdown()` again when the QR image lands, so deleting its re-arm self-heals and
+the gap there is cosmetic. The creditcard panel has no second caller, so the same one-line
+deletion is a permanent missing countdown. **Two panels sharing a fix do not share a blast
+radius — enumerate the callers of the thing your re-arm re-runs before deciding one test for
+the pair is enough.**
+
+Lesson: a spec that seeds the state under test into storage BEFORE mounting can never
+exercise the code path that exists for the state arriving LATE. When a change adds a
+late-arrival hook, the test must start from the absent state and transition.

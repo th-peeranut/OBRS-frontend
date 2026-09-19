@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -738,6 +738,31 @@ describe('PaymentCreditcardComponent - the countdown runs to the booking hold de
     ).toBeNull();
     expect(fixture.componentInstance.countdown).toBe('');
     expect(fixture.componentInstance.isHoldExpired).toBeFalse();
+    expect(payButton().disabled).toBeFalse();
+  });
+
+  /**
+   * OBRS-1984 (AC-3), added at scrutinize. On a REFRESH the NgRx store is empty, so
+   * /payment refetches the booking and stores the deadline one HTTP round trip AFTER this
+   * panel was already built with nothing to count to. `ngOnChanges` on
+   * `totalState -> 'ready'` is the panel's ONLY way back from that - unlike the QR panel,
+   * nothing else here re-runs `startCountdown`. Deleting that hook left every other
+   * OBRS-1984 spec green, which is why this one exists.
+   */
+  it('picks up a deadline that only arrives with the refetched total', async () => {
+    await mount(null);
+    expect(countdownText()).toBeNull();
+
+    const bookingService = TestBed.inject(BookingService) as jasmine.SpyObj<BookingService>;
+    bookingService.getActiveBookingExpiresAt.and.returnValue(inMinutes(9));
+
+    fixture.componentInstance.totalState = 'ready';
+    fixture.componentInstance.ngOnChanges({
+      totalState: new SimpleChange('loading', 'ready', false),
+    });
+    fixture.detectChanges();
+
+    expect(countdownText()).toBe('09 : 00');
     expect(payButton().disabled).toBeFalse();
   });
 });
