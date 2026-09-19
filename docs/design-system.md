@@ -945,22 +945,27 @@ enforced rule with a test behind it.
   fetch succeeded; a note that describes the *data* (like the basis captions above)
   should stay gated with its section.
 
-- **OPEN-seating passenger-count card in place of a leg's seat map** (OBRS-323,
+- **OPEN-seating leg: a one-line note in place of a seat map** (OBRS-323,
   `PassengerInfoFormComponent`): a schedule with `seatingMode: 'OPEN'` has no fixed
-  seat to pick, so that leg's seat map/active-passenger-chip-row/leg-label are hidden
-  and replaced with an inline count card — the headcount as **read-only text**, and
-  "เหลือ X ที่นั่ง" (reusing the existing `SCHEDULE_BOOKING.SEAT_REMAIN`/`SEAT_UNIT`
-  keys, not a duplicate) only while the leg is near full. ⛔ **The card reports the
-  count, it does not edit it** (OBRS-1988): it carried a +/- stepper until that proved
-  to be a second edit point for a number ASSIGNED legs could not edit at all, and one
-  that never wrote back to `scheduleFilter` — so the search page and this page could
-  disagree. The headcount is chosen once, on the home-page search filter, and the card
-  renders whatever `passengerData` was seeded with. It has no border of its own: in the
-  all-legs-OPEN case it is alone inside `.card-container`, and a second frame there
-  reads as an empty box-in-a-box. Each leg branches independently
+  seat to pick, so that leg's seat map and active-passenger chip row are hidden and
+  replaced by one muted line under the leg label. ⛔ **Do not restate the headcount
+  on a step downstream of the search page** (OBRS-1988): this started as a count card
+  with a +/- stepper, which was a second edit point for a number ASSIGNED legs could
+  not edit at all and that never wrote back to `scheduleFilter`; making it read-only
+  fixed the divergence but left the number printed three times on one screen — the
+  passenger forms are already titled "ข้อมูลผู้โดยสารคนที่ N" and the summary sidebar
+  reports "ผู้ใหญ่ N / เด็ก N" from the same store. The count is chosen once, on the
+  home-page search filter, and reported once, on the summary card.
+  The note reuses the search page's own `SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY`
+  rather than a second string of its own, so the two wordings cannot drift — the same
+  reason the leg's near-full line reused `SCHEDULE_BOOKING.SEAT_REMAIN`. (That
+  near-full line is gone from this page: with the count fixed here, a scarcity nudge
+  had nothing to act on. The search results list still carries it, where the trip is
+  chosen.) An OPEN leg keeps its leg label, unlike before OBRS-1988 — an unlabelled
+  note cannot say which leg it is about. Each leg branches independently
   (`isOpenSeatingOutbound$`/`isOpenSeatingReturn$`), so a round trip can mix an OPEN
-  outbound with an ASSIGNED return; the shared "Seat selection" card title/hint is
-  dropped only when every leg on the booking is OPEN. See
+  outbound with an ASSIGNED return; when **every** leg is OPEN there is no map left to
+  explain, so the whole seat-selection block is dropped — title, hint and note. See
   `docs/adr/0019-open-seating-passenger-count-card-per-leg-branch.md`.
 
 - **Inline `admin-modal-backdrop` dialog inside a `shared/` component** (OBRS-272,

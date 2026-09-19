@@ -546,34 +546,6 @@
                                   </div>
                                 }
                               </div>
-                              <!-- OPEN-seating (OBRS-323/318-c) passenger-count card, reused wherever a
-                              leg's seat map is hidden because that leg sells with no fixed seat
-                              (also as the single shared card when every leg is OPEN). Read-only
-                              since OBRS-1988: the headcount is chosen once on the search page, so
-                              this card only reports what `passengerData` (seeded from
-                              `scheduleFilter`) already holds — ASSIGNED legs work the same way. -->
-                              <ng-template #openSeatCountCard let-available="available">
-                                <div class="open-seat-card">
-                                  <div class="text-muted open-seat-card-hint">
-                                    {{ "PASSENGER_INFO.FORM.OPEN_SEAT_SECTION_HINT" | translate }}
-                                  </div>
-                                  <div class="dropdown-passenger mt-2">
-                                    <div class="text-section">
-                                      <div class="open-seat-card-label">
-                                        {{ "PASSENGER_INFO.FORM.OPEN_SEAT_COUNT_LABEL" | translate }}
-                                      </div>
-                                      @if (isLowSeat(available)) {
-                                        <div class="option-hint-text mt-1">
-                                          {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ available }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
-                                        </div>
-                                      }
-                                    </div>
-                                    <span class="open-seat-card-count">
-                                      {{ passengerData.length }} {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
-                                    </span>
-                                  </div>
-                                </div>
-                              </ng-template>
                                   <!-- Seat selection — ONE shared seat map per leg (OBRS-242), not one per
                                   passenger. An active-passenger selector above each leg's map decides
                                   who a seat click assigns to; the map itself shows every passenger's
@@ -594,9 +566,10 @@
                                           <div class="col-12 text-muted">
                                             {{ "PASSENGER_INFO.FORM.SEAT_SECTION_HINT" | translate }}
                                           </div>
-                                          <!-- Outbound leg label (only labelled when there's a return leg too,
-                                          and only when outbound still has a map to label) -->
-                                          @if ((isReturnTrip$ | async) && !(isOpenSeatingOutbound$ | async)) {
+                                          <!-- Outbound leg label (round trips only). An OPEN leg is labelled
+                                          too (OBRS-1988) — it carries the open-seating note below, and an
+                                          unlabelled note could not say which leg it is about. -->
+                                          @if (isReturnTrip$ | async) {
                                             <div
                                               class="col-12 mt-2"
                                               >
@@ -713,26 +686,24 @@
                                                   </div>
                                             }
                                           } @else {
-                                            <div class="col-12 mt-3">
-                                              <ng-container
-                *ngTemplateOutlet="
-                  openSeatCountCard;
-                  context: {
-                    available: openSeatAvailableOutbound$ | async
-                  }
-                "
-                                            ></ng-container>
-                                          </div>
+                                            <div class="col-12 mt-2">
+                                              <!-- OBRS-1988: an OPEN leg has nothing to pick, so it says so in one
+                                              line instead of restating the headcount — the summary sidebar already
+                                              reports that, and the search page is where it is chosen. The wording is
+                                              the search page's own open-seating key, not a second copy of it, so the
+                                              two can never drift apart. -->
+                                              <div class="text-muted open-seat-leg-hint">
+                                                {{ "SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY" | translate }}
+                                              </div>
+                                            </div>
                                         }
                                         <!-- Return leg — round trips only; arrival vehicle/availability is independent -->
                                         @if (isReturnTrip$ | async) {
-                                          @if (!(isOpenSeatingReturn$ | async)) {
                                             <div class="col-12 mt-4">
                                               <div class="seat-leg-label">
                                                 {{ "PASSENGER_INFO.FORM.SEAT_LEG_RETURN" | translate }}
                                               </div>
                                             </div>
-                                          }
                                           @if (!(isOpenSeatingReturn$ | async)) {
                                             <!-- Active-passenger selector (return) -->
                                             <div class="col-12 mt-3">
@@ -839,45 +810,17 @@
                                                   </div>
                                             }
                                           } @else {
-                                            <div class="col-12 mt-4">
-                                              <ng-container
-                  *ngTemplateOutlet="
-                    openSeatCountCard;
-                    context: {
-                      available: openSeatAvailableReturn$ | async
-                    }
-                  "
-                                            ></ng-container>
-                                          </div>
+                                            <div class="col-12 mt-2">
+                                              <!-- Same one-line open-seating note as the outbound leg above. -->
+                                              <div class="text-muted open-seat-leg-hint">
+                                                {{ "SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY" | translate }}
+                                              </div>
+                                            </div>
                                         }
                                       }
                                     </div>
                                   </div>
                                 </div>
                               }
-                              <!-- Every leg on this booking is OPEN (both legs on a round trip, or the
-                              single leg on a one-way) — no seat map anywhere, so the "Seat
-                              selection" title/hint is dropped entirely; just the shared
-                              passenger-count card, in the same canonical card shell. -->
-                              @if (passengerData.controls.length && (allLegsOpenSeating$ | async)) {
-                                <div
-                                  class="card-container mt-3"
-                                  >
-                                  <div class="card-body">
-                                    <div class="row">
-                                      <div class="col-12">
-                                        <ng-container
-              *ngTemplateOutlet="
-                openSeatCountCard;
-                context: {
-                  available: openSeatAvailableShared$ | async
-                }
-              "
-                                      ></ng-container>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            }
                           </form>
                         }

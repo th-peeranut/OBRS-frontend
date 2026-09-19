@@ -1,31 +1,36 @@
 /**
  * OBRS-1988 — BEFORE/AFTER evidence for the OPEN-seating passenger-count card on
- * /passenger-info. The headcount is chosen once, on the search page; this card
- * only reports it, so the +/- stepper (a second edit point that never wrote back
- * to `scheduleFilter`) is gone and the card no longer draws its own frame.
+ * /passenger-info. The headcount is chosen once on the search page and the
+ * summary sidebar already reports it, so the card is gone: an OPEN leg now says
+ * what it is in one line (the search page's own open-seating wording), and when
+ * every leg is OPEN the seat-selection block goes with it.
  *
- * Two scenarios, because the card renders from three different outlets:
- *   alllegs — one-way OPEN: every leg is open, so the whole seat-selection block
- *             is replaced by this one shared card inside `.card-container`.
- *             availableSeats = 3 (<= LOW_SEAT_THRESHOLD 5) so the gated
- *             "เหลือ 3 ที่นั่ง" line is IN frame and proven still there.
- *   mixed   — round trip, OPEN outbound + ASSIGNED return: the per-leg outlet,
- *             sitting beside the return leg's real seat map. availableSeats = 9
- *             (> 5) so the same line is proven still HIDDEN (no inventory
- *             reveal) — the two scenarios photograph both sides of that gate.
+ * Three scenarios, because the card rendered from three different outlets:
+ *   alllegs    — one-way OPEN: no leg has a map, so AFTER there is no
+ *                seat-selection block at all. availableSeats = 3, i.e. BEFORE
+ *                this also carries the "เหลือ 3 ที่นั่ง" line, and AFTER proves
+ *                it went with the card (the count cannot be changed here, so the
+ *                scarcity nudge had nothing to act on; the search list keeps it).
+ *   mixed      — round trip, OPEN outbound + ASSIGNED return: the OPEN leg is
+ *                labelled and explained in one line beside the return leg's real
+ *                seat map. availableSeats = 9.
+ *   openreturn — ASSIGNED outbound + OPEN return: the mirror outlet, so all
+ *                three are photographed rather than assumed symmetrical.
  *
  * NO BACKEND, same recipe as capture-obrs1943.js: every `/api/**` call is served
  * from `page.route` fixtures, and the booking is seeded through
  * `obrs.booking_context` (the OBRS-903 TTL envelope the booking stores rehydrate
  * from). The passenger rows come from `filter.passengerInfo` — 2 adults here, so
- * the frame shows the card reporting a number it did not ask for.
+ * the frame shows a page that never asks for the number a second time.
  *
  * ⛔ Serve with `--configuration gate`, never `sit`: the SIT flags redirect
  * /passenger-info to the homepage.
  *
- * Every claim in the images is ASSERTED here (including the removed border, read
- * off getComputedStyle rather than judged by eye) and the script throws rather
- * than save a screenshot that disagrees with its own scenario.
+ * Every claim in the images is ASSERTED here — including the ABSENT ones (no
+ * card, no stepper, no restated headcount, no remaining-seat line), which a
+ * picture can only fail to show — and the script throws rather than save a
+ * screenshot that disagrees with its own scenario. The whole-page frame exists
+ * to prove the premise: the headcount is still on screen, on the summary card.
  *
  * Usage:
  *   npx ng serve --configuration gate --port <port>
@@ -47,8 +52,6 @@ const ok = (data) => ({ code: 200, message: 'OK', data });
 const json = (route, body, status = 200) =>
   route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
-const SECTION_HINT = 'ที่นั่งแบบไม่ระบุที่นั่ง';
-const SEAT_REMAIN = 'เหลือ';
 const PASSENGER_COUNT = 2;
 
 // --- fixtures ---------------------------------------------------------------
@@ -184,20 +187,24 @@ async function seed(page, scenario) {
   }, bookingContext(scenario));
 }
 
-/** Reads the card back out of the DOM — including the border, which is the
- *  whole point of AC-6 and cannot be judged from a picture. */
+/** Reads the page back out of the DOM. Everything the images claim is asserted
+ *  here — including what is ABSENT, which a picture can only fail to show. */
 async function measure(page) {
   return page.evaluate(() => {
-    const card = document.querySelector('app-passenger-info-form .open-seat-card');
     const text = (el) => (el?.textContent || '').replace(/\s+/g, ' ').trim();
+    const form = document.querySelector('app-passenger-info-form');
     return {
       url: location.pathname,
+      // The card shell itself — 1 BEFORE, 0 AFTER.
       cards: document.querySelectorAll('app-passenger-info-form .open-seat-card').length,
-      cardText: text(card),
-      countText: text(card?.querySelector('.open-seat-card-count')),
+      // What replaced it on a leg that still shares the page with a seat map.
+      hints: document.querySelectorAll('app-passenger-info-form .open-seat-leg-hint').length,
+      hintText: text(form?.querySelector('.open-seat-leg-hint')),
+      legLabels: Array.from(document.querySelectorAll('app-passenger-info-form .seat-leg-label')).map(text),
+      formText: text(form),
+      sidebarText: text(document.querySelector('app-passenger-info-summary')),
       plus: document.querySelectorAll('app-passenger-info-form .passenger-add').length,
       minus: document.querySelectorAll('app-passenger-info-form .passenger-minus').length,
-      borderTopWidth: card ? getComputedStyle(card).borderTopWidth : null,
       seatMaps: document.querySelectorAll('app-passenger-seat-van, app-passenger-seat-bus').length,
       passengerRows: document.querySelectorAll('app-passenger-info-form [id^="firstName-"]').length,
       swals: document.querySelectorAll('.swal2-popup').length,
@@ -206,18 +213,21 @@ async function measure(page) {
   });
 }
 
-/** Grows the viewport to the card's LIVE bottom — an element screenshot taller
+/** Grows the viewport to the form's LIVE bottom — an element screenshot taller
  *  than the viewport is cropped, never stitched. */
 async function fitViewport(page, width) {
   const bottom = await page.evaluate(() => {
-    const el = document
-      .querySelector('app-passenger-info-form .open-seat-card')
-      ?.closest('.card-container');
+    const el = document.querySelector('app-passenger-info-form');
     return el ? el.getBoundingClientRect().bottom + window.scrollY : 0;
   });
   await page.setViewportSize({ width, height: Math.max(800, Math.ceil(bottom) + 48) });
   await page.waitForTimeout(400);
 }
+
+const OPEN_SEATING_WORDING = 'นั่งที่ว่างได้เลย'; // SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY
+const SEAT_SECTION_TITLE = 'การเลือกที่นั่ง'; // PASSENGER_INFO.FORM.SEAT_SECTION_TITLE
+const SEAT_REMAIN_LINE = /เหลือ\s*\d+\s*ที่นั่ง/;
+const HEADCOUNT_RESTATED = /\d+\s*คน/;
 
 async function capture(browser, { label, width, device }) {
   const scenario = SCENARIOS[label];
@@ -231,7 +241,7 @@ async function capture(browser, { label, width, device }) {
   await seed(page, scenario);
 
   await page.goto(`${BASE}/passenger-info`, { waitUntil: 'networkidle' });
-  await page.waitForSelector('app-passenger-info-form .open-seat-card', { timeout: 30000 });
+  await page.waitForSelector('app-passenger-info-form [id^="firstName-"]', { timeout: 30000 });
   // The loading swal is a real transient state; let it close before deciding
   // the page is dirty.
   await page.waitForTimeout(1500);
@@ -244,9 +254,6 @@ async function capture(browser, { label, width, device }) {
   if (m.swals > 0 || m.toasts > 0) {
     fail(`page is dirty: ${m.swals} swal(s), ${m.toasts} error toast(s)`);
   }
-  if (m.cards !== 1) {
-    fail(`expected exactly 1 open-seat card, DOM has ${m.cards}`);
-  }
   if (m.passengerRows !== PASSENGER_COUNT) {
     fail(`expected ${PASSENGER_COUNT} passenger rows seeded from the search page, DOM has ${m.passengerRows}`);
   }
@@ -255,50 +262,58 @@ async function capture(browser, { label, width, device }) {
   if (m.seatMaps !== expectedMaps) {
     fail(`expected ${expectedMaps} seat map(s) for this scenario, DOM has ${m.seatMaps}`);
   }
-  if (!m.cardText.includes(SECTION_HINT)) {
-    fail(`the OPEN_SEAT_SECTION_HINT wording is missing from the card`);
-  }
-  if (scenario.seatRemain !== m.cardText.includes(SEAT_REMAIN)) {
-    const openLeg = scenario.selection.find((s) => s.seatingMode === 'OPEN');
-    fail(
-      `the "${SEAT_REMAIN} X ที่นั่ง" line should be ${scenario.seatRemain ? 'SHOWN' : 'HIDDEN'} at availableSeats=${openLeg.availableSeats}`
-    );
-  }
-  if (!m.cardText.includes(String(PASSENGER_COUNT))) {
-    fail(`the card does not report the seeded headcount ${PASSENGER_COUNT}`);
+  // The premise the whole change rests on: the sidebar reports the headcount.
+  if (!/ผู้ใหญ่\s*2/.test(m.sidebarText)) {
+    fail(`the summary sidebar does not report "ผู้ใหญ่ 2": ${m.sidebarText.slice(0, 160)}`);
   }
 
   if (TAG === 'AFTER') {
-    if (m.plus || m.minus) {
-      fail(`the stepper is still rendered: ${m.plus} plus, ${m.minus} minus`);
+    if (m.cards || m.plus || m.minus) {
+      fail(`the count card is still rendered: ${m.cards} card(s), ${m.plus} plus, ${m.minus} minus`);
     }
-    if (m.borderTopWidth !== '0px') {
-      fail(`the card still draws its own frame (border-top-width ${m.borderTopWidth})`);
+    if (HEADCOUNT_RESTATED.test(m.formText)) {
+      fail(`the form still restates the headcount: "${m.formText.match(HEADCOUNT_RESTATED)[0]}"`);
+    }
+    if (SEAT_REMAIN_LINE.test(m.formText)) {
+      fail(`the remaining-seat line survived on this page: "${m.formText.match(SEAT_REMAIN_LINE)[0]}"`);
+    }
+    if (label === 'alllegs') {
+      // Every leg OPEN: nothing is left to pick, so the whole block goes.
+      if (m.hints !== 0) fail(`no seat map is left to explain, yet DOM has ${m.hints} note(s)`);
+      if (m.formText.includes(SEAT_SECTION_TITLE)) fail(`the seat-selection block is still rendered`);
+    } else {
+      // Mixed: the OPEN leg is labelled and explained in one line, no number.
+      if (m.hints !== 1) fail(`expected exactly 1 open-seating note, DOM has ${m.hints}`);
+      if (!m.hintText.includes(OPEN_SEATING_WORDING)) {
+        fail(`the note does not carry the search page's open-seating wording: "${m.hintText}"`);
+      }
+      if (m.legLabels.length !== 2) {
+        fail(`both legs must be labelled once the OPEN leg carries a note, got ${JSON.stringify(m.legLabels)}`);
+      }
     }
   } else {
+    if (m.cards !== 1) fail(`BEFORE must still render the count card, DOM has ${m.cards}`);
     if (m.plus !== 1 || m.minus !== 1) {
       fail(`BEFORE must still have the stepper, DOM has ${m.plus} plus / ${m.minus} minus`);
-    }
-    if (m.borderTopWidth === '0px') {
-      fail(`BEFORE must still draw its own frame — this tree already has the fix`);
     }
   }
 
   await fitViewport(page, width);
-  const file = path.join(OUT_DIR, `OBRS-1988-${TAG}-${label}-${device}.png`);
-  await page
-    .locator('app-passenger-info-form .card-container:has(.open-seat-card)')
-    .screenshot({ path: file });
-  console.log(
-    `shot -> ${path.basename(file)}  ${JSON.stringify({
-      count: m.countText,
-      plus: m.plus,
-      border: m.borderTopWidth,
-    })}`
-  );
+  const files = [];
+  const formFile = path.join(OUT_DIR, `OBRS-1988-${TAG}-${label}-${device}.png`);
+  await page.locator('app-passenger-info-form').screenshot({ path: formFile });
+  files.push(path.basename(formFile));
+  // One whole-page frame per tag proves what the change rests on: the headcount
+  // is still on screen, on the summary card to the right.
+  if (label === 'alllegs' && device === 'desktop') {
+    const pageFile = path.join(OUT_DIR, `OBRS-1988-${TAG}-${label}-desktop-page.png`);
+    await page.screenshot({ path: pageFile, fullPage: true });
+    files.push(path.basename(pageFile));
+  }
+  console.log(`shot -> ${files.join(', ')}  ${JSON.stringify({ cards: m.cards, hints: m.hints, plus: m.plus })}`);
 
   await context.close();
-  return { file: path.basename(file), ...m };
+  return { files, ...m };
 }
 
 (async () => {

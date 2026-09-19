@@ -3357,8 +3357,6 @@
       "FARE_CATEGORY_CHILD_NO_TICKET_DESK": "A child ticket can only board at a stop with a ticket desk. This trip boards elsewhere, so every passenger must be booked at the adult fare.",
       "SEAT_ACTIVE_PASSENGER_LABEL": "Select the passenger to assign a seat",
       "SEAT_CHIP_FALLBACK": "Passenger {{n}}",
-      "OPEN_SEAT_SECTION_HINT": "Open seating — board in arrival order.",
-      "OPEN_SEAT_COUNT_LABEL": "Number of passengers",
       "SENSITIVE_TYPE_CONSENT_LABEL": "I give explicit consent to collecting and using this passenger's monk/nun status, to show it on the ticket, in the confirmation email and in the booking list our staff see, and to help arrange seats on services with numbered seats",
       "SENSITIVE_TYPE_CONSENT_HINT": "Declining is fine - you can still book as usual, we simply do not record the passenger type",
       "SEAT_PREFERENCE_LABEL": "Seat preference (optional)",

@@ -489,27 +489,24 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     store = TestBed.inject(MockStore);
   });
 
-  // OBRS-1988: the headcount is chosen once, on the search page. This card only
-  // reports it, so the +/- stepper is gone — it was a second edit point for the
-  // same number that never wrote back to `scheduleFilter`, and ASSIGNED legs
-  // never had one.
-  it('one-way OPEN schedule: no seat map renders, and the count card is read-only text (no +/- controls)', () => {
+  // OBRS-1988: the headcount is chosen once on the search page and reported by
+  // the summary sidebar, so this page neither asks for it again nor repeats it.
+  // With every leg OPEN there is no seat to pick either, so the whole
+  // seat-selection block goes — there is no leg left for it to be about.
+  it('one-way OPEN schedule: no seat map and no seat-selection block at all — the headcount is not restated here', () => {
     render([openSchedule]);
 
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(0);
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-bus')).length).toBe(0);
-    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
+    expect(fixture.debugElement.queryAll(By.css('.open-seat-leg-hint')).length).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('.passenger-add')).length).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('.passenger-minus')).length).toBe(0);
 
     // Seeded with 1 adult from the schedule filter; openSchedule.availableSeats = 2.
     expect(component.passengerData.length).toBe(1);
 
-    expect(fixture.debugElement.queryAll(By.css('.passenger-add')).length).toBe(0);
-    expect(fixture.debugElement.queryAll(By.css('.passenger-minus')).length).toBe(0);
-
-    const card = fixture.debugElement.query(By.css('.open-seat-card')).nativeElement;
-    expect(card.textContent).toContain('1');
-    // The cap hint only made sense while the count could be raised here.
-    expect(card.textContent).not.toContain('OPEN_SEAT_MAX_HINT');
+    const text = fixture.nativeElement.textContent;
+    expect(text).not.toContain('PASSENGER_INFO.FORM.SEAT_SECTION_TITLE');
   });
 
   // OBRS-1226: the summary sidebar reads its headcount/total from the
@@ -535,33 +532,61 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
       .toEqual([1]);
   });
 
-  it('OPEN near-full (availableSeats <= LOW_SEAT_THRESHOLD): the "เหลือ X ที่นั่ง" remaining-seat line IS shown', () => {
+  // The "เหลือ X ที่นั่ง" line went with the card (OBRS-1988). The count cannot be
+  // changed on this page, so a scarcity nudge here had nothing to act on; the
+  // search results list still carries it, where the trip is actually chosen.
+  it('OPEN near-full (availableSeats <= LOW_SEAT_THRESHOLD): no remaining-seat line on this page any more', () => {
     render([openSchedule]); // availableSeats = 2 (<= 5)
-    const card = fixture.debugElement.query(By.css('.open-seat-card')).nativeElement;
-    expect(card.textContent).toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
+    expect(fixture.nativeElement.textContent).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
   });
 
-  it('OPEN plenty (availableSeats > LOW_SEAT_THRESHOLD): the remaining-seat line is HIDDEN (no inventory reveal), count card still renders', () => {
-    render([{ ...openSchedule, availableSeats: 13 }]); // 13 > 5
-    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
-    const card = fixture.debugElement.query(By.css('.open-seat-card')).nativeElement;
-    expect(card.textContent).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
-  });
-
-  it('mixed-mode round trip: OPEN outbound renders a count card, ASSIGNED return still renders its seat map', () => {
+  it('mixed-mode round trip: the OPEN leg is labelled and explained in one line (no headcount), the ASSIGNED leg keeps its seat map', () => {
     render([openSchedule, assignedSchedule]);
 
-    // Outbound (OPEN): no seat map, count card present.
     // Return (ASSIGNED, van): exactly one seat map, for the return leg only.
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
-    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
+
+    // Outbound (OPEN): one note, in the search page's own open-seating wording.
+    const hints = fixture.debugElement.queryAll(By.css('.open-seat-leg-hint'));
+    expect(hints.length).toBe(1);
+    expect(hints[0].nativeElement.textContent).toContain('SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY');
+
+    // Both legs are labelled — an unlabelled note could not say which leg it is
+    // about, so the OPEN leg keeps its label too (it had none before OBRS-1988).
+    const labels = fixture.debugElement
+      .queryAll(By.css('.seat-leg-label'))
+      .map((d) => d.nativeElement.textContent)
+      .join(' ');
+    expect(labels).toContain('PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND');
+    expect(labels).toContain('PASSENGER_INFO.FORM.SEAT_LEG_RETURN');
   });
 
-  it('ASSIGNED-only schedule (regression): seat map renders as before, no OPEN-seating card', () => {
+  // The mirror of the case above. The return leg has its own copy of the same
+  // branch in the template, and nothing in this spec exercised that direction
+  // before — the one case where a typo would only show on a booking that is
+  // ASSIGNED out and OPEN back.
+  it('mixed-mode round trip, the other way round: the ASSIGNED outbound keeps its map, the OPEN return gets the note', () => {
+    render([assignedSchedule, openSchedule]);
+
+    expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
+
+    const hints = fixture.debugElement.queryAll(By.css('.open-seat-leg-hint'));
+    expect(hints.length).toBe(1);
+    expect(hints[0].nativeElement.textContent).toContain('SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY');
+
+    const labels = fixture.debugElement
+      .queryAll(By.css('.seat-leg-label'))
+      .map((d) => d.nativeElement.textContent)
+      .join(' ');
+    expect(labels).toContain('PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND');
+    expect(labels).toContain('PASSENGER_INFO.FORM.SEAT_LEG_RETURN');
+  });
+
+  it('ASSIGNED-only schedule (regression): seat map renders as before, no OPEN-seating note', () => {
     render([assignedSchedule]);
 
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
-    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('.open-seat-leg-hint')).length).toBe(0);
   });
 
   // OBRS-361: both p-selectButton groups render with no pre-selection, and
