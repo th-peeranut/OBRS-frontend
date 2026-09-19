@@ -83,6 +83,7 @@
             <app-payment-creditcard
               [activeTab]="paymentTab"
               [successRedirect]="null"
+              [amountOverride]="paymentAmount"
               (tabChange)="onPaymentTabChange($event)"
               (back)="onPaymentBack()"
               (paymentCompleted)="onPaymentCompleted()"
@@ -92,6 +93,7 @@
             <app-payment-qrcode
               [activeTab]="paymentTab"
               [successRedirect]="null"
+              [amountOverride]="paymentAmount"
               (tabChange)="onPaymentTabChange($event)"
               (back)="onPaymentBack()"
               (paymentCompleted)="onPaymentCompleted()"
