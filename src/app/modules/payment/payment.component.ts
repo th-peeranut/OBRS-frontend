@@ -110,9 +110,16 @@ export class PaymentComponent implements OnDestroy {
 
           // OBRS-1984: the hold deadline this refetch brought back. Persisted before the
           // panels read it, so the countdown after a refresh is the remaining hold and not
-          // a fresh 15:00. Absent (older backend) clears it — the panels then show no
-          // countdown, which is the one honest answer when the deadline is unknown.
-          this.bookingService.setActiveBookingExpiresAt(booking.expiresAt);
+          // a fresh 15:00.
+          //
+          // Written only when the response actually carries one. `setActiveBookingExpiresAt`
+          // is write-OR-CLEAR, and the signed-in lane reads a projection that has no
+          // `expiresAt` field at all — clearing on that would delete the deadline the CREATE
+          // call already stored, which survives the refresh perfectly well. An absent field
+          // means "this response does not know", never "there is no deadline".
+          if (booking.expiresAt) {
+            this.bookingService.setActiveBookingExpiresAt(booking.expiresAt);
+          }
 
           this.store.dispatch(
             invokeSetBookingApi({

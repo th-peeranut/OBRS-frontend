@@ -244,7 +244,19 @@ describe('PaymentComponent', () => {
       );
     });
 
-    it('clears a stale deadline when the booking comes back without one (older backend)', () => {
+    /**
+     * REVERSED at OBRS-1986's signed-in-lane fix. This used to assert the opposite - that a
+     * response without `expiresAt` CLEARS the stored deadline - which was harmless while the
+     * only caller was the guest read, whose projection always carries the field (the column
+     * is NOT NULL) so "absent" could only mean an older backend that had never written the
+     * key either. The signed-in lane reads a different projection that has no `expiresAt`
+     * field at all, and the CREATE call already stored a perfectly good deadline that
+     * survives the refresh. Clearing it there deletes the countdown for every logged-in
+     * customer who reloads /payment.
+     *
+     * An absent field means "this response does not know", never "there is no deadline".
+     */
+    it('leaves the stored deadline alone when the booking comes back without one', () => {
       buildWith({ booking: null, passengerInfo: null });
       bookingService.getActiveBookingId.and.returnValue(4242);
       bookingService.getBooking.and.returnValue(
@@ -253,9 +265,9 @@ describe('PaymentComponent', () => {
 
       component.ngOnInit();
 
-      // `undefined` clears the key - the panels then show no countdown rather than one
-      // carried over from a booking that is no longer the one being paid for.
-      expect(bookingService.setActiveBookingExpiresAt).toHaveBeenCalledWith(undefined);
+      expect(bookingService.setActiveBookingExpiresAt).not.toHaveBeenCalled();
+      // The total still lands - the two are independent.
+      expect(component.totalState).toBe('ready');
     });
 
     it('handles an empty localStorage without throwing and without enabling the button', () => {

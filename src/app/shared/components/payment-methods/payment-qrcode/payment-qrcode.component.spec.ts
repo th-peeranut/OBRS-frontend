@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -1256,6 +1256,37 @@ describe('PaymentQrcodeComponent - the countdown runs to the booking hold deadli
     expect(countdownText(fixture.nativeElement)).toBe('00 : 00');
     expect(fixture.componentInstance.isHoldExpired).toBeTrue();
     expect(payButton().disabled).toBeTrue();
+  });
+
+  /**
+   * OBRS-1984, added at the same scrutinize round that pinned the credit-card twin
+   * (`picks up a deadline that only arrives with the refetched total`). On a REFRESH the
+   * NgRx store is empty, so /payment refetches the booking and only then stores the
+   * deadline - one HTTP round trip after this panel was already built with nothing to
+   * count to. `ngOnChanges` on `totalState -> 'ready'` is the hook that re-derives it.
+   *
+   * The twin's commit message is right that the gap here is SOFTER than on the card panel:
+   * `handlePromptPayResponse` calls `startCountdown()` again when the QR image lands, so a
+   * customer who gets that far self-heals. It is not nothing, though - this block mounts
+   * with `amountOverride = 0`, i.e. exactly the state where no QR is requested and that
+   * second caller never runs, which is also the real state during the round trip the total
+   * is still in flight. So the panel would show no countdown until the image arrived.
+   */
+  it('picks up a deadline that only arrives with the refetched total', async () => {
+    await mountQr(null);
+    expect(countdownText(fixture.nativeElement)).toBeNull();
+
+    const bookingService = TestBed.inject(BookingService) as jasmine.SpyObj<BookingService>;
+    bookingService.getActiveBookingExpiresAt.and.returnValue(inMinutes(9));
+
+    fixture.componentInstance.totalState = 'ready';
+    fixture.componentInstance.ngOnChanges({
+      totalState: new SimpleChange('loading', 'ready', false),
+    });
+    fixture.detectChanges();
+
+    expect(countdownText(fixture.nativeElement)).toBe('09 : 00');
+    expect(payButton().disabled).toBeFalse();
   });
 
   it('FALLBACK - with no stored deadline it shows no countdown at all, and still lets the customer pay', async () => {
