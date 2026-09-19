@@ -1,5 +1,7 @@
+import { SimpleChange } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 
 import { BookingService } from '../../../services/booking/booking.service';
 import { MaintenanceWindowService } from '../../../services/maintenance-window/maintenance-window.service';
@@ -138,6 +140,36 @@ describe('payment panels refuse an unverified total (OBRS-1986)', () => {
 
       expect(alertService.confirm).not.toHaveBeenCalled();
       expect(navigate).not.toHaveBeenCalled();
+      component.ngOnDestroy();
+    });
+
+    it('asks for the QR once the total lands, instead of staying empty for good', () => {
+      // The gate above returns WITHOUT setting hasRequestedQrCode, and nothing else calls
+      // ensurePromptPayQrCode again. A customer opening this tab during the one round trip
+      // GET /api/bookings/{id} costs would otherwise face an empty panel with no message.
+      const { component, paymentService } = qrcode();
+      paymentService.createPayment.and.returnValue(of({}) as never);
+      component.totalState = 'loading';
+      component.ngOnInit();
+      expect(paymentService.createPayment).not.toHaveBeenCalled();
+
+      component.totalState = 'ready';
+      component.ngOnChanges({
+        totalState: new SimpleChange('loading', 'ready', false),
+      });
+
+      expect(paymentService.createPayment).toHaveBeenCalledTimes(1);
+      component.ngOnDestroy();
+    });
+
+    it('does not re-ask for a call site that never binds totalState', () => {
+      // firstChange is what keeps parcel / reschedule / change-stop byte-identical.
+      const { component, paymentService } = qrcode();
+      component.ngOnChanges({
+        totalState: new SimpleChange(undefined, 'ready', true),
+      });
+
+      expect(paymentService.createPayment).not.toHaveBeenCalled();
       component.ngOnDestroy();
     });
   });

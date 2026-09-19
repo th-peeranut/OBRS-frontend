@@ -3,9 +3,11 @@ import {
   EventEmitter,
   HostListener,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -40,7 +42,7 @@ type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
     styleUrl: './payment-qrcode.component.scss',
     standalone: false
 })
-export class PaymentQrcodeComponent implements OnInit, OnDestroy {
+export class PaymentQrcodeComponent implements OnInit, OnChanges, OnDestroy {
   @Input() activeTab: PaymentTab = 'qrcode';
   /**
    * Route to navigate to on a completed payment. Defaults to the existing
@@ -128,6 +130,28 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       if (this.amountOverride <= 0) {
         return;
       }
+    }
+    void this.ensurePromptPayQrCode();
+  }
+
+  /**
+   * OBRS-1986: `ensurePromptPayQrCode()` returns WITHOUT setting `hasRequestedQrCode` while
+   * `isTotalUnverified`, and nothing else ever calls it again. A customer who opens this tab
+   * during the one round trip `GET /api/bookings/{id}` costs would therefore sit in front of an
+   * empty QR panel for good - with no message either, because `totalState` then reaches
+   * `'ready'` and hides the `TOTAL_UNAVAILABLE` line. Re-arm once, when the total lands.
+   *
+   * `firstChange` is skipped so the call sites that never bind `totalState` (parcel booking, the
+   * reschedule and change-stop dialogs) keep their exact `ngOnInit`-only behaviour, and the
+   * `amountOverride <= 0` rule of `ngOnInit` is mirrored for the same reason.
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['totalState'];
+    if (!change || change.firstChange || change.currentValue !== 'ready') {
+      return;
+    }
+    if (this.amountOverride != null && this.amountOverride <= 0) {
+      return;
     }
     void this.ensurePromptPayQrCode();
   }
