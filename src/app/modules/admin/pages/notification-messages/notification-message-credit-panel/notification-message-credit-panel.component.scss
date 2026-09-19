@@ -9,8 +9,10 @@
   margin: 0;
   font-weight: 600;
 
-  &.is-warning {
-    color: var(--admin-warning-fg);
+  // OBRS-1550: a rise is red (was --admin-warning-fg). Already-declared
+  // SURFACE token, both themes — no new token, same rule as the note above.
+  &.is-danger {
+    color: var(--admin-danger-fg);
   }
 
   &.is-success {
