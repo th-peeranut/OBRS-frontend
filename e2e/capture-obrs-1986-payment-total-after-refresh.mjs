@@ -18,28 +18,11 @@
 import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { bookAsGuestToPayment } from './lib/guest-booking-flow.mjs';
 
 const BASE = process.env.OBRS_BASE_URL ?? 'http://localhost:4200';
 const OUT = process.env.OBRS_OUT_DIR ?? path.resolve('e2e-evidence/obrs-1986');
 const LABEL = process.env.OBRS_LABEL ?? 'RUN';
-
-const ORIGIN = 'หนองชาก';
-const DESTINATION = 'บขส. หมอชิต (หมอชิต 2)';
-
-/** The stop pickers are `input[role=combobox][aria-label]` over `a[role=option]` anchors. */
-async function pickFromCombobox(page, label, optionText) {
-  await page.getByRole('combobox', { name: label }).first().click({ timeout: 20000 });
-  await page.getByRole('option', { name: optionText, exact: true }).first().click({ timeout: 15000 });
-}
-
-/** Label association is not guaranteed on every field here, so fall back to the label's own box. */
-async function fillField(page, labelRe, value) {
-  const byLabel = page.getByLabel(labelRe);
-  if (await byLabel.count()) { await byLabel.first().fill(value); return; }
-  const near = page.locator('label').filter({ hasText: labelRe }).first()
-    .locator('xpath=ancestor-or-self::*[1]/following::input[1]');
-  await near.fill(value, { timeout: 15000 });
-}
 
 const run = async () => {
   await mkdir(OUT, { recursive: true });
@@ -50,57 +33,10 @@ const run = async () => {
 
   page.on('console', (m) => { if (m.type() === 'error') (measured.consoleErrors ??= []).push(m.text()); });
 
-  await page.goto(BASE, { waitUntil: 'networkidle' });
-
-  await page.getByRole('button', { name: 'เที่ยวเดียว' }).click();
-  await pickFromCombobox(page, 'ต้นทาง', ORIGIN);
-  await pickFromCombobox(page, 'ปลายทาง', DESTINATION);
-  await page.getByRole('button', { name: 'ค้นหา' }).click();
-
-  await page.waitForURL('**/schedule-booking', { timeout: 20000 });
-  await page.waitForLoadState('networkidle');
-
-  // The seed only has trips on later dates, so the results page opens on an empty "today"
-  // and offers the nearest day that does have one. Take that offer when it is there.
-  const choose = page.getByRole('button', { name: 'เลือก' }).first();
-  const nextDay = page.getByRole('button', { name: /ดูรอบวัน/ }).first();
-  // Whichever renders first decides: an empty "today" shows the offer, a populated one
-  // shows the trips. Racing them beats a fixed sleep on a page that fetches twice.
-  await choose.or(nextDay).waitFor({ timeout: 30000 });
-  if (await nextDay.isVisible()) {
-    await nextDay.click();
-    await page.waitForLoadState('networkidle');
-  }
-  await choose.waitFor({ timeout: 30000 }).catch(async () => {
-    await writeFile(path.join(OUT, `${LABEL}-debug-results.txt`), await page.locator('body').innerText(), 'utf8');
-    await page.screenshot({ path: path.join(OUT, `${LABEL}-debug-results.png`), fullPage: true });
-    throw new Error('no "เลือก" button on the results page - see the debug dump');
+  await bookAsGuestToPayment(page, BASE, async (where) => {
+    await writeFile(path.join(OUT, `${LABEL}-debug-${where}.txt`), await page.locator('body').innerText(), 'utf8');
+    await page.screenshot({ path: path.join(OUT, `${LABEL}-debug-${where}.png`), fullPage: true });
   });
-  await choose.click();
-  await page.waitForURL('**/review-schedule-booking', { timeout: 20000 });
-  await page.getByRole('button', { name: 'ยืนยันข้อมูล' }).click();
-
-  await page.waitForURL('**/passenger-info', { timeout: 20000 });
-  measured.passengerInfoInputs = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('input')).map((i) => ({ id: i.id, ph: i.placeholder, type: i.type })));
-  await fillField(page, /ชื่อจริง/, 'สมชาย');
-  await fillField(page, /นามสกุล/, 'ทดสอบ');
-  await fillField(page, /หมายเลขโทรศัพท์/, '0812345678');
-  // Passenger 1 carries its OWN required name - the PII that OBRS-903 keeps out of storage
-  // and that AC3 keeps out of the new response. Copy the booker rather than retyping it.
-  await page.getByText('ใช้ข้อมูลผู้จองเป็นผู้โดยสารคนนี้').first().click();
-  await page.getByRole('button', { name: 'ถัดไป' }).click();
-
-  // Some steps put a confirmation in front of the navigation; take it when it is there.
-  const confirm = page.getByRole('button', { name: /ยืนยัน|ตกลง/ });
-  if (await confirm.count()) await confirm.first().click({ timeout: 5000 }).catch(() => {});
-
-  await page.waitForURL('**/payment', { timeout: 30000 }).catch(async (e) => {
-    await writeFile(path.join(OUT, `${LABEL}-debug-passenger.txt`), await page.locator('body').innerText(), 'utf8');
-    await page.screenshot({ path: path.join(OUT, `${LABEL}-debug-passenger.png`), fullPage: true });
-    throw e;
-  });
-  await page.waitForLoadState('networkidle');
   await page.screenshot({ path: path.join(OUT, `${LABEL}-1-payment-fresh.png`), fullPage: true });
 
   const readState = async () => ({
