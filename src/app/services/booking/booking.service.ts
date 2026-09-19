@@ -10,6 +10,7 @@ import { environment } from '../../../environments/environment';
 import {
   BookingPayload,
   CreateBookingResponse,
+  GuestBookingView,
 } from '../../shared/interfaces/booking.interface';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import {
@@ -236,6 +237,37 @@ export class BookingService {
     }
 
     return result;
+  }
+
+  /**
+   * OBRS-1986: re-read the booking this browser is in the middle of paying for.
+   *
+   * <p>The /payment screen's total must be the server's `netAmount` and nothing else. A
+   * refresh empties the NgRx passenger store - it is never persisted, because that would
+   * write names and phone numbers to the customer's machine (OBRS-903) - and the old
+   * client-side `pricePerSeat x passengerCount` fallback then printed "0 baht" beside a
+   * live pay button while the backend charged the real fare.
+   *
+   * <p>Guest lane: the SAME booking-scoped `X-Guest-Payment-Token` header
+   * `PaymentService.createPayment` and `PaymentService.getQrImage` already send, chosen on
+   * the same condition. Never a query string - that writes a credential into every access
+   * log between here and Koyeb - and never a new localStorage key.
+   *
+   * <p>`silentContext()` because the caller renders its own message: a customer must be
+   * TOLD the total could not be confirmed, next to a disabled pay button, not shown a
+   * generic toast over a screen that still looks payable.
+   */
+  getBooking(bookingId: number): Observable<ResponseAPI<GuestBookingView>> {
+    const guestToken = this.getGuestPaymentToken();
+    const headers =
+      !this.authService.isAuthenticated() && guestToken
+        ? new HttpHeaders({ 'X-Guest-Payment-Token': guestToken })
+        : undefined;
+
+    return this.http.get<ResponseAPI<GuestBookingView>>(
+      `${environment.apiUrl}/api/bookings/${bookingId}`,
+      { headers, context: this.silentContext() }
+    );
   }
 
   getBookingTickets(

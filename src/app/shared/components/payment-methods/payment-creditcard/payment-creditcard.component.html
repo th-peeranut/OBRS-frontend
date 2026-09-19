@@ -48,6 +48,13 @@ line appended below the action row is the one thing on this screen that can be c
   <p class="payment-maintenance-hint">{{ "PAYMENT.MAINTENANCE_LOCKED" | translate }}</p>
 }
 
+<!-- OBRS-1986 (AC-6): only the 'unavailable' arm, never 'loading' - a refresh spends a
+moment with no total yet, and accusing the page of a failure it has not had is its own
+false alarm. The button is dead in both states either way. -->
+@if (totalState === 'unavailable') {
+  <p class="payment-maintenance-hint">{{ "PAYMENT.TOTAL_UNAVAILABLE" | translate }}</p>
+}
+
 <div class="payment-actions">
   <div class="payment-action-item">
     <button class="back-btn" type="button" (click)="onBack()">
@@ -68,8 +75,8 @@ line appended below the action row is the one thing on this screen that can be c
       class="payment-btn"
       type="button"
       (click)="submitPayment()"
-      [class.payment-btn-diabled]="isSubmittingPayment || isWaitingForConfirmation || isPaymentLocked"
-      [disabled]="isSubmittingPayment || isWaitingForConfirmation || isPaymentLocked"
+      [class.payment-btn-diabled]="isSubmittingPayment || isWaitingForConfirmation || isPaymentLocked || isTotalUnverified"
+      [disabled]="isSubmittingPayment || isWaitingForConfirmation || isPaymentLocked || isTotalUnverified"
       [appPending]="isSubmittingPayment || isWaitingForConfirmation"
     >
       {{ "PAYMENT.CREDIT_CARD.PAY_NOW" | translate }}

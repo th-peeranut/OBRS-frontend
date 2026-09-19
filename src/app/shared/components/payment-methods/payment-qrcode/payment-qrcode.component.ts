@@ -20,6 +20,7 @@ import {
   PaymentByBookingIdResponse,
   PaymentPayload,
   PaymentResponse,
+  PaymentTotalState,
 } from '../../../../shared/interfaces/payment.interface';
 import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
@@ -62,6 +63,12 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * `<app-payment-summary>`.
    */
   @Input() amountOverride: number | null = null;
+  /**
+   * OBRS-1986: whether the total on screen is the server's own. `'ready'` by default so
+   * every existing call site stays byte-identical; only /payment binds the live value.
+   * See `PaymentTotalState`.
+   */
+  @Input() totalState: PaymentTotalState = 'ready';
   @Output() tabChange = new EventEmitter<PaymentTab>();
   @Output() back = new EventEmitter<void>();
   @Output() paymentCompleted = new EventEmitter<void>();
@@ -182,8 +189,24 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     return this.isPaymentLocked && !this.qrImageUrl;
   }
 
+  /**
+   * OBRS-1986 (AC-6): true until this screen can show the server's own total.
+   *
+   * Unlike the maintenance lock this one also stops `ensurePromptPayQrCode()`, because
+   * asking for the QR is what CREATES the charge - a PromptPay charge raised while the
+   * page cannot state the amount is the prod defect of 2026-09-19 in its worst form.
+   */
+  get isTotalUnverified(): boolean {
+    return this.totalState !== 'ready';
+  }
+
   async confirmPayment(): Promise<void> {
-    if (this.isSubmittingPayment || !this.qrPaymentUrl || this.isNewChargeLocked) {
+    if (
+      this.isSubmittingPayment ||
+      !this.qrPaymentUrl ||
+      this.isNewChargeLocked ||
+      this.isTotalUnverified
+    ) {
       return;
     }
 
@@ -234,7 +257,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       // (ngOnInit calls this the moment the tab opens). Gating only the confirm button would
       // still leave a fresh PromptPay charge sitting at the gateway when the deploy lands,
       // which is the exact stuck payment the owner asked to prevent.
-      this.isPaymentLocked
+      this.isPaymentLocked ||
+      // OBRS-1986: same argument, different unknown - the amount.
+      this.isTotalUnverified
     ) {
       return;
     }

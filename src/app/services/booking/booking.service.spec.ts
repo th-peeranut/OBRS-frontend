@@ -419,4 +419,43 @@ describe('BookingService', () => {
       expect(service.getActiveBookingNumber()).toBeNull();
     });
   });
+
+  /**
+   * OBRS-1986. The credential is the same booking-scoped grant the guest pay call and the
+   * QR fetch already send, in the same header, read from the same localStorage key. A
+   * second header - or the token in a query string, which would write it into every access
+   * log between here and Koyeb - is what these two assertions exist to prevent.
+   */
+  describe('getBooking (OBRS-1986)', () => {
+    afterEach(() => {
+      localStorage.removeItem('active_booking_payment_grant');
+    });
+
+    it('carries the guest grant in X-Guest-Payment-Token, never in the URL', () => {
+      authStub.isAuthenticated = () => false;
+      localStorage.setItem('active_booking_payment_grant', 'grant-abc');
+
+      service.getBooking(4242).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings/4242`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('X-Guest-Payment-Token')).toBe('grant-abc');
+      expect(req.request.urlWithParams).toBe(`${environment.apiUrl}/api/bookings/4242`);
+      // The page renders its own "we could not confirm the amount" line beside a disabled
+      // pay button; a generic toast over a screen that still looks payable is worse.
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
+      req.flush({ code: 200, message: 'ok', data: { bookingId: 4242 } });
+    });
+
+    it('sends no guest header for a signed-in customer', () => {
+      authStub.isAuthenticated = () => true;
+      localStorage.setItem('active_booking_payment_grant', 'grant-abc');
+
+      service.getBooking(4242).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings/4242`);
+      expect(req.request.headers.has('X-Guest-Payment-Token')).toBeFalse();
+      req.flush({ code: 200, message: 'ok', data: { bookingId: 4242 } });
+    });
+  });
 });

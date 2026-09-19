@@ -28,6 +28,7 @@
     @if (activePaymentTab === 'creditcard') {
       <app-payment-creditcard
         [activeTab]="activePaymentTab"
+        [totalState]="totalState"
         (tabChange)="onPaymentTabChange($event)"
         (back)="onBack()"
         (paymentCompleted)="onPaymentCompleted()"
@@ -36,6 +37,7 @@
     @if (activePaymentTab === 'qrcode') {
       <app-payment-qrcode
         [activeTab]="activePaymentTab"
+        [totalState]="totalState"
         (tabChange)="onPaymentTabChange($event)"
         (back)="onBack()"
         (paymentCompleted)="onPaymentCompleted()"

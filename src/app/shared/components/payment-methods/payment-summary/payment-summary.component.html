@@ -21,31 +21,36 @@ passengers/discount snapshot to show, just a single total. -->
           <div class="card-body-header">
             {{ "PAYMENT.SUMMARY.HEADER" | translate }}
           </div>
-          @if (getAdultCount((passengerInfo$ | async)) > 0) {
-            <div
-              class="card-body-content"
-              >
-              <span>
-                {{ "PAYMENT.SUMMARY.ADULT_LABEL" | translate }}
-              </span>
-              <span>
-                {{ getAdultCount((passengerInfo$ | async)) }}
-                {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
-              </span>
-            </div>
-          }
-          @if (getKidCount((passengerInfo$ | async)) > 0) {
-            <div
-              class="card-body-content"
-              >
-              <span>
-                {{ "PAYMENT.SUMMARY.CHILD_LABEL" | translate }}
-              </span>
-              <span>
-                {{ getKidCount((passengerInfo$ | async)) }}
-                {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
-              </span>
-            </div>
+          <!-- OBRS-1986: counts$ prefers the passenger store and falls back to the
+          server's own adultCount/childCount, so these rows survive a refresh instead of
+          vanishing with the store that used to be their only source. -->
+          @if (counts$ | async; as counts) {
+            @if (counts.adult > 0) {
+              <div
+                class="card-body-content"
+                >
+                <span>
+                  {{ "PAYMENT.SUMMARY.ADULT_LABEL" | translate }}
+                </span>
+                <span>
+                  {{ counts.adult }}
+                  {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
+                </span>
+              </div>
+            }
+            @if (counts.child > 0) {
+              <div
+                class="card-body-content"
+                >
+                <span>
+                  {{ "PAYMENT.SUMMARY.CHILD_LABEL" | translate }}
+                </span>
+                <span>
+                  {{ counts.child }}
+                  {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
+                </span>
+              </div>
+            }
           }
           @if (getScheduleBooking(scheduleBooking?.schedule).length == 1) {
             <div
@@ -96,31 +101,29 @@ passengers/discount snapshot to show, just a single total. -->
                 -{{ formatMoney(booking.discountAmountSnapshot) }}
               </span>
             </div>
-            <div class="card-footer">
-              <span>
-                {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
-              </span>
-              <span>
-                {{ formatMoney(booking.netAmount) }}
-              </span>
-            </div>
-          } @else {
-            <div class="card-footer">
-              <span>
-                {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
-              </span>
-              <span>
-                {{ formatMoney(sumFare(scheduleBooking?.schedule, (passengerInfo$ | async))) }}
-              </span>
-            </div>
           }
+        }
+        <!-- OBRS-1986 (AC-5): the server's netAmount or nothing. There is deliberately no
+        client-side fallback here any more - the one that used to sit in this slot computed
+        pricePerSeat x passengerCount, which a page refresh turned into "0 baht" beside a
+        live pay button while the backend charged the real fare (PROD, 2026-09-19). A
+        silently wrong total is worse than no total. -->
+        @if (hasServerTotal(netAmount$ | async)) {
+          <div class="card-footer">
+            <span>
+              {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
+            </span>
+            <span>
+              {{ formatMoney(netAmount$ | async) }}
+            </span>
+          </div>
         } @else {
           <div class="card-footer">
             <span>
               {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
             </span>
             <span>
-              {{ formatMoney(sumFare(scheduleBooking?.schedule, (passengerInfo$ | async))) }}
+              {{ "PAYMENT.SUMMARY.TOTAL_PENDING" | translate }}
             </span>
           </div>
         }

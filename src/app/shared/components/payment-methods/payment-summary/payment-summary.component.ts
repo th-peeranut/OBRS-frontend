@@ -2,14 +2,17 @@ import { Component, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
-import { Observable } from 'rxjs';
+import { combineLatest, map, Observable } from 'rxjs';
 import { BookingState } from '../../../../shared/interfaces/booking.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { parsePricePerSeat } from '../../../../shared/lib/trip-format';
 import { formatMoney } from '../../../../shared/lib/money-display';
 import { ScheduleFilter, Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
-import { selectBooking } from '../../../../shared/stores/booking/booking.selector';
+import {
+  selectBooking,
+  selectBookingNetAmount,
+} from '../../../../shared/stores/booking/booking.selector';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
@@ -55,6 +58,22 @@ export class PaymentSummaryComponent {
   // discount — the server computes discountAmountSnapshot/netAmount only once
   // the booking exists (see AGENT_MEMORY.md Finding 1). Never precompute one.
   booking: Observable<BookingState | null>;
+  /**
+   * OBRS-1986 (AC-5): the total, and the only total. `null` means the screen cannot state
+   * one - it renders a dash rather than a number, and `PaymentComponent` keeps the pay
+   * button dead. The client-side `pricePerSeat x passengerCount` fallback that used to
+   * fill this line is gone: after a refresh emptied the passenger store it resolved to 0,
+   * so PROD showed "0 baht" while the backend charged the full fare (2026-09-19).
+   */
+  netAmount$: Observable<number | null>;
+  /**
+   * OBRS-1986: the adult/child rows. The passenger store is the source while it has rows
+   * (it alone knows about the OPEN-seating stepper mid-flow - OBRS-1384); after a refresh
+   * emptied it, the server's own `adultCount`/`childCount` take over. The counts are all
+   * that comes back - `GET /api/bookings/{id}` carries no name and no phone number - so
+   * the passenger-DETAIL block stays empty rather than showing invented rows.
+   */
+  counts$: Observable<{ adult: number; child: number }>;
 
   constructor(
     private store: Store,
@@ -66,6 +85,26 @@ export class PaymentSummaryComponent {
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
     this.booking = this.store.pipe(select(selectBooking));
     this.passengerInfo$ = this.store.pipe(select(selectPassengerInfo));
+    this.netAmount$ = this.store.pipe(select(selectBookingNetAmount));
+    this.counts$ = combineLatest([this.passengerInfo$, this.booking]).pipe(
+      map(([passengers, booking]) =>
+        passengers?.length
+          ? {
+              adult: this.getAdultCount(passengers),
+              child: this.getKidCount(passengers),
+            }
+          : {
+              adult: Number(booking?.adultCount ?? 0),
+              child: Number(booking?.childCount ?? 0),
+            }
+      )
+    );
+  }
+
+  /** OBRS-1986 (AC-5): `false` is what puts a dash on the total line instead of a number
+   *  this screen would have had to invent. */
+  hasServerTotal(netAmount: number | null): boolean {
+    return netAmount != null;
   }
 
   hasDiscount(booking: BookingState | null | undefined): boolean {
@@ -89,20 +128,6 @@ export class PaymentSummaryComponent {
 
   getKidCount(passengers?: PassengerInfo[] | null): number {
     return passengers?.filter((p) => !p.isAdult).length ?? 0;
-  }
-
-  sumPassengers(items?: PassengerInfo[] | null): number {
-    return items?.length ?? 0;
-  }
-
-  sumFare(
-    items?: Schedule[] | null,
-    passengers?: PassengerInfo[] | null
-  ): number {
-    const sumPassengers = this.sumPassengers(passengers) ?? 0;
-    const sumFare =
-      items?.reduce((total, item) => total + this.getPricePerSeat(item?.pricePerSeat), 0) ?? 0;
-    return sumFare * sumPassengers;
   }
 
   getPricePerSeat(value: string | number | null | undefined): number {

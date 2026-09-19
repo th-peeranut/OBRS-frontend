@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
+import { Subject } from 'rxjs';
+import { take, takeUntil } from 'rxjs/operators';
 
 // store
 import { Store } from '@ngrx/store';
@@ -11,9 +13,13 @@ import {
   invokeSetScheduleFilterApi,
 } from '../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
+import { invokeSetBookingApi } from '../../shared/stores/booking/booking.action';
+import { selectBookingNetAmount } from '../../shared/stores/booking/booking.selector';
 import { Router } from '@angular/router';
 import { AnalyticsService } from '../../services/analytics/analytics.service';
+import { BookingService } from '../../services/booking/booking.service';
 import { normalizeAnalyticsPaymentMethod } from '../../shared/lib/analytics-payment-method';
+import { PaymentTotalState } from '../../shared/interfaces/payment.interface';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -23,13 +29,21 @@ type PaymentTab = 'creditcard' | 'qrcode';
     styleUrl: './payment.component.scss',
     standalone: false
 })
-export class PaymentComponent {
+export class PaymentComponent implements OnDestroy {
   activePaymentTab: PaymentTab = 'creditcard';
+  /**
+   * OBRS-1986: whether the server's own `netAmount` is on screen. Handed to both payment
+   * panels, which keep their pay button dead until it reads `'ready'`.
+   */
+  totalState: PaymentTotalState = 'loading';
+
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private store: Store,
     private router: Router,
-    private analytics: AnalyticsService
+    private analytics: AnalyticsService,
+    private bookingService: BookingService
   ) {}
 
   ngOnInit(): void {
@@ -41,6 +55,78 @@ export class PaymentComponent {
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
     this.store.dispatch(invokeGetScheduleBookingApi());
     this.store.dispatch(invokeGetScheduleFilterApi());
+    this.restoreServerTotal();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * OBRS-1986 (AC-4). A refresh of this page empties the NgRx booking AND passenger
+   * stores - neither is persisted, and the passenger one deliberately never will be
+   * (names and phone numbers, OBRS-903) - while the trip selection survives in
+   * `obrs.booking_context`. That asymmetry is what printed "0 baht" beside a live pay
+   * button on PROD on 2026-09-19: the fare was there, the headcount was 0.
+   *
+   * Refetching is the only way to get the real figure back, so it happens here, once, at
+   * page init - and only when the store cannot already answer, so the ordinary
+   * /passenger-info -> /payment walk makes no extra request.
+   */
+  private restoreServerTotal(): void {
+    this.store
+      .select(selectBookingNetAmount)
+      .pipe(take(1))
+      .subscribe((netAmount) => {
+        if (netAmount != null) {
+          this.totalState = 'ready';
+          return;
+        }
+        this.refetchBooking();
+      });
+  }
+
+  private refetchBooking(): void {
+    const bookingId = this.bookingService.getActiveBookingId();
+    if (!bookingId) {
+      this.totalState = 'unavailable';
+      return;
+    }
+
+    this.bookingService
+      .getBooking(bookingId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const booking = response?.data;
+          const netAmount = Number(booking?.netAmount);
+          if (booking?.netAmount == null || !Number.isFinite(netAmount)) {
+            // A 200 that carries no amount is no better than a failure here - the one
+            // thing this call exists to bring back is the figure the customer pays.
+            this.totalState = 'unavailable';
+            return;
+          }
+
+          this.store.dispatch(
+            invokeSetBookingApi({
+              booking: {
+                bookingId: booking.bookingId ?? bookingId,
+                bookingNumber: booking.bookingNumber ?? null,
+                totalAmount: booking.totalAmount,
+                discountAmountSnapshot: booking.discountAmountSnapshot,
+                netAmount,
+                adultCount: booking.adultCount,
+                childCount: booking.childCount,
+              },
+            })
+          );
+          this.totalState = 'ready';
+        },
+        error: () => {
+          this.totalState = 'unavailable';
+        },
+      });
   }
 
   onBack(): void {

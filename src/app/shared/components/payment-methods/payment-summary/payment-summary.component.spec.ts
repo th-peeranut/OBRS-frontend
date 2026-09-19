@@ -5,7 +5,6 @@ import {
   createTranslateStub,
 } from '../../../../testing/test-stubs';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
-import { Schedule } from '../../../../shared/interfaces/schedule.interface';
 
 describe('PaymentSummaryComponent', () => {
   let component: PaymentSummaryComponent;
@@ -38,8 +37,6 @@ describe('PaymentSummaryComponent', () => {
       { isAdult: true, firstName: 'B' } as PassengerInfo,
     ];
 
-    const ONE_WAY_190 = [{ pricePerSeat: '190' }] as unknown as Schedule[];
-
     it('counts the adults and children on the booking', () => {
       const mixed: PassengerInfo[] = [
         { isAdult: true } as PassengerInfo,
@@ -49,27 +46,30 @@ describe('PaymentSummaryComponent', () => {
 
       expect(component.getAdultCount(mixed)).toBe(1);
       expect(component.getKidCount(mixed)).toBe(2);
-      expect(component.sumPassengers(mixed)).toBe(3);
     });
 
-    it('follows the OPEN-seating + all the way to the fare line', () => {
-      expect(component.sumPassengers(TWO_ADULTS)).toBe(2);
-      expect(component.sumFare(ONE_WAY_190, TWO_ADULTS)).toBe(380);
-    });
-
-    it('reads a round trip as both legs times the real headcount', () => {
-      const roundTrip = [
-        { pricePerSeat: '190' },
-        { pricePerSeat: '210' },
-      ] as unknown as Schedule[];
-
-      expect(component.sumFare(roundTrip, TWO_ADULTS)).toBe(800);
+    it('follows the OPEN-seating + through to the passenger row', () => {
+      expect(component.getAdultCount(TWO_ADULTS)).toBe(2);
     });
 
     it('says nothing rather than guessing when there are no passenger rows', () => {
       expect(component.getAdultCount(null)).toBe(0);
       expect(component.getKidCount(undefined)).toBe(0);
-      expect(component.sumFare(ONE_WAY_190, null)).toBe(0);
+    });
+  });
+
+  /**
+   * OBRS-1986. `sumFare`/`sumPassengers` were deleted with the template branch that
+   * called them - the fare-times-headcount total is the defect itself, so it is not left
+   * lying around as a "safety net" for the next template to reach for.
+   */
+  describe('the total is the server figure or nothing (OBRS-1986)', () => {
+    it('treats a missing server netAmount as no total at all', () => {
+      expect(component.hasServerTotal(null)).toBeFalse();
+    });
+
+    it('accepts a server netAmount of zero as a real, stated total', () => {
+      expect(component.hasServerTotal(0)).toBeTrue();
     });
   });
 });

@@ -121,6 +121,12 @@
     </div>
   }
 
+  <!-- OBRS-1986 (AC-6): only the 'unavailable' arm, never 'loading' - see the same block in
+  payment-creditcard.component.html. -->
+  @if (totalState === 'unavailable') {
+    <p class="payment-maintenance-hint">{{ "PAYMENT.TOTAL_UNAVAILABLE" | translate }}</p>
+  }
+
   <div class="payment-actions">
     <div class="payment-action-item">
       <button class="back-btn" type="button" (click)="onBack()">
@@ -136,8 +142,8 @@
           class="payment-btn"
           type="button"
           (click)="confirmPayment()"
-          [class.payment-btn-diabled]="isSubmittingPayment || !qrPaymentUrl || isNewChargeLocked"
-          [disabled]="isSubmittingPayment || !qrPaymentUrl || isNewChargeLocked"
+          [class.payment-btn-diabled]="isSubmittingPayment || !qrPaymentUrl || isNewChargeLocked || isTotalUnverified"
+          [disabled]="isSubmittingPayment || !qrPaymentUrl || isNewChargeLocked || isTotalUnverified"
           [appPending]="isSubmittingPayment"
           >
           {{ "PAYMENT.QR.CONFIRM_PAYMENT" | translate }}
