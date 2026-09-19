@@ -46,10 +46,9 @@ import {
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { shareReplay } from 'rxjs/operators';
-import { MAX_PASSENGERS_PER_BOOKING, LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
+import { MAX_PASSENGERS_PER_BOOKING } from '../../../../shared/constants/passenger-limits';
 import { trimmedRequiredValidator } from '../../../../shared/validators/trimmed-required.validator';
 import { trimmedLengthValidator } from '../../../../shared/validators/trimmed-length.validator';
-import { isLowSeatCount } from '../../../../shared/lib/trip-format';
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
 import { ScheduleService } from '../../../../services/schedule/schedule.service';
 import {
@@ -86,23 +85,15 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   /**
    * OPEN-seating (OBRS-323/318-c) — each leg's seating mode is INDEPENDENT, so a
    * round trip can mix an OPEN outbound with an ASSIGNED return (or vice versa).
-   * The template hides only the OPEN leg's seat map and replaces it with an
-   * inline passenger-count card; see `passenger-info-form.component.html`.
+   * The template hides only the OPEN leg's seat map and replaces it with a
+   * one-line open-seating note; see `passenger-info-form.component.html`.
    */
   isOpenSeatingOutbound$: Observable<boolean>;
   isOpenSeatingReturn$: Observable<boolean>;
-  openSeatAvailableOutbound$: Observable<number>;
-  openSeatAvailableReturn$: Observable<number>;
   /** True only when every leg on this booking is OPEN (both legs on a round
    *  trip, or the single leg on a one-way) — the only case where the shared
    *  "Seat selection" card title/hint is dropped entirely (no leg has a map). */
   allLegsOpenSeating$: Observable<boolean>;
-  /** min(availableSeats of each OPEN leg, MAX_PASSENGERS_PER_BOOKING) — the
-   *  actual +/- ceiling for the OPEN-seating passenger-count card(s). */
-  openSeatMaxCount$: Observable<number>;
-  /** Seats remaining shown on the single shared count card when every leg is
-   *  OPEN — the binding constraint across legs, i.e. the smaller of the two. */
-  openSeatAvailableShared$: Observable<number>;
 
   /**
    * OBRS-361: per-leg context `showSeatPreferenceFields()` needs to decide
@@ -151,16 +142,6 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       labelKey: 'PASSENGER_INFO.FORM.SEAT_REQUIREMENT_EXTRA_LEGROOM',
     },
   ];
-
-  /**
-   * "เหลือ X ที่นั่ง" on the OPEN count card is a near-full scarcity signal only —
-   * shown iff `available <= LOW_SEAT_THRESHOLD` (0 < available), matching the
-   * search results list convention (`ScheduleBookingListComponent`). Above the
-   * threshold the remaining count is hidden; the +/- cap still applies silently.
-   */
-  isLowSeat(available: number | null | undefined): boolean {
-    return isLowSeatCount(available, LOW_SEAT_THRESHOLD);
-  }
 
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;
@@ -286,14 +267,6 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       map((booking) => this.returnSchedule(booking)?.seatingMode === 'OPEN'),
       shareReplay(1)
     );
-    this.openSeatAvailableOutbound$ = this.scheduleBooking$.pipe(
-      map((booking) => this.outboundSchedule(booking)?.availableSeats ?? 0),
-      shareReplay(1)
-    );
-    this.openSeatAvailableReturn$ = this.scheduleBooking$.pipe(
-      map((booking) => this.returnSchedule(booking)?.availableSeats ?? 0),
-      shareReplay(1)
-    );
     this.allLegsOpenSeating$ = combineLatest([
       this.isReturnTrip$,
       this.isOpenSeatingOutbound$,
@@ -301,34 +274,6 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     ]).pipe(
       map(([isReturn, openOutbound, openReturn]) =>
         isReturn ? openOutbound && openReturn : openOutbound
-      ),
-      shareReplay(1)
-    );
-    this.openSeatMaxCount$ = combineLatest([
-      this.isOpenSeatingOutbound$,
-      this.isOpenSeatingReturn$,
-      this.openSeatAvailableOutbound$,
-      this.openSeatAvailableReturn$,
-    ]).pipe(
-      map(([openOutbound, openReturn, availOutbound, availReturn]) => {
-        const caps = [MAX_PASSENGERS_PER_BOOKING];
-        if (openOutbound) {
-          caps.push(availOutbound);
-        }
-        if (openReturn) {
-          caps.push(availReturn);
-        }
-        return Math.min(...caps);
-      }),
-      shareReplay(1)
-    );
-    this.openSeatAvailableShared$ = combineLatest([
-      this.isReturnTrip$,
-      this.openSeatAvailableOutbound$,
-      this.openSeatAvailableReturn$,
-    ]).pipe(
-      map(([isReturn, availOutbound, availReturn]) =>
-        isReturn ? Math.min(availOutbound, availReturn) : availOutbound
       ),
       shareReplay(1)
     );
@@ -924,33 +869,12 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * OPEN-seating passenger-count stepper (OBRS-323). `maxCount` is the
-   * caller-supplied `openSeatMaxCount$` snapshot — capped in the template so a
-   * stale/slow-to-resolve observable can never let the count exceed it.
-   */
-  addOpenSeatPassenger(maxCount: number): void {
-    if (this.passengerData.length >= maxCount) {
-      return;
-    }
-    this.insertPassenger(true);
-    this.syncPassengerInfoToStore();
-  }
-
-  removeOpenSeatPassenger(): void {
-    if (this.passengerData.length <= 1) {
-      return;
-    }
-    this.deletePassenger(this.passengerData.length - 1);
-    this.syncPassengerInfoToStore();
-  }
-
-  /**
    * `setPassengerData()` wholesale-rebuilds `passengerData` from the
    * passenger-info store on every store emit (see the `passengerInfo`
    * subscription in `ngOnInit`, and its ngOnInit-empty-array-only seed guard).
-   * A +/- click above is a local FormArray mutation via insertPassenger()/
-   * deletePassenger() — NOT persisted to the store — so without this, a later
-   * store re-emit would silently revert the user's adjusted count (OBRS-323).
+   * The search-page seed and every field edit are local FormArray mutations —
+   * NOT persisted to the store — so without this, a later store re-emit would
+   * silently revert them (OBRS-323/OBRS-1226).
    * Mirrors the same dispatch(invokeSetPassengerInfo(...)) call
    * `PassengerInfoComponent.onSubmitPassengerInfo()` already makes on submit.
    */

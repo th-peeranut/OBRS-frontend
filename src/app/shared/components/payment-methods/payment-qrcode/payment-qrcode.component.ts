@@ -3,9 +3,11 @@ import {
   EventEmitter,
   HostListener,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -20,6 +22,7 @@ import {
   PaymentByBookingIdResponse,
   PaymentPayload,
   PaymentResponse,
+  PaymentTotalState,
 } from '../../../../shared/interfaces/payment.interface';
 import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
@@ -34,6 +37,7 @@ import {
   isTrustedPaymentRedirect,
   paymentRedirectOriginForLog,
 } from '../../../lib/payment-redirect';
+import { remainingHoldSeconds } from '../../../lib/payment-hold-countdown';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
@@ -44,7 +48,7 @@ type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
     styleUrl: './payment-qrcode.component.scss',
     standalone: false
 })
-export class PaymentQrcodeComponent implements OnInit, OnDestroy {
+export class PaymentQrcodeComponent implements OnInit, OnChanges, OnDestroy {
   @Input() activeTab: PaymentTab = 'qrcode';
   /**
    * Route to navigate to on a completed payment. Defaults to the existing
@@ -67,6 +71,12 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * `<app-payment-summary>`.
    */
   @Input() amountOverride: number | null = null;
+  /**
+   * OBRS-1986: whether the total on screen is the server's own. `'ready'` by default so
+   * every existing call site stays byte-identical; only /payment binds the live value.
+   * See `PaymentTotalState`.
+   */
+  @Input() totalState: PaymentTotalState = 'ready';
   @Output() tabChange = new EventEmitter<PaymentTab>();
   @Output() back = new EventEmitter<void>();
   @Output() paymentCompleted = new EventEmitter<void>();
@@ -88,7 +98,13 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * transaction id that one already exists before the first scan.
    */
   bookingNumber = '';
-  countdown = '15 : 00';
+  /**
+   * OBRS-1984: empty until a hold deadline is known - the template then renders no
+   * countdown at all. It used to be seeded '15 : 00', which is what restarted the clock on
+   * every tab switch (this panel is an `@if` branch, destroyed and rebuilt) and printed a
+   * deadline nobody had checked.
+   */
+  countdown = '';
   /**
    * OBRS-1203 — the iOS fallback. Shows the QR full-screen with a
    * "press and hold to save" hint, because on iOS that gesture is the only way
@@ -109,7 +125,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    *  proves the key itself is dead (see the catch block below), which a freshly generated
    *  key failing is not. */
   private isPaymentIdempotencyKeyRestored = false;
-  private countdownTotalSeconds = 15 * 60;
+  private countdownTotalSeconds = 0;
+  /** The booking's own `expires_at`; `null` = unknown, which is NOT "expired". */
+  private holdExpiresAt: string | null = null;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
 
   constructor(
@@ -131,6 +149,32 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       if (this.amountOverride <= 0) {
         return;
       }
+    }
+    void this.ensurePromptPayQrCode();
+  }
+
+  /**
+   * OBRS-1986: `ensurePromptPayQrCode()` returns WITHOUT setting `hasRequestedQrCode` while
+   * `isTotalUnverified`, and nothing else ever calls it again. A customer who opens this tab
+   * during the one round trip `GET /api/bookings/{id}` costs would therefore sit in front of an
+   * empty QR panel for good - with no message either, because `totalState` then reaches
+   * `'ready'` and hides the `TOTAL_UNAVAILABLE` line. Re-arm once, when the total lands.
+   *
+   * `firstChange` is skipped so the call sites that never bind `totalState` (parcel booking, the
+   * reschedule and change-stop dialogs) keep their exact `ngOnInit`-only behaviour, and the
+   * `amountOverride <= 0` rule of `ngOnInit` is mirrored for the same reason.
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['totalState'];
+    if (!change || change.firstChange || change.currentValue !== 'ready') {
+      return;
+    }
+    // OBRS-1984: the hold deadline arrives on the same round trip as the total, so
+    // re-derive here too. It cannot restart the clock - `startCountdown` counts to a
+    // deadline, not from a duration.
+    this.startCountdown();
+    if (this.amountOverride != null && this.amountOverride <= 0) {
+      return;
     }
     void this.ensurePromptPayQrCode();
   }
@@ -192,8 +236,37 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     return this.isPaymentLocked && !this.qrImageUrl;
   }
 
+  /**
+   * OBRS-1986 (AC-6): true until this screen can show the server's own total.
+   *
+   * Unlike the maintenance lock this one also stops `ensurePromptPayQrCode()`, because
+   * asking for the QR is what CREATES the charge - a PromptPay charge raised while the
+   * page cannot state the amount is the prod defect of 2026-09-19 in its worst form.
+   */
+  get isTotalUnverified(): boolean {
+    return this.totalState !== 'ready';
+  }
+
+  /**
+   * OBRS-1984 (AC-5): the seat hold this payment is for has run out. Composes with
+   * `isTotalUnverified` and `isNewChargeLocked` as a plain OR on the pay button - three
+   * independent reasons the charge must not start, none of which can mask another.
+   *
+   * False while the deadline is unknown: a countdown we cannot state must not lock a
+   * customer out of paying for a booking the server still holds.
+   */
+  get isHoldExpired(): boolean {
+    return this.holdExpiresAt !== null && this.countdownTotalSeconds <= 0;
+  }
+
   async confirmPayment(): Promise<void> {
-    if (this.isSubmittingPayment || !this.qrPaymentUrl || this.isNewChargeLocked) {
+    if (
+      this.isSubmittingPayment ||
+      !this.qrPaymentUrl ||
+      this.isNewChargeLocked ||
+      this.isTotalUnverified ||
+      this.isHoldExpired
+    ) {
       return;
     }
 
@@ -244,7 +317,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       // (ngOnInit calls this the moment the tab opens). Gating only the confirm button would
       // still leave a fresh PromptPay charge sitting at the gateway when the deploy lands,
       // which is the exact stuck payment the owner asked to prevent.
-      this.isPaymentLocked
+      this.isPaymentLocked ||
+      // OBRS-1986: same argument, different unknown - the amount.
+      this.isTotalUnverified
     ) {
       return;
     }
@@ -713,20 +788,40 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     return formatMoney(Number.isFinite(value) ? value : 0, this.translate.currentLang);
   }
 
+  /**
+   * OBRS-1984: counts to the booking's own `expires_at`, read from storage so a tab switch
+   * or a refresh continues the same countdown. Each tick re-derives from the deadline
+   * rather than decrementing - a backgrounded tab throttles `setInterval`, and a
+   * decremented counter would drift behind the real hold while looking healthy.
+   */
   private startCountdown(): void {
     this.clearCountdown();
-    this.countdownTotalSeconds = 15 * 60;
+    this.holdExpiresAt = this.bookingService.getActiveBookingExpiresAt();
+    const remaining = remainingHoldSeconds(this.holdExpiresAt, Date.now());
+    if (remaining === null) {
+      // No deadline known: show no countdown rather than claim one.
+      this.holdExpiresAt = null;
+      this.countdownTotalSeconds = 0;
+      this.countdown = '';
+      return;
+    }
+
+    this.countdownTotalSeconds = remaining;
     this.updateCountdownLabel();
+    if (remaining <= 0) {
+      this.isWaitingForConfirmation = false;
+      return;
+    }
 
     this.countdownIntervalId = setInterval(() => {
+      this.countdownTotalSeconds =
+        remainingHoldSeconds(this.holdExpiresAt, Date.now()) ?? 0;
+      this.updateCountdownLabel();
+
       if (this.countdownTotalSeconds <= 0) {
         this.clearCountdown();
         this.isWaitingForConfirmation = false;
-        return;
       }
-
-      this.countdownTotalSeconds -= 1;
-      this.updateCountdownLabel();
     }, 1000);
   }
 

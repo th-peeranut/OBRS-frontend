@@ -349,6 +349,35 @@ const TICKETS = ok([
   },
 ]);
 
+/**
+ * `GET /api/private/bookings/{id}/tickets` — the ENVELOPE the live endpoint returns
+ * (`BookingTicketResponse`), which is NOT the flat row array `TICKETS` above holds. The two
+ * were served by the same fixture until OBRS-1986's regression made the difference matter:
+ * /payment's signed-in lane reads its total from this response, and a `data` that is an array
+ * has no `totalAmount`, so the total stayed unverifiable, the pay button stayed dead and the
+ * QR was never requested — the three reds this lane reported on PR #530.
+ *
+ * `totalAmount` here is the backend's `booking.getNetAmount()` (OBRS-backend
+ * `BookingService#getTicketsByBookingId`), i.e. the post-discount figure. 180 is the same
+ * number `STORE_SEED.bookingResult` and the QR spec's stubbed payment carry, so the three
+ * agree.
+ *
+ * `journeys` stays empty on purpose and is NOT a shortcut: the e-ticket page reads
+ * `data.journeys ?? []` and therefore behaves identically to the array fixture it replaces,
+ * so no sweep's DOM moves — and a booking still waiting to be paid for (the seed's status is
+ * `pending`) genuinely has no CONFIRMED tickets to return, which is all this endpoint emits
+ * (OBRS-180's `keepOnlyConfirmedTickets`).
+ */
+const BOOKING_TICKETS = (id: string) =>
+  ok({
+    bookingId: Number(id),
+    bookingNumber: 'B-000501',
+    bookingStatus: 'pending',
+    totalTickets: 0,
+    totalAmount: 180,
+    journeys: [],
+  });
+
 // Without this every ticket renders the red OBRS-96 'qrUnavailable' placeholder
 // and the e-ticket measurement is of an error state, not a ticket.
 const boardingToken = (id: string) =>
@@ -432,7 +461,7 @@ const FIXTURES: [RegExp, (m: RegExpExecArray) => unknown][] = [
   [/\/stops/, () => ok(STATIONS)],
   [/\/bookings\/me/, () => MY_BOOKINGS],
   [/\/parcels\/me/, () => MY_PARCELS],
-  [/\/bookings\/\d+\/tickets/, () => TICKETS],
+  [/\/bookings\/(\d+)\/tickets/, (m) => BOOKING_TICKETS(m[1])],
   [/\/tickets/, () => TICKETS],
 ];
 
@@ -1124,6 +1153,14 @@ export async function seedCustomerSession(page: Page, dark: boolean): Promise<vo
       localStorage.setItem('auth_token', 'obrs-584-contrast-gate-token');
       localStorage.setItem('auth_username', 'customer@system.local');
       localStorage.setItem('auth_roles', JSON.stringify(['user']));
+      // OBRS-1986. Must equal ACTIVE_BOOKING_ID_KEY (src/app/shared/lib/booking-context-storage.ts),
+      // and 501 is the id the rest of this file's fixtures use. A customer standing on /payment
+      // ALWAYS has this: it is how they got there. Without it the page has no booking to verify
+      // the total against, so `totalState` never leaves 'unavailable' and the pay button stays
+      // disabled -- which is why the contrast sweep stopped measuring `.payment-btn` in either
+      // theme and reported its two dark hover/focus CONTRAST_ALLOW entries as NEVER MEASURED.
+      // Before this card the button was unconditionally live and the omission cost nothing.
+      localStorage.setItem('active_booking_id', '501');
       // Must equal RECENT_ROUTES_CACHE_KEY (src/app/shared/lib/recent-routes.ts).
       // Hand-copied -- see RECENT_ROUTES_SEED's note on why, and on the v1 that
       // sat here unread from OBRS-923 until OBRS-938.

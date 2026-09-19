@@ -3357,9 +3357,6 @@
       "FARE_CATEGORY_CHILD_NO_TICKET_DESK": "儿童票只能在设有售票柜台的站点上车。本次行程的上车站点没有柜台，因此所有座位均需按成人票价预订。",
       "SEAT_ACTIVE_PASSENGER_LABEL": "选择要分配座位的乘客",
       "SEAT_CHIP_FALLBACK": "乘客 {{n}}",
-      "OPEN_SEAT_SECTION_HINT": "开放座位 — 按到达顺序上车。",
-      "OPEN_SEAT_COUNT_LABEL": "乘客人数",
-      "OPEN_SEAT_MAX_HINT": "乘客人数已达剩余座位上限（剩余 {{max}} 个）。",
       "SENSITIVE_TYPE_CONSENT_LABEL": "本人明确同意收集并使用该乘客的僧侣/尼姑身份，用于显示在车票、确认邮件及本公司员工可见的订单列表中，并在指定座位号的班次上用于安排座位",
       "SENSITIVE_TYPE_CONSENT_HINT": "不同意亦可正常订票，我们只是不会记录乘客类型",
       "SEAT_PREFERENCE_LABEL": "座位偏好（可选）",
@@ -3409,6 +3406,7 @@
   },
   "PAYMENT": {
     "MAINTENANCE_LOCKED": "暂停付款 — 系统即将维护",
+    "TOTAL_UNAVAILABLE": "无法确认此订单的金额。请刷新页面，或在付款前联系工作人员。",
     "INFO": {
       "TITLE": "选择付款方式"
     },
@@ -3427,7 +3425,8 @@
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
       "DISCOUNT": "折扣",
-      "TOTAL": "总计"
+      "TOTAL": "总计",
+      "TOTAL_PENDING": "—"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "点击付款后，请在 Omise 的安全窗口中输入卡片信息。本网站不会看到或保存您的卡号。",

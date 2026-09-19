@@ -10,6 +10,7 @@ import { environment } from '../../../environments/environment';
 import {
   BookingPayload,
   CreateBookingResponse,
+  GuestBookingView,
 } from '../../shared/interfaces/booking.interface';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import {
@@ -42,6 +43,7 @@ import { generateIdempotencyKey } from '../../shared/lib/idempotency-key';
 import { normalizeSeatAssignments } from '../../shared/lib/seat-number';
 import { map, Observable } from 'rxjs';
 import {
+  ACTIVE_BOOKING_EXPIRES_AT_KEY,
   ACTIVE_BOOKING_ID_KEY,
   ACTIVE_BOOKING_NUMBER_KEY,
   ACTIVE_BOOKING_PAYMENT_GRANT_KEY,
@@ -116,6 +118,10 @@ export class BookingService {
   // over the API; this is the number the customer quotes and the one booking search
   // resolves, so the payment screen can print a reference before any transaction exists.
   private readonly BOOKING_NUMBER_KEY = ACTIVE_BOOKING_NUMBER_KEY;
+  // OBRS-1984: the seat-hold deadline of that same booking. Stored beside the id because it
+  // has exactly the same lifetime, and read back by both payment panels so a tab switch or a
+  // refresh continues the countdown instead of restarting it.
+  private readonly BOOKING_EXPIRES_AT_KEY = ACTIVE_BOOKING_EXPIRES_AT_KEY;
   // OBRS-858 (ADR-0123 Decision 6). Deliberately NOT named *_token in a way that resembles
   // `auth_token`: it is a capability for one booking, not a session, and a reader skimming
   // localStorage should not mistake one for the other.
@@ -225,6 +231,14 @@ export class BookingService {
       result.netAmount = netAmount;
     }
 
+    // OBRS-1984: forwarded, not stored here. `setActiveBookingId` owns the write, because the
+    // deadline must be cleared for a booking that arrives without one - and this seam cannot
+    // tell "same booking, no deadline" from "a new booking replacing the old one".
+    const expiresAt = String(data?.expiresAt ?? '').trim();
+    if (expiresAt) {
+      result.expiresAt = expiresAt;
+    }
+
     // OBRS-858 (ADR-0123 Decision 6): only the PUBLIC create returns this, so an absent value is
     // the normal authenticated case rather than a missing field. Stored here, at the one seam that
     // already normalizes this response, so no component has to remember to do it — and stored
@@ -236,6 +250,100 @@ export class BookingService {
     }
 
     return result;
+  }
+
+  /**
+   * OBRS-1986: re-read the booking this browser is in the middle of paying for.
+   *
+   * <p>The /payment screen's total must be the server's `netAmount` and nothing else. A
+   * refresh empties the NgRx passenger store - it is never persisted, because that would
+   * write names and phone numbers to the customer's machine (OBRS-903) - and the old
+   * client-side `pricePerSeat x passengerCount` fallback then printed "0 baht" beside a
+   * live pay button while the backend charged the real fare.
+   *
+   * <p><b>ONE decision point, two credentials.</b> A signed-in customer has no guest grant
+   * at ALL and never will: `CreateBookingResponse#guestPaymentToken` is null on every
+   * authenticated create by design (ADR-0123 Decision 6 - "a caller the server can already
+   * identify pays through /api/private/payments, so minting a bearer credential for them
+   * would open a second, weaker way into the same action"). So the guest read below cannot
+   * answer for them, and the first cut of this card left them staring at a disabled pay button -
+   * a harder regression than the "0 baht" this card started from.
+   *
+   * <p>Guest lane: the SAME booking-scoped `X-Guest-Payment-Token` header
+   * `PaymentService.createPayment` and `PaymentService.getQrImage` already send, chosen on
+   * the same condition. Never a query string - that writes a credential into every access
+   * log between here and Koyeb - and never a new localStorage key.
+   *
+   * <p>Signed-in lane: `GET /api/private/bookings/{id}/tickets`, the read this service
+   * ALREADY makes, authorized by the session the auth interceptor attaches and confined to
+   * the caller's own booking by `BookingService#validateOwnership`. NOT the sibling
+   * `GET /api/private/bookings/{id}`: that one is `@PreAuthorize("hasRole('OWNER')")` - the
+   * back-office detail read - and answers 403 to an ordinary customer.
+   * See `toBookingTotalView` for what that response can and cannot supply.
+   *
+   * <p>`silentContext()` because the caller renders its own message: a customer must be
+   * TOLD the total could not be confirmed, next to a disabled pay button, not shown a
+   * generic toast over a screen that still looks payable.
+   */
+  getBooking(bookingId: number): Observable<ResponseAPI<GuestBookingView>> {
+    if (this.authService.isAuthenticated()) {
+      return this.getBookingTickets(bookingId, true).pipe(
+        map((response) => ({
+          ...response,
+          data: response?.data
+            ? this.toBookingTotalView(response.data, bookingId)
+            : undefined,
+        }))
+      );
+    }
+
+    const guestToken = this.getGuestPaymentToken();
+    const headers = guestToken
+      ? new HttpHeaders({ 'X-Guest-Payment-Token': guestToken })
+      : undefined;
+
+    return this.http.get<ResponseAPI<GuestBookingView>>(
+      `${environment.apiUrl}/api/bookings/${bookingId}`,
+      { headers, context: this.silentContext() }
+    );
+  }
+
+  /**
+   * OBRS-1986 (follow-up): the signed-in lane's booking read, expressed in the shape the guest read
+   * returns, so /payment keeps ONE `totalState` machine instead of two parallel ones.
+   *
+   * <p><b>The money.</b> `BookingTicketResponse.totalAmount` is populated from
+   * `booking.getNetAmount()` (OBRS-backend `BookingService#getTicketsByBookingId`), i.e. it
+   * carries the field this projection calls `netAmount` under an older name - the figure the
+   * customer is actually charged, after the discount snapshot. It is mapped onto `netAmount`
+   * and NOT onto `totalAmount`, because putting a net figure on the gross line is how a
+   * summary starts printing a discount that does not exist.
+   *
+   * <p>Parsed defensively and left ABSENT when it is missing or not a finite number - never
+   * coerced to `0`. The caller reads "no amount" as unverified and keeps the pay button dead;
+   * a `0` would read as a booking that costs nothing and re-open the defect this card family
+   * exists to close.
+   *
+   * <p><b>What this endpoint cannot supply, and is therefore left absent rather than
+   * invented:</b> the gross `totalAmount`/`discountAmountSnapshot` pair (so the summary shows
+   * no discount line on this lane), `expiresAt` (no hold countdown - OBRS-1984's panels show
+   * none when the deadline is unknown, which is the honest answer), and
+   * `adultCount`/`childCount` (the passenger rows stay hidden, which is already what
+   * `payment-summary`'s `counts$` does with a 0).
+   */
+  private toBookingTotalView(
+    data: BookingTicketsData,
+    bookingId: number
+  ): GuestBookingView {
+    const rawNetAmount = data.totalAmount;
+    const netAmount = rawNetAmount == null ? NaN : Number(rawNetAmount);
+
+    return {
+      bookingId: data.bookingId ?? bookingId,
+      bookingNumber: data.bookingNumber,
+      netAmount: Number.isFinite(netAmount) ? netAmount : undefined,
+      status: data.bookingStatus,
+    };
   }
 
   getBookingTickets(
@@ -478,10 +586,16 @@ export class BookingService {
    * rather than leaving it. The two belong to the same booking, so a kept-over number
    * from the previous booking would print the wrong reference on the next payment
    * screen — worse than printing none.
+   *
+   * OBRS-1984: `expiresAt` follows exactly that rule, for exactly that reason. The three
+   * call sites that pass nothing (parcel booking, the reschedule and change-stop dialogs)
+   * therefore clear it: a countdown left over from the customer's previous booking is a
+   * deadline this screen has no right to state.
    */
   setActiveBookingId(
     bookingId: number | null | undefined,
-    bookingNumber?: string | null
+    bookingNumber?: string | null,
+    expiresAt?: string | null
   ): void {
     const normalized = Number(bookingId);
     if (!Number.isFinite(normalized) || normalized <= 0) {
@@ -496,6 +610,26 @@ export class BookingService {
     } else {
       localStorage.removeItem(this.BOOKING_NUMBER_KEY);
     }
+
+    this.setActiveBookingExpiresAt(expiresAt);
+  }
+
+  /**
+   * OBRS-1984: the hold deadline on its own, for the one caller that learns it after the
+   * booking already exists — /payment re-reading `GET /api/bookings/{id}` on a refresh.
+   * Write-or-clear, same rule as the booking number above.
+   */
+  setActiveBookingExpiresAt(expiresAt: string | null | undefined): void {
+    const normalized = String(expiresAt ?? '').trim();
+    if (normalized) {
+      localStorage.setItem(this.BOOKING_EXPIRES_AT_KEY, normalized);
+    } else {
+      localStorage.removeItem(this.BOOKING_EXPIRES_AT_KEY);
+    }
+  }
+
+  getActiveBookingExpiresAt(): string | null {
+    return localStorage.getItem(this.BOOKING_EXPIRES_AT_KEY)?.trim() || null;
   }
 
   getActiveBookingId(): number | null {

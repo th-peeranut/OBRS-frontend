@@ -67,4 +67,40 @@ misses:
   `ng-template` + `addOpenSeatPassenger`/`removeOpenSeatPassenger` shape),
   not re-derive it or reach for `DropdownObrsPassengerComponent` directly
   (that component is adult/kid-split and `ControlValueAccessor`-shaped, a
-  different contract).
+  different contract). ⛔ **Withdrawn — see the amendment below.**
+
+## Amendment (2026-09-19, OBRS-1988) — the count is not restated on this step
+
+**Why:** the owner asked why /passenger-info makes the customer state the
+headcount a second time. It does not — the number is seeded from the search
+page (`scheduleFilter.passengerInfo` → `insertPassenger()`). What the card
+added was a second *edit* point for it, and that point was wrong twice over:
+an ASSIGNED leg has no such control at all (its headcount is locked to the
+search page), and `addOpenSeatPassenger()`/`removeOpenSeatPassenger()` wrote
+only to the passenger-info store, never back to `scheduleFilter`, so going
+back to the search page showed a different number. Making the card read-only
+closed that divergence but left the number on screen three times: the
+passenger forms are titled "ข้อมูลผู้โดยสารคนที่ N", and
+`PassengerInfoSummaryComponent` renders "ผู้ใหญ่ N / เด็ก N" from the same
+store this form seeds (OBRS-1226), for OPEN and ASSIGNED alike.
+
+**Changes:** the `openSeatCountCard` `ng-template` is deleted, with
+`addOpenSeatPassenger`/`removeOpenSeatPassenger`, `openSeatMaxCount$`,
+`openSeatAvailable{Outbound,Return,Shared}$`, `isLowSeat()` and the
+`OPEN_SEAT_MAX_HINT`/`OPEN_SEAT_SECTION_HINT`/`OPEN_SEAT_COUNT_LABEL` keys
+(`insertPassenger()`/`deletePassenger()` stay — the seed path and the store
+rebuild still use them). An OPEN leg that shares the page with an ASSIGNED
+leg's map now renders its leg label plus one muted line,
+`SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY` — the search page's own
+open-seating wording, referenced rather than copied, so the two cannot drift.
+The leg label is no longer hidden for an OPEN leg: an unlabelled note could
+not say which leg it is about. When **every** leg is OPEN there is no map left
+to explain, so the whole seat-selection block is dropped instead of holding a
+lone note. The near-full "เหลือ X ที่นั่ง" line goes with the card — the count
+is fixed on this page, so the nudge had nothing to act on; the search results
+list still shows it where the trip is chosen. The per-leg branch and the
+ASSIGNED path in the sections above are otherwise untouched.
+
+**Standing rule this replaces:** a booking step downstream of the search page
+neither changes nor restates the passenger count — one place to choose it
+(the search filter), one place to report it (the summary card).

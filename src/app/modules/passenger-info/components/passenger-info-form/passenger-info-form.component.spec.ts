@@ -489,36 +489,33 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     store = TestBed.inject(MockStore);
   });
 
-  it('one-way OPEN schedule: no seat map renders, and + beyond availableSeats does not grow passengerData', () => {
+  // OBRS-1988: the headcount is chosen once on the search page and reported by
+  // the summary sidebar, so this page neither asks for it again nor repeats it.
+  // With every leg OPEN there is no seat to pick either, so the whole
+  // seat-selection block goes — there is no leg left for it to be about.
+  it('one-way OPEN schedule: no seat map and no seat-selection block at all — the headcount is not restated here', () => {
     render([openSchedule]);
 
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(0);
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-bus')).length).toBe(0);
-    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
+    expect(fixture.debugElement.queryAll(By.css('.open-seat-leg-hint')).length).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('.passenger-add')).length).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('.passenger-minus')).length).toBe(0);
 
     // Seeded with 1 adult from the schedule filter; openSchedule.availableSeats = 2.
     expect(component.passengerData.length).toBe(1);
 
-    const addBtn = fixture.debugElement.query(By.css('.passenger-add'));
-    addBtn.nativeElement.click();
-    fixture.detectChanges();
-    expect(component.passengerData.length).toBe(2);
-
-    // At the availableSeats cap (2) now — a further click must not grow it.
-    addBtn.nativeElement.click();
-    fixture.detectChanges();
-    expect(component.passengerData.length).toBe(2);
+    const text = fixture.nativeElement.textContent;
+    expect(text).not.toContain('PASSENGER_INFO.FORM.SEAT_SECTION_TITLE');
   });
 
   // OBRS-1226: the summary sidebar reads its headcount/total from the
   // passenger-info store, so what the customer sees is only right if this
-  // form keeps that store current. Two failures this pins, both RED before
-  // the fix: (a) the search-page seed never reached the store at all until
-  // the 300ms debounce, so the money line rendered 0 first; (b) a +/- click
-  // moved the form but the store the summary reads was written from the
-  // SEARCH page, so "ผู้ใหญ่ 1 คน · 200 บาท" stayed put while 2 tickets were
-  // being bought.
-  it('OBRS-1226: the search-page seed reaches the passenger-info store on first render, and + dispatches the adjusted headcount', () => {
+  // form keeps that store current. The failure this pins was RED before the
+  // fix: the search-page seed never reached the store at all until the 300ms
+  // debounce, so the money line rendered 0 first. (The +/- half of this test
+  // went with the stepper in OBRS-1988 — the headcount no longer changes here.)
+  it('OBRS-1226: the search-page seed reaches the passenger-info store on first render', () => {
     const dispatchedCounts: number[] = [];
     // Installed BEFORE render() — the seed dispatch fires inside the very
     // first change-detection pass, which render() runs.
@@ -533,42 +530,63 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     expect(dispatchedCounts)
       .withContext('the seeded passenger reaches the store synchronously, not 300ms later')
       .toEqual([1]);
-
-    fixture.debugElement.query(By.css('.passenger-add')).nativeElement.click();
-    fixture.detectChanges();
-
-    expect(dispatchedCounts[dispatchedCounts.length - 1])
-      .withContext('+ writes the new headcount to the store the summary reads')
-      .toBe(2);
   });
 
-  it('OPEN near-full (availableSeats <= LOW_SEAT_THRESHOLD): the "เหลือ X ที่นั่ง" remaining-seat line IS shown', () => {
+  // The "เหลือ X ที่นั่ง" line went with the card (OBRS-1988). The count cannot be
+  // changed on this page, so a scarcity nudge here had nothing to act on; the
+  // search results list still carries it, where the trip is actually chosen.
+  it('OPEN near-full (availableSeats <= LOW_SEAT_THRESHOLD): no remaining-seat line on this page any more', () => {
     render([openSchedule]); // availableSeats = 2 (<= 5)
-    const card = fixture.debugElement.query(By.css('.open-seat-card')).nativeElement;
-    expect(card.textContent).toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
+    expect(fixture.nativeElement.textContent).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
   });
 
-  it('OPEN plenty (availableSeats > LOW_SEAT_THRESHOLD): the remaining-seat line is HIDDEN (no inventory reveal), count card still renders', () => {
-    render([{ ...openSchedule, availableSeats: 13 }]); // 13 > 5
-    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
-    const card = fixture.debugElement.query(By.css('.open-seat-card')).nativeElement;
-    expect(card.textContent).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
-  });
-
-  it('mixed-mode round trip: OPEN outbound renders a count card, ASSIGNED return still renders its seat map', () => {
+  it('mixed-mode round trip: the OPEN leg is labelled and explained in one line (no headcount), the ASSIGNED leg keeps its seat map', () => {
     render([openSchedule, assignedSchedule]);
 
-    // Outbound (OPEN): no seat map, count card present.
     // Return (ASSIGNED, van): exactly one seat map, for the return leg only.
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
-    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
+
+    // Outbound (OPEN): one note, in the search page's own open-seating wording.
+    const hints = fixture.debugElement.queryAll(By.css('.open-seat-leg-hint'));
+    expect(hints.length).toBe(1);
+    expect(hints[0].nativeElement.textContent).toContain('SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY');
+
+    // Both legs are labelled — an unlabelled note could not say which leg it is
+    // about, so the OPEN leg keeps its label too (it had none before OBRS-1988).
+    const labels = fixture.debugElement
+      .queryAll(By.css('.seat-leg-label'))
+      .map((d) => d.nativeElement.textContent)
+      .join(' ');
+    expect(labels).toContain('PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND');
+    expect(labels).toContain('PASSENGER_INFO.FORM.SEAT_LEG_RETURN');
   });
 
-  it('ASSIGNED-only schedule (regression): seat map renders as before, no OPEN-seating card', () => {
+  // The mirror of the case above. The return leg has its own copy of the same
+  // branch in the template, and nothing in this spec exercised that direction
+  // before — the one case where a typo would only show on a booking that is
+  // ASSIGNED out and OPEN back.
+  it('mixed-mode round trip, the other way round: the ASSIGNED outbound keeps its map, the OPEN return gets the note', () => {
+    render([assignedSchedule, openSchedule]);
+
+    expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
+
+    const hints = fixture.debugElement.queryAll(By.css('.open-seat-leg-hint'));
+    expect(hints.length).toBe(1);
+    expect(hints[0].nativeElement.textContent).toContain('SCHEDULE_BOOKING.OPEN_SEATING_BANNER.BODY');
+
+    const labels = fixture.debugElement
+      .queryAll(By.css('.seat-leg-label'))
+      .map((d) => d.nativeElement.textContent)
+      .join(' ');
+    expect(labels).toContain('PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND');
+    expect(labels).toContain('PASSENGER_INFO.FORM.SEAT_LEG_RETURN');
+  });
+
+  it('ASSIGNED-only schedule (regression): seat map renders as before, no OPEN-seating note', () => {
     render([assignedSchedule]);
 
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
-    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('.open-seat-leg-hint')).length).toBe(0);
   });
 
   // OBRS-361: both p-selectButton groups render with no pre-selection, and
@@ -784,11 +802,28 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     expect(component.getFormValue(0, 'seatPreference')).toBe('WINDOW');
     expect(component.getFormValue(0, 'seatRequirement')).toBe('WHEELCHAIR');
 
-    // Add passenger 2 via the OPEN leg's "+": insertPassenger() +
-    // syncPassengerInfoToStore() => a store round trip => setPassengerData([p1, p2])
-    // taking the count-CHANGED (remove/add-delta) branch.
-    const addBtn = fixture.debugElement.query(By.css('.passenger-add'));
-    addBtn.nativeElement.click();
+    // Add passenger 2 the only way left after OBRS-1988 removed the in-form
+    // stepper: the SEARCH page writes the new headcount to the passenger-info
+    // store, which lands as setPassengerData([p1, p2]) — the same
+    // count-CHANGED (remove/add-delta) branch this test exists to pin.
+    store.overrideSelector(selectPassengerInfo, [
+      ...(component as any).buildPassengerInfoPayload(),
+      {
+        isAdult: true,
+        title: null,
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        phoneNumber: '',
+        gender: '',
+        isSelectSeat: false,
+        passengerSeat: '',
+        passengerSeatReturn: '',
+        seatPreference: null,
+        seatRequirement: null,
+      },
+    ]);
+    store.refreshState();
     fixture.detectChanges();
     tick(300);
     fixture.detectChanges();

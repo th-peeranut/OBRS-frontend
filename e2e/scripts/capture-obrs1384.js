@@ -2,6 +2,14 @@
  * OBRS-1384 — before/after evidence for "the amount under the PromptPay QR is the
  * SEARCH page's headcount times the fare".
  *
+ * ⛔ NOT RUNNABLE SINCE OBRS-1988 (2026-09-19) — kept as the record of how this card
+ * was evidenced, not as a regression aid. The repro below walks through the OPEN-seating
+ * +/- stepper on /passenger-info, and that stepper is gone: the headcount is now set
+ * once, on the search page, so `.open-seat-card .passenger-add` never appears and the
+ * waitForSelector at the bottom of this file would simply time out. The divergence this
+ * card fixed is structurally impossible now — there is no second edit point to diverge
+ * from. Re-verifying OBRS-1384 needs a new repro, not this one.
+ *
  * Drives the REAL customer booking flow on SIT, because the API shortcut that
  * `sit-test-credentials` records for /payment (create the booking over the API, write
  * `localStorage['active_booking_id']`) cannot reproduce this bug: the passenger rows
