@@ -20,6 +20,7 @@ describe('PaymentComponent', () => {
     bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
       'getBooking',
+      'setActiveBookingExpiresAt',
     ]);
     bookingService.getActiveBookingId.and.returnValue(null);
     bookingService.getBooking.and.returnValue(of({ code: 200, message: 'ok' }));
@@ -209,6 +210,44 @@ describe('PaymentComponent', () => {
 
       expect(component.totalState).toBe('unavailable');
       expect(setBookingActions().length).toBe(0);
+    });
+
+    /**
+     * OBRS-1984 (AC-2/AC-3): the same refetch also brings back the hold deadline, which is
+     * what lets the countdown continue after a refresh instead of restarting at 15:00.
+     * Stored, not just read: both payment panels are rebuilt on every tab switch and read
+     * it back from storage.
+     */
+    it('stores the hold deadline the refetch brought back', () => {
+      buildWith({ booking: null, passengerInfo: null });
+      bookingService.getActiveBookingId.and.returnValue(4242);
+      bookingService.getBooking.and.returnValue(
+        of({
+          code: 200,
+          message: 'ok',
+          data: { ...REFRESHED, expiresAt: '2026-09-19T10:15:00+07:00' },
+        } as ResponseAPI<GuestBookingView>)
+      );
+
+      component.ngOnInit();
+
+      expect(bookingService.setActiveBookingExpiresAt).toHaveBeenCalledWith(
+        '2026-09-19T10:15:00+07:00'
+      );
+    });
+
+    it('clears a stale deadline when the booking comes back without one (older backend)', () => {
+      buildWith({ booking: null, passengerInfo: null });
+      bookingService.getActiveBookingId.and.returnValue(4242);
+      bookingService.getBooking.and.returnValue(
+        of({ code: 200, message: 'ok', data: REFRESHED } as ResponseAPI<GuestBookingView>)
+      );
+
+      component.ngOnInit();
+
+      // `undefined` clears the key - the panels then show no countdown rather than one
+      // carried over from a booking that is no longer the one being paid for.
+      expect(bookingService.setActiveBookingExpiresAt).toHaveBeenCalledWith(undefined);
     });
 
     it('handles an empty localStorage without throwing and without enabling the button', () => {

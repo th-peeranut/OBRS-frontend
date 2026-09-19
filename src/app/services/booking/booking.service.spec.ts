@@ -458,4 +458,59 @@ describe('BookingService', () => {
       req.flush({ code: 200, message: 'ok', data: { bookingId: 4242 } });
     });
   });
+
+  /**
+   * OBRS-1984 (AC-2). The hold deadline lives beside `active_booking_id`, in the key group
+   * `booking-context-storage.ts` owns, so the /payment countdown survives a tab switch and
+   * a refresh. Write-or-clear, exactly like the booking number above: a deadline carried
+   * over from the customer's PREVIOUS booking is a claim this app has no right to make.
+   */
+  describe('the active booking hold deadline (OBRS-1984)', () => {
+    afterEach(() => {
+      localStorage.removeItem('active_booking_expires_at');
+    });
+
+    it('stores the deadline next to the booking id, under its own key', () => {
+      service.setActiveBookingId(7, 'BK-7', '2026-09-19T10:15:00+07:00');
+
+      expect(localStorage.getItem('active_booking_expires_at')).toBe(
+        '2026-09-19T10:15:00+07:00'
+      );
+      expect(service.getActiveBookingExpiresAt()).toBe('2026-09-19T10:15:00+07:00');
+    });
+
+    it('clears a stale deadline when the next booking arrives without one', () => {
+      service.setActiveBookingId(7, 'BK-7', '2026-09-19T10:15:00+07:00');
+
+      service.setActiveBookingId(8, 'BK-8');
+
+      expect(service.getActiveBookingExpiresAt()).toBeNull();
+    });
+
+    it('drops the deadline when the active booking is cleared', () => {
+      service.setActiveBookingId(7, 'BK-7', '2026-09-19T10:15:00+07:00');
+
+      service.clearActiveBookingId();
+
+      expect(localStorage.getItem('active_booking_expires_at')).toBeNull();
+    });
+
+    it('forwards the deadline the create response carries, so /payment can store it', () => {
+      service.createBooking(PAYLOAD).subscribe((response) => {
+        expect(response.data?.expiresAt).toBe('2026-09-19T10:15:00+07:00');
+      });
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings`);
+      req.flush({
+        code: 201,
+        message: 'created',
+        data: {
+          bookingId: 7,
+          bookingNumber: 'BK-7',
+          expiresAt: '2026-09-19T10:15:00+07:00',
+        },
+      });
+    });
+  });
+
 });

@@ -32,6 +32,7 @@ import {
   isTrustedPaymentRedirect,
   paymentRedirectOriginForLog,
 } from '../../../lib/payment-redirect';
+import { remainingHoldSeconds } from '../../../lib/payment-hold-countdown';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
@@ -92,7 +93,13 @@ export class PaymentQrcodeComponent implements OnInit, OnChanges, OnDestroy {
    * transaction id that one already exists before the first scan.
    */
   bookingNumber = '';
-  countdown = '15 : 00';
+  /**
+   * OBRS-1984: empty until a hold deadline is known - the template then renders no
+   * countdown at all. It used to be seeded '15 : 00', which is what restarted the clock on
+   * every tab switch (this panel is an `@if` branch, destroyed and rebuilt) and printed a
+   * deadline nobody had checked.
+   */
+  countdown = '';
   /**
    * OBRS-1203 — the iOS fallback. Shows the QR full-screen with a
    * "press and hold to save" hint, because on iOS that gesture is the only way
@@ -108,7 +115,9 @@ export class PaymentQrcodeComponent implements OnInit, OnChanges, OnDestroy {
   private qrObjectUrl = '';
   private hasRequestedQrCode = false;
   private paymentIdempotencyKey = '';
-  private countdownTotalSeconds = 15 * 60;
+  private countdownTotalSeconds = 0;
+  /** The booking's own `expires_at`; `null` = unknown, which is NOT "expired". */
+  private holdExpiresAt: string | null = null;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
 
   constructor(
@@ -150,6 +159,10 @@ export class PaymentQrcodeComponent implements OnInit, OnChanges, OnDestroy {
     if (!change || change.firstChange || change.currentValue !== 'ready') {
       return;
     }
+    // OBRS-1984: the hold deadline arrives on the same round trip as the total, so
+    // re-derive here too. It cannot restart the clock - `startCountdown` counts to a
+    // deadline, not from a duration.
+    this.startCountdown();
     if (this.amountOverride != null && this.amountOverride <= 0) {
       return;
     }
@@ -224,12 +237,25 @@ export class PaymentQrcodeComponent implements OnInit, OnChanges, OnDestroy {
     return this.totalState !== 'ready';
   }
 
+  /**
+   * OBRS-1984 (AC-5): the seat hold this payment is for has run out. Composes with
+   * `isTotalUnverified` and `isNewChargeLocked` as a plain OR on the pay button - three
+   * independent reasons the charge must not start, none of which can mask another.
+   *
+   * False while the deadline is unknown: a countdown we cannot state must not lock a
+   * customer out of paying for a booking the server still holds.
+   */
+  get isHoldExpired(): boolean {
+    return this.holdExpiresAt !== null && this.countdownTotalSeconds <= 0;
+  }
+
   async confirmPayment(): Promise<void> {
     if (
       this.isSubmittingPayment ||
       !this.qrPaymentUrl ||
       this.isNewChargeLocked ||
-      this.isTotalUnverified
+      this.isTotalUnverified ||
+      this.isHoldExpired
     ) {
       return;
     }
@@ -730,20 +756,40 @@ export class PaymentQrcodeComponent implements OnInit, OnChanges, OnDestroy {
     return formatMoney(Number.isFinite(value) ? value : 0, this.translate.currentLang);
   }
 
+  /**
+   * OBRS-1984: counts to the booking's own `expires_at`, read from storage so a tab switch
+   * or a refresh continues the same countdown. Each tick re-derives from the deadline
+   * rather than decrementing - a backgrounded tab throttles `setInterval`, and a
+   * decremented counter would drift behind the real hold while looking healthy.
+   */
   private startCountdown(): void {
     this.clearCountdown();
-    this.countdownTotalSeconds = 15 * 60;
+    this.holdExpiresAt = this.bookingService.getActiveBookingExpiresAt();
+    const remaining = remainingHoldSeconds(this.holdExpiresAt, Date.now());
+    if (remaining === null) {
+      // No deadline known: show no countdown rather than claim one.
+      this.holdExpiresAt = null;
+      this.countdownTotalSeconds = 0;
+      this.countdown = '';
+      return;
+    }
+
+    this.countdownTotalSeconds = remaining;
     this.updateCountdownLabel();
+    if (remaining <= 0) {
+      this.isWaitingForConfirmation = false;
+      return;
+    }
 
     this.countdownIntervalId = setInterval(() => {
+      this.countdownTotalSeconds =
+        remainingHoldSeconds(this.holdExpiresAt, Date.now()) ?? 0;
+      this.updateCountdownLabel();
+
       if (this.countdownTotalSeconds <= 0) {
         this.clearCountdown();
         this.isWaitingForConfirmation = false;
-        return;
       }
-
-      this.countdownTotalSeconds -= 1;
-      this.updateCountdownLabel();
     }, 1000);
   }
 

@@ -1,7 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
 import {
   CARD_ENTRY_CANCELLED,
@@ -42,6 +44,7 @@ describe('PaymentCreditcardComponent - payment status "paid" (OBRS-177)', () => 
     const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      'getActiveBookingExpiresAt',
     ]);
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
@@ -254,6 +257,7 @@ describe('PaymentCreditcardComponent - OmiseCard hosted card entry (OBRS-391)', 
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      'getActiveBookingExpiresAt',
     ]);
     bookingService.getActiveBookingId.and.returnValue(10);
 
@@ -463,6 +467,7 @@ describe('PaymentCreditcardComponent - authorizeUri host allow-list (security re
     translate.instant.and.callFake((key: string) => key);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      'getActiveBookingExpiresAt',
     ]);
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
@@ -558,7 +563,8 @@ describe('PaymentCreditcardComponent - payment lock during maintenance (OBRS-190
     const alertService = jasmine.createSpyObj<AlertService>('AlertService', ['success', 'error', 'info']);
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
-    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', ['getActiveBookingId']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', ['getActiveBookingId',
+      'getActiveBookingExpiresAt',]);
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
       'createPayment',
@@ -596,5 +602,142 @@ describe('PaymentCreditcardComponent - payment lock during maintenance (OBRS-190
 
     // It got as far as looking for the booking - i.e. the lock did not short-circuit it.
     expect(bookingService.getActiveBookingId).toHaveBeenCalled();
+  });
+});
+
+/**
+ * OBRS-1984 - the countdown is the booking's own hold deadline, not a constant.
+ *
+ * On PROD 2026-09-19 it restarted at 15:00 every time the customer switched payment tab
+ * (the two panels are `@if` branches: destroyed and rebuilt, not shown/hidden) and on every
+ * refresh, because each `ngOnInit` re-seeded `15 * 60`. 15 was a guess on top of that -
+ * `SEAT_RESERVATION_MINUTES` is per-operator config.
+ *
+ * Mounted through TestBed rather than instantiated, because what the customer is misled by
+ * is the RENDERED label and the RENDERED button, not a private field.
+ */
+describe('PaymentCreditcardComponent - the countdown runs to the booking hold deadline (OBRS-1984)', () => {
+  let fixture: ComponentFixture<PaymentCreditcardComponent>;
+
+  /** ISO instant `minutes` from now, with an explicit offset (`Z`) - a literal without one
+   *  is read in the runner's timezone and can be green here and red on CI. */
+  const inMinutes = (minutes: number): string =>
+    new Date(Date.now() + minutes * 60_000).toISOString();
+
+  async function mount(storedExpiresAt: string | null): Promise<void> {
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+      'getActiveBookingExpiresAt',
+    ]);
+    bookingService.getActiveBookingId.and.returnValue(7);
+    // The stored key `active_booking_expires_at`, written when the booking was created and
+    // read back here - which is what makes a tab switch and a refresh continue one countdown.
+    bookingService.getActiveBookingExpiresAt.and.returnValue(storedExpiresAt);
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      declarations: [PaymentCreditcardComponent],
+      imports: [TranslateModule.forRoot()],
+      providers: [
+        { provide: Router, useValue: jasmine.createSpyObj<Router>('Router', ['navigate']) },
+        { provide: BookingService, useValue: bookingService },
+        {
+          provide: PaymentService,
+          useValue: jasmine.createSpyObj<PaymentService>('PaymentService', [
+            'getBookingPayments',
+            'createPayment',
+            'createMockPayment',
+          ]),
+        },
+        {
+          provide: OmiseTokenService,
+          useValue: jasmine.createSpyObj<OmiseTokenService>('OmiseTokenService', [
+            'requestCardToken',
+          ]),
+        },
+        {
+          provide: AlertService,
+          useValue: jasmine.createSpyObj<AlertService>('AlertService', [
+            'success',
+            'error',
+            'info',
+          ]),
+        },
+        {
+          provide: MaintenanceWindowService,
+          useValue: { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService,
+        },
+      ],
+      // `<app-payment-summary>` and the `appPending` directive are siblings of what this
+      // block asserts; NO_ERRORS_SCHEMA leaves them inert.
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PaymentCreditcardComponent);
+    fixture.detectChanges();
+  }
+
+  function countdownText(): string | null {
+    return (
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('.countdown-value')
+        ?.textContent?.trim() ?? null
+    );
+  }
+
+  function payButton(): HTMLButtonElement {
+    return (fixture.nativeElement as HTMLElement).querySelector(
+      'button.payment-btn'
+    ) as HTMLButtonElement;
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  it('shows the remaining hold, so a 4-minute deadline reads 04 : 00 and never 15 : 00', async () => {
+    await mount(inMinutes(4));
+
+    expect(countdownText()).toBe('04 : 00');
+    expect(payButton().disabled).toBeFalse();
+  });
+
+  it('continues from the remaining time when the component is rebuilt - the tab switch and the refresh', async () => {
+    // 6 minutes into a 15-minute hold: 9 left. The first mount is the panel the customer
+    // was looking at; the second is the one they get back after switching tab or reloading.
+    const deadline = inMinutes(9);
+
+    await mount(deadline);
+    expect(countdownText()).toBe('09 : 00');
+
+    fixture.destroy();
+    await mount(deadline);
+
+    expect(countdownText()).toBe('09 : 00');
+    expect(countdownText()).not.toBe('15 : 00');
+  });
+
+  it('shows 00 : 00 and refuses the charge once the hold has expired', async () => {
+    await mount(inMinutes(-1));
+
+    expect(countdownText()).toBe('00 : 00');
+    expect(fixture.componentInstance.isHoldExpired).toBeTrue();
+    expect(payButton().disabled).toBeTrue();
+  });
+
+  it('FALLBACK - with no stored deadline it shows no countdown at all, and still lets the customer pay', async () => {
+    await mount(null);
+
+    // Deliberate: the backend half deploys first, so `expiresAt` is absent for a while.
+    // Claiming a deadline we do not know is the defect; claiming none is honest, and the
+    // server still enforces the hold. It must not disable the button either - the booking
+    // is still held.
+    expect(countdownText()).toBeNull();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.countdown')
+    ).toBeNull();
+    expect(fixture.componentInstance.countdown).toBe('');
+    expect(fixture.componentInstance.isHoldExpired).toBeFalse();
+    expect(payButton().disabled).toBeFalse();
   });
 });

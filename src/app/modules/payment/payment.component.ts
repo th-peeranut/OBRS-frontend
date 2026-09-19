@@ -108,6 +108,12 @@ export class PaymentComponent implements OnDestroy {
             return;
           }
 
+          // OBRS-1984: the hold deadline this refetch brought back. Persisted before the
+          // panels read it, so the countdown after a refresh is the remaining hold and not
+          // a fresh 15:00. Absent (older backend) clears it — the panels then show no
+          // countdown, which is the one honest answer when the deadline is unknown.
+          this.bookingService.setActiveBookingExpiresAt(booking.expiresAt);
+
           this.store.dispatch(
             invokeSetBookingApi({
               booking: {

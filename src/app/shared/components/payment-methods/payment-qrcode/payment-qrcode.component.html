@@ -57,10 +57,14 @@
             }
           </div>
           <div class="qr-amount">{{ amountDisplay }}</div>
-          <div class="qr-countdown">
-            <img src="icons/payment-timer.svg" alt="" aria-hidden="true" />
-            <span>{{ countdown }}</span>
-          </div>
+          <!-- OBRS-1984: rendered only when the booking's own `expires_at` is known - see
+          the same block in payment-creditcard.component.html. -->
+          @if (countdown) {
+            <div class="qr-countdown">
+              <img src="icons/payment-timer.svg" alt="" aria-hidden="true" />
+              <span>{{ countdown }}</span>
+            </div>
+          }
         </div>
 
         <!-- OBRS-1204: the merchant-name row is gone, not blanked. The name the payer
@@ -142,8 +146,8 @@
           class="payment-btn"
           type="button"
           (click)="confirmPayment()"
-          [class.payment-btn-diabled]="isSubmittingPayment || !qrPaymentUrl || isNewChargeLocked || isTotalUnverified"
-          [disabled]="isSubmittingPayment || !qrPaymentUrl || isNewChargeLocked || isTotalUnverified"
+          [class.payment-btn-diabled]="isSubmittingPayment || !qrPaymentUrl || isNewChargeLocked || isTotalUnverified || isHoldExpired"
+          [disabled]="isSubmittingPayment || !qrPaymentUrl || isNewChargeLocked || isTotalUnverified || isHoldExpired"
           [appPending]="isSubmittingPayment"
           >
           {{ "PAYMENT.QR.CONFIRM_PAYMENT" | translate }}

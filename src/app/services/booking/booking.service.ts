@@ -43,6 +43,7 @@ import { generateIdempotencyKey } from '../../shared/lib/idempotency-key';
 import { normalizeSeatAssignments } from '../../shared/lib/seat-number';
 import { map, Observable } from 'rxjs';
 import {
+  ACTIVE_BOOKING_EXPIRES_AT_KEY,
   ACTIVE_BOOKING_ID_KEY,
   ACTIVE_BOOKING_NUMBER_KEY,
   ACTIVE_BOOKING_PAYMENT_GRANT_KEY,
@@ -117,6 +118,10 @@ export class BookingService {
   // over the API; this is the number the customer quotes and the one booking search
   // resolves, so the payment screen can print a reference before any transaction exists.
   private readonly BOOKING_NUMBER_KEY = ACTIVE_BOOKING_NUMBER_KEY;
+  // OBRS-1984: the seat-hold deadline of that same booking. Stored beside the id because it
+  // has exactly the same lifetime, and read back by both payment panels so a tab switch or a
+  // refresh continues the countdown instead of restarting it.
+  private readonly BOOKING_EXPIRES_AT_KEY = ACTIVE_BOOKING_EXPIRES_AT_KEY;
   // OBRS-858 (ADR-0123 Decision 6). Deliberately NOT named *_token in a way that resembles
   // `auth_token`: it is a capability for one booking, not a session, and a reader skimming
   // localStorage should not mistake one for the other.
@@ -224,6 +229,14 @@ export class BookingService {
     const netAmount = Number(data?.netAmount);
     if (Number.isFinite(netAmount)) {
       result.netAmount = netAmount;
+    }
+
+    // OBRS-1984: forwarded, not stored here. `setActiveBookingId` owns the write, because the
+    // deadline must be cleared for a booking that arrives without one - and this seam cannot
+    // tell "same booking, no deadline" from "a new booking replacing the old one".
+    const expiresAt = String(data?.expiresAt ?? '').trim();
+    if (expiresAt) {
+      result.expiresAt = expiresAt;
     }
 
     // OBRS-858 (ADR-0123 Decision 6): only the PUBLIC create returns this, so an absent value is
@@ -510,10 +523,16 @@ export class BookingService {
    * rather than leaving it. The two belong to the same booking, so a kept-over number
    * from the previous booking would print the wrong reference on the next payment
    * screen — worse than printing none.
+   *
+   * OBRS-1984: `expiresAt` follows exactly that rule, for exactly that reason. The three
+   * call sites that pass nothing (parcel booking, the reschedule and change-stop dialogs)
+   * therefore clear it: a countdown left over from the customer's previous booking is a
+   * deadline this screen has no right to state.
    */
   setActiveBookingId(
     bookingId: number | null | undefined,
-    bookingNumber?: string | null
+    bookingNumber?: string | null,
+    expiresAt?: string | null
   ): void {
     const normalized = Number(bookingId);
     if (!Number.isFinite(normalized) || normalized <= 0) {
@@ -528,6 +547,26 @@ export class BookingService {
     } else {
       localStorage.removeItem(this.BOOKING_NUMBER_KEY);
     }
+
+    this.setActiveBookingExpiresAt(expiresAt);
+  }
+
+  /**
+   * OBRS-1984: the hold deadline on its own, for the one caller that learns it after the
+   * booking already exists — /payment re-reading `GET /api/bookings/{id}` on a refresh.
+   * Write-or-clear, same rule as the booking number above.
+   */
+  setActiveBookingExpiresAt(expiresAt: string | null | undefined): void {
+    const normalized = String(expiresAt ?? '').trim();
+    if (normalized) {
+      localStorage.setItem(this.BOOKING_EXPIRES_AT_KEY, normalized);
+    } else {
+      localStorage.removeItem(this.BOOKING_EXPIRES_AT_KEY);
+    }
+  }
+
+  getActiveBookingExpiresAt(): string | null {
+    return localStorage.getItem(this.BOOKING_EXPIRES_AT_KEY)?.trim() || null;
   }
 
   getActiveBookingId(): number | null {
