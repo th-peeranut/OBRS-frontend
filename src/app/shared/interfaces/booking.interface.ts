@@ -105,4 +105,36 @@ export interface BookingState {
   totalAmount?: number;
   discountAmountSnapshot?: number;
   netAmount?: number;
+  // OBRS-1986: the server's own passenger split, restored by `GET /api/bookings/{id}`
+  // after a /payment refresh empties the passenger store. Counts only - that response
+  // carries no name and no phone number by design, so the left "passenger details"
+  // block stays empty rather than being filled with invented rows.
+  adultCount?: number;
+  childCount?: number;
+}
+
+/**
+ * OBRS-1986: what the guest-readable `GET /api/bookings/{id}` returns (inside the usual
+ * `ApiSuccessRespDto` envelope), read with the booking-scoped `X-Guest-Payment-Token`
+ * the guest pay call already sends.
+ *
+ * <p>This is how the /payment screen gets its total back after a refresh. The passenger
+ * store is deliberately never persisted (`booking-context-storage.ts` - names and phone
+ * numbers must not be written to the customer's machine, OBRS-903), so before this card a
+ * refresh left the screen computing `pricePerSeat x 0` and printing "0 baht" beside a live
+ * pay button while the backend charged the real fare.
+ *
+ * <p>No passenger PII here on purpose: counts, amounts, the hold deadline and the status.
+ */
+export interface GuestBookingView {
+  bookingId: number;
+  bookingNumber: string;
+  totalAmount?: number;
+  discountAmountSnapshot?: number;
+  netAmount?: number;
+  /** ISO offset datetime - the real hold deadline. */
+  expiresAt?: string;
+  status?: string;
+  adultCount?: number;
+  childCount?: number;
 }

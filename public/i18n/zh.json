@@ -3406,6 +3406,7 @@
   },
   "PAYMENT": {
     "MAINTENANCE_LOCKED": "暂停付款 — 系统即将维护",
+    "TOTAL_UNAVAILABLE": "无法确认此订单的金额。请刷新页面，或在付款前联系工作人员。",
     "INFO": {
       "TITLE": "选择付款方式"
     },
@@ -3424,7 +3425,8 @@
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
       "DISCOUNT": "折扣",
-      "TOTAL": "总计"
+      "TOTAL": "总计",
+      "TOTAL_PENDING": "—"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "点击付款后，请在 Omise 的安全窗口中输入卡片信息。本网站不会看到或保存您的卡号。",

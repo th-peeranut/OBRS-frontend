@@ -22,6 +22,7 @@ import {
   PaymentByBookingIdResponse,
   PaymentPayload,
   PaymentResponse,
+  PaymentTotalState,
 } from '../../../../shared/interfaces/payment.interface';
 import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
@@ -55,6 +56,13 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
    * byte-identical.
    */
   @Input() amountOverride: number | null = null;
+  /**
+   * OBRS-1986: whether the total on screen is the server's own. `'ready'` by default, so
+   * every existing call site (parcel booking, the reschedule and change-stop dialogs -
+   * all of which state their own amount) stays byte-identical; only /payment binds the
+   * live value. See `PaymentTotalState`.
+   */
+  @Input() totalState: PaymentTotalState = 'ready';
   @Output() tabChange = new EventEmitter<PaymentTab>();
   @Output() back = new EventEmitter<void>();
   @Output() paymentCompleted = new EventEmitter<void>();
@@ -107,6 +115,16 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     return this.maintenanceWindowService.isPaymentLockedNow();
   }
 
+  /**
+   * OBRS-1986 (AC-6): true until this screen can show the server's own total. Gates the
+   * button AND the handler, the same way `isPaymentLocked` does - the button is what the
+   * customer sees, the early return is what someone who re-enables it in devtools gets.
+   * Never let a customer pay against a number the page cannot vouch for.
+   */
+  get isTotalUnverified(): boolean {
+    return this.totalState !== 'ready';
+  }
+
 
   ngOnDestroy(): void {
     this.clearCountdown();
@@ -122,7 +140,12 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   }
 
   async submitPayment(): Promise<void> {
-    if (this.isSubmittingPayment || this.isWaitingForConfirmation || this.isPaymentLocked) {
+    if (
+      this.isSubmittingPayment ||
+      this.isWaitingForConfirmation ||
+      this.isPaymentLocked ||
+      this.isTotalUnverified
+    ) {
       return;
     }
 

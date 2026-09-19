@@ -19,6 +19,17 @@ export type MobileBankingSourceType =
   | 'mobile_banking_bbl'
   | 'mobile_banking_ocbc';
 
+/**
+ * OBRS-1986: whether the server's own total is on screen yet.
+ *
+ * `'loading'` is the honest opening state after a page refresh - the booking store is
+ * empty until `GET /api/bookings/{id}` answers - and it disables the pay button just like
+ * `'unavailable'` does. The two are separate so the screen only ACCUSES itself of a
+ * failure once it really has one: a "we could not confirm the amount" line flashed on
+ * every refresh would be its own false alarm.
+ */
+export type PaymentTotalState = 'loading' | 'ready' | 'unavailable';
+
 export interface PaymentPayload {
   bookingId: number;
   paymentMethod: PaymentMethod;

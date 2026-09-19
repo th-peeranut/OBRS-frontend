@@ -3406,6 +3406,7 @@
   },
   "PAYMENT": {
     "MAINTENANCE_LOCKED": "Payments are paused - the site is about to go down for maintenance",
+    "TOTAL_UNAVAILABLE": "We could not confirm the amount for this booking. Please reload the page, or contact our staff before paying.",
     "INFO": {
       "TITLE": "Select payment method"
     },
@@ -3424,7 +3425,8 @@
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "DISCOUNT": "Discount",
-      "TOTAL": "Total"
+      "TOTAL": "Total",
+      "TOTAL_PENDING": "—"
     },
     "CREDIT_CARD": {
       "HOSTED_HINT": "Press pay and enter your card details in Omise's secure window. This site never sees or stores your card number.",

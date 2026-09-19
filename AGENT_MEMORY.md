@@ -4929,3 +4929,19 @@ fire MORE than once over the component's lifetime (a lifecycle event, not just a
 "first ngOnChanges + first onXyz" is not naturally idempotent, because one half is
 naturally repeating.
 
+
+## OBRS-1986 (scrutinize self-fix) — a "gate the create call" early-return needs a re-arm
+
+`payment-qrcode` gates `ensurePromptPayQrCode()` (the call that CREATES the PromptPay
+charge) behind `isTotalUnverified`, the same way OBRS-1902 gated it behind
+`isPaymentLocked`. The difference nobody noticed: the maintenance lock is read from a
+getter that stays true for the whole window, while `totalState` is a transient that
+FLIPS to `'ready'` one HTTP round trip later. `ensurePromptPayQrCode()` returns without
+setting `hasRequestedQrCode`, and `ngOnInit` is its only caller — so a customer who
+opened the QR tab during that round trip got an empty panel permanently, and no message
+either, because `'ready'` also hides the `TOTAL_UNAVAILABLE` hint. Fixed with an
+`ngOnChanges` re-arm (`firstChange` skipped so the unbound call sites stay identical).
+
+Lesson: when you add a condition to an existing early-return guard, ask whether your
+condition can BECOME false while the component stays mounted. If it can, the guard needs
+a re-arm; copying a guard whose condition is effectively static does not carry one.

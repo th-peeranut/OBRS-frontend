@@ -3,9 +3,11 @@ import {
   EventEmitter,
   HostListener,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -20,6 +22,7 @@ import {
   PaymentByBookingIdResponse,
   PaymentPayload,
   PaymentResponse,
+  PaymentTotalState,
 } from '../../../../shared/interfaces/payment.interface';
 import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
@@ -39,7 +42,7 @@ type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
     styleUrl: './payment-qrcode.component.scss',
     standalone: false
 })
-export class PaymentQrcodeComponent implements OnInit, OnDestroy {
+export class PaymentQrcodeComponent implements OnInit, OnChanges, OnDestroy {
   @Input() activeTab: PaymentTab = 'qrcode';
   /**
    * Route to navigate to on a completed payment. Defaults to the existing
@@ -62,6 +65,12 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * `<app-payment-summary>`.
    */
   @Input() amountOverride: number | null = null;
+  /**
+   * OBRS-1986: whether the total on screen is the server's own. `'ready'` by default so
+   * every existing call site stays byte-identical; only /payment binds the live value.
+   * See `PaymentTotalState`.
+   */
+  @Input() totalState: PaymentTotalState = 'ready';
   @Output() tabChange = new EventEmitter<PaymentTab>();
   @Output() back = new EventEmitter<void>();
   @Output() paymentCompleted = new EventEmitter<void>();
@@ -125,6 +134,28 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     void this.ensurePromptPayQrCode();
   }
 
+  /**
+   * OBRS-1986: `ensurePromptPayQrCode()` returns WITHOUT setting `hasRequestedQrCode` while
+   * `isTotalUnverified`, and nothing else ever calls it again. A customer who opens this tab
+   * during the one round trip `GET /api/bookings/{id}` costs would therefore sit in front of an
+   * empty QR panel for good - with no message either, because `totalState` then reaches
+   * `'ready'` and hides the `TOTAL_UNAVAILABLE` line. Re-arm once, when the total lands.
+   *
+   * `firstChange` is skipped so the call sites that never bind `totalState` (parcel booking, the
+   * reschedule and change-stop dialogs) keep their exact `ngOnInit`-only behaviour, and the
+   * `amountOverride <= 0` rule of `ngOnInit` is mirrored for the same reason.
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['totalState'];
+    if (!change || change.firstChange || change.currentValue !== 'ready') {
+      return;
+    }
+    if (this.amountOverride != null && this.amountOverride <= 0) {
+      return;
+    }
+    void this.ensurePromptPayQrCode();
+  }
+
   ngOnDestroy(): void {
     this.clearCountdown();
     this.releaseQrObjectUrl();
@@ -182,8 +213,24 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     return this.isPaymentLocked && !this.qrImageUrl;
   }
 
+  /**
+   * OBRS-1986 (AC-6): true until this screen can show the server's own total.
+   *
+   * Unlike the maintenance lock this one also stops `ensurePromptPayQrCode()`, because
+   * asking for the QR is what CREATES the charge - a PromptPay charge raised while the
+   * page cannot state the amount is the prod defect of 2026-09-19 in its worst form.
+   */
+  get isTotalUnverified(): boolean {
+    return this.totalState !== 'ready';
+  }
+
   async confirmPayment(): Promise<void> {
-    if (this.isSubmittingPayment || !this.qrPaymentUrl || this.isNewChargeLocked) {
+    if (
+      this.isSubmittingPayment ||
+      !this.qrPaymentUrl ||
+      this.isNewChargeLocked ||
+      this.isTotalUnverified
+    ) {
       return;
     }
 
@@ -234,7 +281,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       // (ngOnInit calls this the moment the tab opens). Gating only the confirm button would
       // still leave a fresh PromptPay charge sitting at the gateway when the deploy lands,
       // which is the exact stuck payment the owner asked to prevent.
-      this.isPaymentLocked
+      this.isPaymentLocked ||
+      // OBRS-1986: same argument, different unknown - the amount.
+      this.isTotalUnverified
     ) {
       return;
     }

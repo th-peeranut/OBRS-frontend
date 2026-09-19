@@ -1,7 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { BookingService } from './booking.service';
-import { BookingPayload } from '../../shared/interfaces/booking.interface';
+import {
+  BookingPayload,
+  GuestBookingView,
+} from '../../shared/interfaces/booking.interface';
 import { environment } from '../../../environments/environment';
 import {
   SHOW_BLOCKING_LOADING,
@@ -417,6 +420,134 @@ describe('BookingService', () => {
       service.clearActiveBookingId();
 
       expect(service.getActiveBookingNumber()).toBeNull();
+    });
+  });
+
+  /**
+   * OBRS-1986. The credential is the same booking-scoped grant the guest pay call and the
+   * QR fetch already send, in the same header, read from the same localStorage key. A
+   * second header - or the token in a query string, which would write it into every access
+   * log between here and Koyeb - is what these two assertions exist to prevent.
+   */
+  describe('getBooking (OBRS-1986)', () => {
+    afterEach(() => {
+      localStorage.removeItem('active_booking_payment_grant');
+    });
+
+    it('carries the guest grant in X-Guest-Payment-Token, never in the URL', () => {
+      authStub.isAuthenticated = () => false;
+      localStorage.setItem('active_booking_payment_grant', 'grant-abc');
+
+      service.getBooking(4242).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/bookings/4242`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('X-Guest-Payment-Token')).toBe('grant-abc');
+      expect(req.request.urlWithParams).toBe(`${environment.apiUrl}/api/bookings/4242`);
+      // The page renders its own "we could not confirm the amount" line beside a disabled
+      // pay button; a generic toast over a screen that still looks payable is worse.
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
+      req.flush({ code: 200, message: 'ok', data: { bookingId: 4242 } });
+    });
+
+    /**
+     * OBRS-1986 regression, caught by the hermetic E2E lane on PR #530. The spec that stood
+     * here asserted a signed-in customer hits `GET /api/bookings/{id}` with no credential -
+     * which is a call that can only ever fail: that endpoint takes `X-Guest-Payment-Token`
+     * as a REQUIRED header (`PublicBookingController#getBookingAsGuest`), and a signed-in
+     * customer never holds one, because `CreateBookingResponse#guestPaymentToken` is null on
+     * every authenticated create by design (ADR-0123 Decision 6). So the first cut of this
+     * card left a logged-in customer with a permanently unverifiable total and a dead pay
+     * button - worse than the wrong total it replaced. The lane's three reds were all this.
+     *
+     * The signed-in lane reads its own money from the endpoint its session already opens.
+     */
+    it('reads the signed-in lane from the private tickets endpoint, with no guest header', () => {
+      authStub.isAuthenticated = () => true;
+      localStorage.setItem('active_booking_payment_grant', 'grant-abc');
+
+      service.getBooking(4242).subscribe();
+
+      httpMock.expectNone(`${environment.apiUrl}/api/bookings/4242`);
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/bookings/4242/tickets`
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.has('X-Guest-Payment-Token')).toBeFalse();
+      // Same silence as the guest lane: /payment renders its own message next to the
+      // disabled button rather than a generic toast over a screen that looks payable.
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
+      req.flush({ code: 200, message: 'ok', data: { bookingId: 4242 } });
+    });
+
+    /**
+     * `BookingTicketResponse.totalAmount` is built from `booking.getNetAmount()` in
+     * OBRS-backend `BookingService#getTicketsByBookingId` - the post-discount figure this
+     * projection calls `netAmount`. Mapping it onto the gross `totalAmount` line instead
+     * would make the summary print a discount that does not exist.
+     */
+    it('maps the private response net amount onto netAmount', () => {
+      authStub.isAuthenticated = () => true;
+      let view: GuestBookingView | undefined;
+
+      service.getBooking(4242).subscribe((response) => (view = response.data));
+
+      httpMock
+        .expectOne(`${environment.apiUrl}/api/private/bookings/4242/tickets`)
+        .flush({
+          code: 200,
+          message: 'ok',
+          data: {
+            bookingId: 4242,
+            bookingNumber: 'B-004242',
+            bookingStatus: 'pending',
+            totalAmount: 360,
+          },
+        });
+
+      expect(view?.netAmount).toBe(360);
+      expect(view?.bookingNumber).toBe('B-004242');
+      expect(view?.status).toBe('pending');
+      // Absent, not invented: this endpoint carries no gross/discount pair and no counts,
+      // so the summary hides those rows instead of showing numbers nobody sent.
+      expect(view?.totalAmount).toBeUndefined();
+      expect(view?.discountAmountSnapshot).toBeUndefined();
+      expect(view?.adultCount).toBeUndefined();
+      expect(view?.childCount).toBeUndefined();
+    });
+
+    /**
+     * The money rule: an amount that cannot be parsed is UNVERIFIED, never 0. A 0 here
+     * reads as "this booking is free" and re-opens the defect the card exists to close.
+     */
+    it('leaves netAmount absent when the private response amount is not a number', () => {
+      authStub.isAuthenticated = () => true;
+      let view: GuestBookingView | undefined;
+
+      service.getBooking(4242).subscribe((response) => (view = response.data));
+
+      httpMock
+        .expectOne(`${environment.apiUrl}/api/private/bookings/4242/tickets`)
+        .flush({
+          code: 200,
+          message: 'ok',
+          data: { bookingId: 4242, bookingNumber: 'B-004242', totalAmount: 'n/a' },
+        });
+
+      expect(view?.netAmount).toBeUndefined();
+    });
+
+    it('leaves netAmount absent when the private response carries no amount at all', () => {
+      authStub.isAuthenticated = () => true;
+      let view: GuestBookingView | undefined;
+
+      service.getBooking(4242).subscribe((response) => (view = response.data));
+
+      httpMock
+        .expectOne(`${environment.apiUrl}/api/private/bookings/4242/tickets`)
+        .flush({ code: 200, message: 'ok', data: { bookingId: 4242, bookingNumber: 'B-4242' } });
+
+      expect(view?.netAmount).toBeUndefined();
     });
   });
 });
