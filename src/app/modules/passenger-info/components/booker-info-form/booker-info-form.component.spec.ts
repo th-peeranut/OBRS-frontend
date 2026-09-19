@@ -224,6 +224,88 @@ describe('BookerInfoFormComponent', () => {
       expect(icons.length).toBe(0);
     });
   });
+  // OBRS-1953: ชื่อกลาง and อีเมล are optional and used to take a half-row each, reading as
+  // heavy as "นามสกุล *". They now sit behind a disclosure link. This is layout only — the
+  // pinning assertion is that neither control's validity changed.
+  describe('optional fields behind a disclosure link (OBRS-1953)', () => {
+    function el(id: string): HTMLElement | null {
+      return fixture.nativeElement.querySelector(`#${id}`);
+    }
+
+    it('keeps the required fields in the first view and hides only the optional two', () => {
+      expect(el('booker-title')).withContext('title').toBeTruthy();
+      expect(el('booker-firstName')).withContext('firstName').toBeTruthy();
+      expect(el('booker-lastName')).withContext('lastName').toBeTruthy();
+      expect(el('booker-phoneNumber')).withContext('phoneNumber').toBeTruthy();
+
+      expect(el('booker-middleName')).withContext('middleName').toBeNull();
+      expect(el('booker-email')).withContext('email').toBeNull();
+    });
+
+    it('offers a real <button> for each, reachable by Tab rather than a div with a click', () => {
+      for (const id of ['booker-email-disclosure', 'booker-middleName-disclosure']) {
+        const button = el(id);
+        expect(button).withContext(id).toBeTruthy();
+        expect(button?.tagName).withContext(id).toBe('BUTTON');
+        // A <button> is tabbable by default; an explicit tabindex="-1" would undo that.
+        expect(button?.getAttribute('tabindex')).withContext(id).toBeNull();
+        expect(button?.getAttribute('aria-expanded')).withContext(id).toBe('false');
+      }
+    });
+
+    it('reveals the field when its link is activated', () => {
+      (el('booker-email-disclosure') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('booker-email')).toBeTruthy();
+      expect(el('booker-email-disclosure')?.getAttribute('aria-expanded')).toBe('true');
+      // The other one is independent.
+      expect(el('booker-middleName')).toBeNull();
+    });
+
+    it('collapsing again hides the field but does not clear what was typed', () => {
+      (el('booker-email-disclosure') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      component.bookerForm.get('email')?.setValue('somchai@example.com');
+
+      (el('booker-email-disclosure') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('booker-email')).withContext('hidden again').toBeNull();
+      expect(component.bookerForm.get('email')?.value).toBe('somchai@example.com');
+    });
+
+    // The AC most likely to be got wrong: Back from /payment puts values into the form,
+    // and a filled field hidden behind a link nobody would click reads as an empty form.
+    it('opens itself for a value that is already in the form', () => {
+      component.bookerForm.patchValue({
+        middleName: 'Chai',
+        email: 'somchai@example.com',
+      });
+      fixture.detectChanges();
+
+      expect(el('booker-middleName')).withContext('middleName').toBeTruthy();
+      expect(el('booker-email')).withContext('email').toBeTruthy();
+    });
+
+    it('changes no validator — required stays required, optional stays optional', () => {
+      const form = component.bookerForm;
+      form.patchValue({ firstName: 'Somchai', lastName: 'Jaidee', phoneNumber: '0812345678' });
+
+      // Both optional fields empty and out of sight: the form is still valid.
+      expect(form.valid).withContext('collapsed + empty').toBeTrue();
+
+      // Still format-checked when filled (OBRS-858), collapsed or not.
+      form.get('email')?.setValue('not-an-email');
+      expect(form.valid).withContext('bad email while collapsed').toBeFalse();
+      form.get('email')?.setValue('');
+
+      // And the required ones did not become optional.
+      form.get('firstName')?.setValue('');
+      expect(form.valid).withContext('firstName still required').toBeFalse();
+    });
+  });
+
   // OBRS-641: on a phone these fields opened the full QWERTY keyboard and the browser had no
   // token to autofill the customer's own contact details against. inputmode is a keyboard hint
   // only - the phone rule above still owns validation and must not soften to match it.
@@ -243,6 +325,13 @@ describe('BookerInfoFormComponent', () => {
     });
 
     it('the name and email fields carry their matching autofill tokens', () => {
+      // OBRS-1953: middleName and email start behind a disclosure link, so they have
+      // to be expanded before they are in the DOM to be asked about. The attributes
+      // themselves are unchanged.
+      component.toggleMiddleName();
+      component.toggleEmail();
+      fixture.detectChanges();
+
       expect(inputEl('booker-firstName').getAttribute('autocomplete')).toBe('given-name');
       expect(inputEl('booker-middleName').getAttribute('autocomplete')).toBe('additional-name');
       expect(inputEl('booker-lastName').getAttribute('autocomplete')).toBe('family-name');

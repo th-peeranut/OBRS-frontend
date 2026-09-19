@@ -120,6 +120,8 @@ test('OBRS-1902: the pay button is disabled during the countdown, and the QR tab
   await page.fill('#booker-firstName', 'Somchai');
   await page.fill('#booker-lastName', 'Jaidee');
   await page.fill('#booker-phoneNumber', '0812345678');
+  // OBRS-1953: the email sits behind a disclosure link now — expand before filling.
+  await page.click('#booker-email-disclosure');
   await page.fill('#booker-email', 'somchai.jaidee@example.com');
   await page.locator('#title-0 .dropdown-btn').click();
   await page.locator('#title-0 .dropdown-option').first().click();

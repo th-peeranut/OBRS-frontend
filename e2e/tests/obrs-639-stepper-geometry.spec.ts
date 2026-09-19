@@ -230,6 +230,8 @@ async function fillPassengerForm(page: Page): Promise<void> {
   await page.fill('#booker-firstName', 'John');
   await page.fill('#booker-lastName', 'Doe');
   await page.fill('#booker-phoneNumber', '0812345678');
+  // OBRS-1953: the email sits behind a disclosure link now — expand before filling.
+  await page.click('#booker-email-disclosure');
   await page.fill('#booker-email', 'john.doe@example.com');
   await page.locator('#title-0 .dropdown-btn').click();
   await page.locator('#title-0 .dropdown-option').first().click();

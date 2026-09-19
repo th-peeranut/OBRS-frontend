@@ -947,13 +947,231 @@ describe('PassengerInfoFormComponent — mobile keyboard + autofill hints (OBRS-
     return el;
   }
 
+  // OBRS-1953: the optional phone starts behind a per-row disclosure link, so a spec
+  // that asks the input a question has to expand its row first. Nothing about the
+  // input itself changed.
+  function expandPhoneRows(rows: number[]): void {
+    for (const i of rows) {
+      component.togglePassengerPhone(i);
+    }
+    fixture.detectChanges();
+  }
+
+  // Same, for the middle name — it moved behind its own link in the same card.
+  function expandMiddleNameRows(rows: number[]): void {
+    for (const i of rows) {
+      component.togglePassengerMiddleName(i);
+    }
+    fixture.detectChanges();
+  }
+
+  // OBRS-1953: the passenger's phone is optional (the SMS destination is the BOOKER's
+  // number), so it moved behind a per-row disclosure link. Layout only — the control
+  // keeps the validators it had.
+  describe('optional phone behind a disclosure link (OBRS-1953)', () => {
+    function el(id: string): HTMLElement | null {
+      return fixture.nativeElement.querySelector(`#${id}`);
+    }
+
+    it('hides only the optional phone; the required names stay in the first view', () => {
+      for (const i of [0, 1]) {
+        expect(el(`firstName-${i}`)).withContext(`firstName ${i}`).toBeTruthy();
+        expect(el(`lastName-${i}`)).withContext(`lastName ${i}`).toBeTruthy();
+        expect(el(`phoneNumber-${i}`)).withContext(`phoneNumber ${i}`).toBeNull();
+      }
+    });
+
+    it('offers a real <button> per row, reachable by Tab', () => {
+      for (const i of [0, 1]) {
+        const button = el(`phoneNumber-disclosure-${i}`);
+        expect(button).withContext(`row ${i}`).toBeTruthy();
+        expect(button?.tagName).withContext(`row ${i}`).toBe('BUTTON');
+        expect(button?.getAttribute('tabindex')).withContext(`row ${i}`).toBeNull();
+        expect(button?.getAttribute('aria-expanded')).withContext(`row ${i}`).toBe('false');
+      }
+    });
+
+    it('expands one row without expanding the other', () => {
+      (el('phoneNumber-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('phoneNumber-0')).toBeTruthy();
+      expect(el('phoneNumber-1')).toBeNull();
+    });
+
+    it('collapsing again hides the field but does not clear what was typed', () => {
+      (el('phoneNumber-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      component.passengerData.at(0).get('phoneNumber')?.setValue('0898765432');
+
+      (el('phoneNumber-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('phoneNumber-0')).withContext('hidden again').toBeNull();
+      expect(component.passengerData.at(0).get('phoneNumber')?.value).toBe('0898765432');
+    });
+
+    it('opens itself for a row that already carries a number', () => {
+      component.passengerData.at(1).get('phoneNumber')?.setValue('0898765432');
+      fixture.detectChanges();
+
+      expect(el('phoneNumber-1')).toBeTruthy();
+      expect(el('phoneNumber-0')).withContext('still empty').toBeNull();
+    });
+
+    it('changes no validator — the phone is still optional and still format-checked', () => {
+      const ctrl = component.passengerData.at(0).get('phoneNumber');
+
+      ctrl?.setValue('');
+      expect(ctrl?.valid).withContext('empty is allowed').toBeTrue();
+
+      ctrl?.setValue('0812');
+      expect(ctrl?.valid).withContext('bad number still rejected').toBeFalse();
+    });
+
+    // OBRS-1955 lists the offending controls straight out of the DOM
+    // (`app-passenger-info [formControlName].ng-invalid`) and focuses the first one. A
+    // collapsed field is not in the DOM at all, and collapsing deliberately KEEPS the
+    // value - so "type a bad number, then collapse the section to be rid of it" would
+    // refuse the booking over a field that is nowhere on screen and name nothing.
+    it('refuses to collapse a field that is blocking the booking', () => {
+      const ctrl = component.passengerData.at(0).get('phoneNumber');
+      ctrl?.setValue('0812');
+      ctrl?.markAsTouched();
+      fixture.detectChanges();
+      expect(ctrl?.invalid).withContext('the number is refused').toBeTrue();
+
+      component.togglePassengerPhone(0);
+      fixture.detectChanges();
+
+      expect(el('phoneNumber-0')).withContext('still on screen').toBeTruthy();
+      expect(
+        fixture.nativeElement.querySelector('[formControlName].ng-invalid#phoneNumber-0')
+      )
+        .withContext('reachable by the selector OBRS-1955 focuses through')
+        .toBeTruthy();
+
+      // Emptying it is the way out - then the traveler's collapse applies again.
+      ctrl?.setValue('');
+      fixture.detectChanges();
+      expect(el('phoneNumber-0')).withContext('collapses once it stops blocking').toBeNull();
+    });
+
+    it('keeps a row\'s choice with that row when an earlier row is deleted', () => {
+      // Row 1 is collapsed by hand; deleting row 0 must not leave row 1 wearing it.
+      component.passengerData.at(1).get('phoneNumber')?.setValue('0898765432');
+      component.togglePassengerPhone(1);
+      expect(component.isPassengerPhoneShown(1)).withContext('collapsed by hand').toBeFalse();
+
+      component.deletePassenger(0);
+
+      expect(component.isPassengerPhoneShown(0))
+        .withContext('the surviving row keeps its own collapsed state')
+        .toBeFalse();
+    });
+  });
+
+  // OBRS-1953 (owner, 17 Sep 2026): the passenger's middle name is the SAME field the
+  // booker hides behind `+ เพิ่มชื่อกลาง`, and it is never required either — so it
+  // gets the same treatment rather than a half-row on every passenger card.
+  describe('optional middle name behind a disclosure link (OBRS-1953)', () => {
+    function el(id: string): HTMLElement | null {
+      return fixture.nativeElement.querySelector(`#${id}`);
+    }
+
+    it('is off the first view while the required names stay on it', () => {
+      for (const i of [0, 1]) {
+        expect(el(`firstName-${i}`)).withContext(`firstName ${i}`).toBeTruthy();
+        expect(el(`lastName-${i}`)).withContext(`lastName ${i}`).toBeTruthy();
+        expect(el(`middleName-${i}`)).withContext(`middleName ${i}`).toBeNull();
+      }
+    });
+
+    it('offers a real <button> per row, reachable by Tab', () => {
+      for (const i of [0, 1]) {
+        const button = el(`middleName-disclosure-${i}`);
+        expect(button).withContext(`row ${i}`).toBeTruthy();
+        expect(button?.tagName).withContext(`row ${i}`).toBe('BUTTON');
+        expect(button?.getAttribute('tabindex')).withContext(`row ${i}`).toBeNull();
+        expect(button?.getAttribute('aria-expanded')).withContext(`row ${i}`).toBe('false');
+      }
+    });
+
+    it('expands one row without expanding the other', () => {
+      (el('middleName-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('middleName-0')).toBeTruthy();
+      expect(el('middleName-1')).toBeNull();
+    });
+
+    it('collapsing again hides the field but does not clear what was typed', () => {
+      (el('middleName-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      component.passengerData.at(0).get('middleName')?.setValue('กลาง');
+
+      (el('middleName-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('middleName-0')).withContext('hidden again').toBeNull();
+      expect(component.passengerData.at(0).get('middleName')?.value).toBe('กลาง');
+    });
+
+    it('opens itself for a row that already carries a middle name', () => {
+      component.passengerData.at(1).get('middleName')?.setValue('กลาง');
+      fixture.detectChanges();
+
+      expect(el('middleName-1')).toBeTruthy();
+      expect(el('middleName-0')).withContext('still empty').toBeNull();
+    });
+
+    it('is independent of the phone disclosure on the same row', () => {
+      (el('middleName-disclosure-0') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el('middleName-0')).withContext('middle name open').toBeTruthy();
+      expect(el('phoneNumber-0')).withContext('phone still collapsed').toBeNull();
+    });
+
+    it('changes no validator — the OBRS-1952 length rule survives the move', () => {
+      const ctrl = component.passengerData.at(0).get('middleName');
+
+      ctrl?.setValue('');
+      expect(ctrl?.valid).withContext('empty is allowed').toBeTrue();
+
+      ctrl?.setValue('กลาง');
+      expect(ctrl?.valid).withContext('a value is allowed').toBeTrue();
+
+      // Hiding the field must not hide the rule: OBRS-1952 put `@Size(min = 2)` on this
+      // control, and a disclosure that quietly dropped it would let the server refuse a
+      // booking over a field the customer cannot even see.
+      ctrl?.setValue('ก');
+      expect(ctrl?.hasError('minlength')).withContext('one character is still refused').toBeTrue();
+    });
+
+    it('keeps a row\'s choice with that row when an earlier row is deleted', () => {
+      component.passengerData.at(1).get('middleName')?.setValue('กลาง');
+      component.togglePassengerMiddleName(1);
+      expect(component.isPassengerMiddleNameShown(1)).withContext('collapsed by hand').toBeFalse();
+
+      component.deletePassenger(0);
+
+      expect(component.isPassengerMiddleNameShown(0))
+        .withContext('the surviving row keeps its own collapsed state')
+        .toBeFalse();
+    });
+  });
+
   it('every passenger phone opens the telephone keypad', () => {
+    expandPhoneRows([0, 1]);
     for (const i of [0, 1]) {
       expect(inputEl(`phoneNumber-${i}`).getAttribute('inputmode')).withContext(`row ${i}`).toBe('tel');
     }
   });
 
   it('the autofill tokens are scoped to their own passenger row', () => {
+    expandPhoneRows([0, 1]);
+    expandMiddleNameRows([0, 1]);
     for (const i of [0, 1]) {
       expect(inputEl(`phoneNumber-${i}`).getAttribute('autocomplete')).toBe(`section-passenger-${i} tel`);
       expect(inputEl(`firstName-${i}`).getAttribute('autocomplete')).toBe(`section-passenger-${i} given-name`);

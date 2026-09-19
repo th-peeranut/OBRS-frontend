@@ -163,53 +163,6 @@
                           </div>
                         }
                       </div>
-                      <!-- Middle name, when present -->
-                      <div class="col-12 col-md-6">
-                        <label
-                          for="middleName-{{ i }}"
-                          [class.label-error]="
-                            group.get('middleName')?.errors &&
-                            (group.get('middleName')?.touched ||
-                              group.get('middleName')?.dirty)
-                          "
-                          >
-                          {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
-                        </label>
-                        <input
-                          class="form-control mt-1"
-                          id="middleName-{{ i }}"
-                          formControlName="middleName"
-                          autocomplete="section-passenger-{{ i }} additional-name"
-                          [class.form-error]="
-                            group.get('middleName')?.errors &&
-                            (group.get('middleName')?.touched ||
-                              group.get('middleName')?.dirty)
-                          "
-                          />
-                          <!-- OBRS-1952: optional, but length-checked once filled — see booker-info-form. -->
-                          @if (
-                            group.get('middleName')?.hasError('minlength') &&
-                            (group.get('middleName')?.touched ||
-                            group.get('middleName')?.dirty)
-                            ) {
-                            <div
-                              class="text-error"
-                              >
-                              {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
-                            </div>
-                          }
-                          @if (
-                            group.get('middleName')?.hasError('maxlength') &&
-                            (group.get('middleName')?.touched ||
-                            group.get('middleName')?.dirty)
-                            ) {
-                            <div
-                              class="text-error"
-                              >
-                              {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
-                            </div>
-                          }
-                        </div>
                         <!-- Last name -->
                         <div class="col-12 col-md-6">
                           <label
@@ -268,7 +221,112 @@
                               </div>
                             }
                           </div>
-                          <div class="col-12 col-md-6">
+                          <!-- OBRS-1953: ชื่อกลาง is never required and is the same field the
+                          BOOKER hides behind `+ เพิ่มชื่อกลาง`, so it gets the same treatment
+                          here — one field, one rule, and a passenger row stops spending a
+                          half-row on it. Owner's call, 17 Sep 2026. The OBRS-1952 length
+                          rule came with it and still fires inside the expanded section. -->
+                          <div class="col-12 optional-disclosure">
+                            <button
+                              type="button"
+                              class="btn btn-link p-0 optional-disclosure-toggle"
+                              id="middleName-disclosure-{{ i }}"
+                              [attr.aria-expanded]="isPassengerMiddleNameShown(i)"
+                              attr.aria-controls="middleName-field-{{ i }}"
+                              (click)="togglePassengerMiddleName(i)"
+                              >
+                              <i
+                                class="bi me-1"
+                                [class.bi-plus]="!isPassengerMiddleNameShown(i)"
+                                [class.bi-dash]="isPassengerMiddleNameShown(i)"
+                                aria-hidden="true"
+                              ></i>
+                              {{
+                              (isPassengerMiddleNameShown(i)
+                              ? "PASSENGER_INFO.FORM.MIDDLE_NAME_HIDE"
+                              : "PASSENGER_INFO.FORM.MIDDLE_NAME_ADD"
+                              ) | translate
+                              }}
+                            </button>
+                          </div>
+                          @if (isPassengerMiddleNameShown(i)) {
+                            <div class="col-12 col-md-6" id="middleName-field-{{ i }}">
+                              <label
+                                for="middleName-{{ i }}"
+                                [class.label-error]="
+                                  group.get('middleName')?.errors &&
+                                  (group.get('middleName')?.touched ||
+                                    group.get('middleName')?.dirty)
+                                "
+                                >
+                                {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
+                              </label>
+                              <input
+                                class="form-control mt-1"
+                                id="middleName-{{ i }}"
+                                formControlName="middleName"
+                                autocomplete="section-passenger-{{ i }} additional-name"
+                                [class.form-error]="
+                                  group.get('middleName')?.errors &&
+                                  (group.get('middleName')?.touched ||
+                                    group.get('middleName')?.dirty)
+                                "
+                                />
+                                <!-- OBRS-1952: optional, but length-checked once filled — see booker-info-form. -->
+                                @if (
+                                  group.get('middleName')?.hasError('minlength') &&
+                                  (group.get('middleName')?.touched ||
+                                  group.get('middleName')?.dirty)
+                                  ) {
+                                  <div
+                                    class="text-error"
+                                    >
+                                    {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                                  </div>
+                                }
+                                @if (
+                                  group.get('middleName')?.hasError('maxlength') &&
+                                  (group.get('middleName')?.touched ||
+                                  group.get('middleName')?.dirty)
+                                  ) {
+                                  <div
+                                    class="text-error"
+                                    >
+                                    {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                                  </div>
+                                }
+                            </div>
+                          }
+                          <!-- OBRS-1953: this phone is OPTIONAL (the SMS destination is the
+                          booker's number, not this one), so it sits behind a disclosure
+                          link instead of carrying the same visual weight as the required
+                          names above it. Layout only — the control's validators are
+                          untouched, and collapsing hides without clearing. -->
+                          <div class="col-12 optional-disclosure">
+                            <button
+                              type="button"
+                              class="btn btn-link p-0 optional-disclosure-toggle"
+                              id="phoneNumber-disclosure-{{ i }}"
+                              [attr.aria-expanded]="isPassengerPhoneShown(i)"
+                              attr.aria-controls="phoneNumber-field-{{ i }}"
+                              (click)="togglePassengerPhone(i)"
+                              >
+                              <i
+                                class="bi me-1"
+                                [class.bi-plus]="!isPassengerPhoneShown(i)"
+                                [class.bi-dash]="isPassengerPhoneShown(i)"
+                                aria-hidden="true"
+                              ></i>
+                              {{
+                              (isPassengerPhoneShown(i)
+                              ? "PASSENGER_INFO.FORM.PASSENGER_PHONE_HIDE"
+                              : "PASSENGER_INFO.FORM.PASSENGER_PHONE_ADD"
+                              ) | translate
+                              }}
+                            </button>
+                          </div>
+                          @if (isPassengerPhoneShown(i)) {
+                          <div class="col-12 col-md-6" id="phoneNumber-field-{{ i }}">
                             <!-- Phone number -->
                             <label
                               for="phoneNumber-{{ i }}"
@@ -311,7 +369,15 @@
                                   }}
                                 </div>
                               }
+                              <!-- OBRS-1953: says what the field is actually for. Measured in
+                              BookingService.buildTicket — this number is never written to any
+                              ticket column, it only links the ticket to an existing member
+                              account, and every message goes to the BOOKER's number. -->
+                              <small class="text-muted d-block mt-1">
+                                {{ "PASSENGER_INFO.FORM.PASSENGER_PHONE_HINT" | translate }}
+                              </small>
                             </div>
+                          }
                             <!-- Gender/status — OBRS-1357: optional, so no `*`, no error state and
                             no label-error binding: the control has no validator left that could
                             put it in one. -->

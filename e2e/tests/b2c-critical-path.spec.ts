@@ -35,6 +35,8 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   // was never updated, so `.btn-next` had been correctly disabled — and this test
   // correctly failing — ever since, on SIT as much as anywhere. Nobody read it as a
   // real failure because the suite it lived in was red as a matter of routine.
+  // OBRS-1953: the email sits behind a disclosure link now — expand before filling.
+  await page.click('#booker-email-disclosure');
   await page.fill('#booker-email', 'john.doe@example.com');
 
   // Fill passenger 0 form
@@ -105,6 +107,10 @@ test('OBRS-858: a guest walks past the passenger form with no login redirect, an
   // Assert the omission is real before drawing a conclusion from it: a stray
   // autofill or a prefill from a previous step would make the next assertion
   // pass while proving nothing about whether email is optional.
+  // OBRS-1953: expand the disclosure to look at the field — collapsed it is not in
+  // the DOM at all, and `toHaveValue('')` on a missing locator would time out rather
+  // than prove the omission is real.
+  await page.click('#booker-email-disclosure');
   await expect(page.locator('#booker-email')).toHaveValue('');
   // OBRS-1955: this used to read `expect('.btn-next').not.toBeDisabled()`. The button no
   // longer reflects the form's validity - it refuses out loud on click instead - so that
@@ -213,6 +219,8 @@ test('OBRS-855: the access token dies mid-booking — the request is retried on 
   await page.fill('#booker-firstName', 'John');
   await page.fill('#booker-lastName', 'Doe');
   await page.fill('#booker-phoneNumber', '0812345678');
+  // OBRS-1953: the email sits behind a disclosure link now — expand before filling.
+  await page.click('#booker-email-disclosure');
   await page.fill('#booker-email', 'john.doe@example.com');
 
   await page.locator('#title-0 .dropdown-btn').click();

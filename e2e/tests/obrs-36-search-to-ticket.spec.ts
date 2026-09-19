@@ -181,6 +181,8 @@ async function fillPassengerAndBooker(page: Page): Promise<void> {
   await page.fill('#booker-phoneNumber', '0812345678');
   // OBRS-238: required and format-checked for ONLINE bookings, so `.btn-next` stays
   // disabled without it and the click below would silently do nothing.
+  // OBRS-1953: the email sits behind a disclosure link now — expand before filling.
+  await page.click('#booker-email-disclosure');
   await page.fill('#booker-email', 'somchai.jaidee@example.com');
 
   await page.locator('#title-0 .dropdown-btn').click();

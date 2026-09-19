@@ -163,6 +163,9 @@ async function shoot(page, locator, name) {
   await page.fill('#booker-lastName', 'ทดสอบ');
   await page.fill('#booker-phoneNumber', '0812345678');
   await page.click('#booker-gender_male');
+  // OBRS-1953: the email sits behind a disclosure link now — expand before filling.
+  const bookerEmailLink = page.locator('#booker-email-disclosure');
+  if (await bookerEmailLink.count()) await bookerEmailLink.click();
   const bookerEmail = page.locator('#booker-email');
   if (await bookerEmail.count()) await bookerEmail.fill(EMAIL);
   await sleep(500);
@@ -173,6 +176,9 @@ async function shoot(page, locator, name) {
     await sleep(800);
   }
   // passenger #1 (the seat the + added) never gets the booker copy
+  // OBRS-1953: that row's phone is optional and starts behind a disclosure link.
+  const row1PhoneLink = page.locator('#phoneNumber-disclosure-1');
+  if (await row1PhoneLink.count()) await row1PhoneLink.click();
   for (const [id, value] of [
     ['#firstName-1', 'สมหญิง'],
     ['#lastName-1', 'ทดสอบ'],

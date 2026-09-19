@@ -97,54 +97,7 @@
                 </div>
               }
             </div>
-            <!-- Middle name, when present -->
-            <div class="col-12 col-md-6">
-              <label
-                for="booker-middleName"
-                [class.label-error]="
-                  bookerForm.get('middleName')?.errors &&
-                  (bookerForm.get('middleName')?.touched ||
-                    bookerForm.get('middleName')?.dirty)
-                "
-                >
-                {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
-              </label>
-              <input
-                class="form-control mt-1"
-                id="booker-middleName"
-                formControlName="middleName"
-                autocomplete="additional-name"
-                [class.form-error]="
-                  bookerForm.get('middleName')?.errors &&
-                  (bookerForm.get('middleName')?.touched ||
-                    bookerForm.get('middleName')?.dirty)
-                "
-                />
-                <!-- OBRS-1952: still optional — blank stays valid and reaches the wire as null.
-                But once it HAS a value, `@Size(min = 2, max = 50)` applies to it too. -->
-                @if (
-                  bookerForm.get('middleName')?.hasError('minlength') &&
-                  (bookerForm.get('middleName')?.touched ||
-                  bookerForm.get('middleName')?.dirty)
-                  ) {
-                  <div
-                    class="text-error"
-                    >
-                    {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
-                  </div>
-                }
-                @if (
-                  bookerForm.get('middleName')?.hasError('maxlength') &&
-                  (bookerForm.get('middleName')?.touched ||
-                  bookerForm.get('middleName')?.dirty)
-                  ) {
-                  <div
-                    class="text-error"
-                    >
-                    {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
-                  </div>
-                }
-              </div>
+              <!-- OBRS-1953: ชื่อกลาง moved below, behind a disclosure link. -->
               <!-- Last name -->
               <div class="col-12 col-md-6">
                 <label
@@ -260,8 +213,111 @@
                       </div>
                     }
                   </div>
+                  <!-- OBRS-1953: the two optional fields sit behind disclosure links, so
+                  the first view carries only what the booking actually requires and an
+                  optional field stops reading as heavy as "นามสกุล *". This is layout
+                  only — no validator moved with them: `middleName` keeps the OBRS-1952
+                  length rule and `email` the OBRS-858 format check, on screen or not.
+                  A control that already holds a value opens its own section (see
+                  isOptionalFieldShown), and collapsing hides without clearing. -->
+                  <div class="col-12 optional-disclosure">
+                    <button
+                      type="button"
+                      class="btn btn-link p-0 optional-disclosure-toggle"
+                      id="booker-email-disclosure"
+                      [attr.aria-expanded]="isEmailShown()"
+                      aria-controls="booker-email-field"
+                      (click)="toggleEmail()"
+                      >
+                      <i
+                        class="bi me-1"
+                        [class.bi-plus]="!isEmailShown()"
+                        [class.bi-dash]="isEmailShown()"
+                        aria-hidden="true"
+                      ></i>
+                      {{
+                      (isEmailShown()
+                      ? "PASSENGER_INFO.FORM.EMAIL_HIDE"
+                      : "PASSENGER_INFO.FORM.EMAIL_ADD"
+                      ) | translate
+                      }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-link p-0 optional-disclosure-toggle"
+                      id="booker-middleName-disclosure"
+                      [attr.aria-expanded]="isMiddleNameShown()"
+                      aria-controls="booker-middleName-field"
+                      (click)="toggleMiddleName()"
+                      >
+                      <i
+                        class="bi me-1"
+                        [class.bi-plus]="!isMiddleNameShown()"
+                        [class.bi-dash]="isMiddleNameShown()"
+                        aria-hidden="true"
+                      ></i>
+                      {{
+                      (isMiddleNameShown()
+                      ? "PASSENGER_INFO.FORM.MIDDLE_NAME_HIDE"
+                      : "PASSENGER_INFO.FORM.MIDDLE_NAME_ADD"
+                      ) | translate
+                      }}
+                    </button>
+                  </div>
+                  <!-- Middle name, when present -->
+                  @if (isMiddleNameShown()) {
+                    <div class="col-12 col-md-6" id="booker-middleName-field">
+                      <label
+                        for="booker-middleName"
+                        [class.label-error]="
+                          bookerForm.get('middleName')?.errors &&
+                          (bookerForm.get('middleName')?.touched ||
+                            bookerForm.get('middleName')?.dirty)
+                        "
+                        >
+                        {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
+                      </label>
+                      <input
+                        class="form-control mt-1"
+                        id="booker-middleName"
+                        formControlName="middleName"
+                        autocomplete="additional-name"
+                        [class.form-error]="
+                          bookerForm.get('middleName')?.errors &&
+                          (bookerForm.get('middleName')?.touched ||
+                            bookerForm.get('middleName')?.dirty)
+                        "
+                        />
+                        <!-- OBRS-1952: still optional — blank stays valid and reaches the wire as null.
+                        But once it HAS a value, `@Size(min = 2, max = 50)` applies to it too. The
+                        disclosure moved where this field lives, not what it refuses. -->
+                        @if (
+                          bookerForm.get('middleName')?.hasError('minlength') &&
+                          (bookerForm.get('middleName')?.touched ||
+                          bookerForm.get('middleName')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            {{ "PASSENGER_INFO.FORM.NAME_TOO_SHORT" | translate }}
+                          </div>
+                        }
+                        @if (
+                          bookerForm.get('middleName')?.hasError('maxlength') &&
+                          (bookerForm.get('middleName')?.touched ||
+                          bookerForm.get('middleName')?.dirty)
+                          ) {
+                          <div
+                            class="text-error"
+                            >
+                            {{ "PASSENGER_INFO.FORM.NAME_TOO_LONG" | translate }}
+                          </div>
+                        }
+                      </div>
+                    }
                   <!-- Email -->
-                  <div class="col-12 col-md-6">
+                  @if (isEmailShown()) {
+                  <div class="col-12 col-md-6" id="booker-email-field">
                     <label
                       for="booker-email"
               [class.label-error]="
@@ -305,6 +361,7 @@
                         </div>
                       }
                     </div>
+                  }
                               </div>
                             </div>
                           </div>
