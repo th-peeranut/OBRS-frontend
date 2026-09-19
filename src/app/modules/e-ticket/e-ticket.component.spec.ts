@@ -1104,6 +1104,22 @@ describe('ETicketComponent — template (OBRS-1510)', () => {
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('.ticket-retrieval-note'))).toBeNull();
   });
+
+  it('OBRS-1434: states the conditions of carriage with a link to the policy page, on BOTH renders — the retrieval note\'s gate must not spread to it', () => {
+    for (const incomplete of [false, true]) {
+      component.ticketIncomplete = incomplete;
+      fixture.detectChanges();
+
+      const note = fixture.debugElement.query(By.css('[data-testid="eticket-conditions"]'));
+      expect(note)
+        .withContext(`ticketIncomplete=${incomplete}: clause 83 applies to the booking either way`)
+        .not.toBeNull();
+      // Outside the rasterised card for the same reason the retrieval note is: a
+      // hyperlink is dead in the PNG `downloadTicketImage()` produces.
+      expect(note.nativeElement.closest('app-e-ticket-card')).toBeNull();
+      expect(note.query(By.css('a[routerLink="/refund-policy"]'))).not.toBeNull();
+    }
+  });
 });
 
 /**

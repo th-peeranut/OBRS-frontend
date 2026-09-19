@@ -1,0 +1,21 @@
+<div class="legal-policy-notice" role="note" data-testid="legal-policy-notice">
+  <p class="legal-policy-notice-title">
+    {{ 'ADMIN.LEGAL_POLICY_NOTICE.TITLE' | translate }}
+  </p>
+
+  @if (compact) {
+    <p class="legal-policy-notice-detail">
+      {{ 'ADMIN.LEGAL_POLICY_NOTICE.POINTER' | translate }}
+      <!-- OBRS-1720: an in-page anchor once the settings tabs become one document. -->
+      <a routerLink="/admin/settings/cancel-reschedule-policy">{{ 'ADMIN.LEGAL_POLICY_NOTICE.LINK' | translate }}</a>
+    </p>
+  } @else if (policy) {
+    <p class="legal-policy-notice-detail">
+      {{ 'ADMIN.LEGAL_POLICY_NOTICE.DETAIL' | translate: detailParams }}
+    </p>
+  }
+
+  <p class="legal-policy-notice-source">
+    {{ 'ADMIN.LEGAL_POLICY_NOTICE.SOURCE' | translate }}
+  </p>
+</div>

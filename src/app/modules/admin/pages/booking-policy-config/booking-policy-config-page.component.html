@@ -14,6 +14,13 @@
   </div>
 </section>
 
+<!-- OBRS-1434 AC-4.2: this page is FIRST in the SALES_POLICY group (the parent route
+redirects here), so it is the one an owner meets when they open the group — and it
+holds none of the values the notice is about. Hence the compact rendering, whose job
+is to point at the tab that does. OBRS-1720 folds both tabs into one document; the
+full box on the other page survives that and this one goes. -->
+<app-legal-policy-notice [compact]="true"></app-legal-policy-notice>
+
 <section class="admin-card mt-3">
   <div class="admin-card-head">
     <h4>{{ 'ADMIN.PAGES.BOOKING_POLICY_CONFIG' | translate }}</h4>
