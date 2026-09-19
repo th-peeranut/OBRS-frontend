@@ -49,6 +49,13 @@ export const BOOKING_CONTEXT_KEY = 'obrs.booking_context';
 export const ACTIVE_BOOKING_ID_KEY = 'active_booking_id';
 export const ACTIVE_BOOKING_NUMBER_KEY = 'active_booking_number';
 export const ACTIVE_BOOKING_PAYMENT_GRANT_KEY = 'active_booking_payment_grant';
+/**
+ * OBRS-1984: the booking's own `expires_at`, so the /payment countdown survives a tab
+ * switch and a refresh instead of restarting at a hardcoded 15:00. A timestamp names
+ * nobody, so unlike the passenger store this one may be written to the customer's machine
+ * (the PDPA boundary above is about names, phones and identity numbers).
+ */
+export const ACTIVE_BOOKING_EXPIRES_AT_KEY = 'active_booking_expires_at';
 
 /** Forgets the booking-in-payment and its guest payment grant (FE-4). */
 export function clearActiveBookingStorage(): void {
@@ -56,6 +63,7 @@ export function clearActiveBookingStorage(): void {
     localStorage.removeItem(ACTIVE_BOOKING_ID_KEY);
     localStorage.removeItem(ACTIVE_BOOKING_NUMBER_KEY);
     localStorage.removeItem(ACTIVE_BOOKING_PAYMENT_GRANT_KEY);
+    localStorage.removeItem(ACTIVE_BOOKING_EXPIRES_AT_KEY);
   } catch {
     // storage unavailable (private mode / blocked): nothing to clear
   }

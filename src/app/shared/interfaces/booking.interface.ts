@@ -97,6 +97,10 @@ export interface CreateBookingResponse {
   // a 60-minute server-side TTL — never a session, and never sent anywhere but
   // POST /api/payments.
   guestPaymentToken?: string;
+  // OBRS-1984: ISO offset datetime — the seat-hold deadline the /payment countdown runs to.
+  // Optional because the backend half ships separately; an absent value means the countdown
+  // has no deadline to state, not that the hold is 15 minutes.
+  expiresAt?: string;
 }
 
 export interface BookingState {

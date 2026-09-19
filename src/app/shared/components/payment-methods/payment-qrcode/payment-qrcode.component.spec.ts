@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -13,6 +13,8 @@ import {
 } from '../../../../shared/interfaces/payment.interface';
 import { MaintenanceWindowService } from '../../../../services/maintenance-window/maintenance-window.service';
 import { PaymentQrcodeComponent } from './payment-qrcode.component';
+import { PaymentCreditcardComponent } from '../payment-creditcard/payment-creditcard.component';
+import { OmiseTokenService } from '../../../../services/payment/omise-token.service';
 
 /**
  * OBRS-298: EOverallPaymentStatus grew a 7th code, refunded_partial (booking
@@ -59,6 +61,7 @@ describe('PaymentQrcodeComponent - refunded_partial payment summary (OBRS-298)',
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      'getActiveBookingExpiresAt',
     ]);
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
@@ -208,7 +211,7 @@ describe('PaymentQrcodeComponent - gateway ceiling refusal (OBRS-736)', () => {
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>(
       'BookingService',
-      ['getActiveBookingId']
+      ['getActiveBookingId', 'getActiveBookingExpiresAt']
     );
     bookingService.getActiveBookingId.and.returnValue(10);
     paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
@@ -360,6 +363,7 @@ describe('PaymentQrcodeComponent - saving the QR on iOS (OBRS-1203)', () => {
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      'getActiveBookingExpiresAt',
     ]);
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
@@ -500,6 +504,7 @@ describe('PaymentQrcodeComponent - the QR preview dialog (OBRS-1203)', () => {
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      'getActiveBookingExpiresAt',
     ]);
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
@@ -591,6 +596,7 @@ describe('PaymentQrcodeComponent - Omise forwards its own PromptPay QR (OBRS-135
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      'getActiveBookingExpiresAt',
     ]);
     paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
@@ -738,6 +744,7 @@ describe('PaymentQrcodeComponent - the amount under the QR comes from the server
       'getActiveBookingId',
       // OBRS-1204: ngOnInit reads this now; the two specs below drive ngOnInit.
       'getActiveBookingNumber',
+      'getActiveBookingExpiresAt',
     ]);
     bookingService.getActiveBookingId.and.returnValue(10);
     bookingService.getActiveBookingNumber.and.returnValue(null);
@@ -890,6 +897,7 @@ describe('PaymentQrcodeComponent - the QR footer (OBRS-1204)', () => {
     bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
       'getActiveBookingNumber',
+      'getActiveBookingExpiresAt',
     ]);
     bookingService.getActiveBookingId.and.returnValue(null);
     bookingService.getActiveBookingNumber.and.returnValue(activeBookingNumber);
@@ -967,6 +975,7 @@ describe('PaymentQrcodeComponent - qrPaymentUrl host allow-list (security review
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
+      'getActiveBookingExpiresAt',
     ]);
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
@@ -1049,6 +1058,7 @@ describe('PaymentQrcodeComponent - payment lock during maintenance (OBRS-1902)',
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
       'getActiveBookingNumber',
+      'getActiveBookingExpiresAt',
     ]);
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
@@ -1110,5 +1120,188 @@ describe('PaymentQrcodeComponent - payment lock during maintenance (OBRS-1902)',
     await component.confirmPayment();
 
     expect(alertService.confirm).toHaveBeenCalled();
+  });
+});
+
+/**
+ * OBRS-1984 - the countdown is the booking's own hold deadline, not a constant.
+ *
+ * On PROD 2026-09-19 it restarted at 15:00 every time the customer switched payment tab
+ * (the two panels are `@if` branches: destroyed and rebuilt, not shown/hidden) and on every
+ * refresh, because each `ngOnInit` re-seeded `15 * 60`. 15 was a guess on top of that -
+ * `SEAT_RESERVATION_MINUTES` is per-operator config.
+ *
+ * Both panels are declared in the one module here so the tab switch can be played for real:
+ * the credit-card panel is destroyed and the QR panel built in its place, exactly as
+ * `payment.component.html` does it.
+ */
+describe('PaymentQrcodeComponent - the countdown runs to the booking hold deadline (OBRS-1984)', () => {
+  let fixture: ComponentFixture<PaymentQrcodeComponent>;
+
+  /** ISO instant `minutes` from now, with an explicit offset (`Z`) - a literal without one
+   *  is read in the runner's timezone and can be green here and red on CI. */
+  const inMinutes = (minutes: number): string =>
+    new Date(Date.now() + minutes * 60_000).toISOString();
+
+  async function configure(storedExpiresAt: string | null): Promise<void> {
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+      'getActiveBookingNumber',
+      'getActiveBookingExpiresAt',
+    ]);
+    bookingService.getActiveBookingId.and.returnValue(7);
+    bookingService.getActiveBookingNumber.and.returnValue('BK-2026-000123');
+    // The stored key `active_booking_expires_at`, written when the booking was created and
+    // read back by BOTH panels - which is what makes a tab switch continue one countdown.
+    bookingService.getActiveBookingExpiresAt.and.returnValue(storedExpiresAt);
+
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      declarations: [PaymentQrcodeComponent, PaymentCreditcardComponent],
+      imports: [TranslateModule.forRoot()],
+      providers: [
+        { provide: Router, useValue: jasmine.createSpyObj<Router>('Router', ['navigate']) },
+        { provide: BookingService, useValue: bookingService },
+        {
+          provide: PaymentService,
+          useValue: jasmine.createSpyObj<PaymentService>('PaymentService', [
+            'getBookingPayments',
+            'createPayment',
+            'createMockPayment',
+          ]),
+        },
+        {
+          provide: OmiseTokenService,
+          useValue: jasmine.createSpyObj<OmiseTokenService>('OmiseTokenService', [
+            'requestCardToken',
+          ]),
+        },
+        {
+          provide: AlertService,
+          useValue: jasmine.createSpyObj<AlertService>('AlertService', [
+            'success',
+            'error',
+            'info',
+            'confirm',
+          ]),
+        },
+        {
+          provide: MaintenanceWindowService,
+          useValue: { isPaymentLockedNow: () => false } as unknown as MaintenanceWindowService,
+        },
+      ],
+      // `<app-payment-summary>` and the `appPending` directive are siblings of what this
+      // block asserts; NO_ERRORS_SCHEMA leaves them inert.
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+  }
+
+  /** `amountOverride = 0` keeps `ngOnInit` off the QR request, the way the OBRS-1204
+   *  footer block above does - this block is about the countdown, not the charge. */
+  async function mountQr(storedExpiresAt: string | null): Promise<void> {
+    await configure(storedExpiresAt);
+    fixture = TestBed.createComponent(PaymentQrcodeComponent);
+    fixture.componentInstance.amountOverride = 0;
+    fixture.componentInstance.qrPaymentUrl = 'https://pay.omise.co/offsites/ofsp_test';
+    fixture.detectChanges();
+  }
+
+  function countdownText(root: HTMLElement): string | null {
+    return root.querySelector('.qr-countdown span')?.textContent?.trim() ?? null;
+  }
+
+  function payButton(): HTMLButtonElement {
+    return (fixture.nativeElement as HTMLElement).querySelector(
+      'button.payment-btn'
+    ) as HTMLButtonElement;
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  it('shows the remaining hold, so a 4-minute deadline reads 04 : 00 and never 15 : 00', async () => {
+    await mountQr(inMinutes(4));
+
+    expect(countdownText(fixture.nativeElement)).toBe('04 : 00');
+    expect(payButton().disabled).toBeFalse();
+  });
+
+  it('continues the SAME countdown when the customer switches from the card tab to this one', async () => {
+    // 6 minutes into a 15-minute hold: 9 left.
+    await configure(inMinutes(9));
+
+    // The tab the customer was on...
+    const cardFixture = TestBed.createComponent(PaymentCreditcardComponent);
+    cardFixture.detectChanges();
+    expect(
+      (cardFixture.nativeElement as HTMLElement)
+        .querySelector('.countdown-value')
+        ?.textContent?.trim()
+    ).toBe('09 : 00');
+
+    // ...is destroyed by the `@if`, and this one is built in its place.
+    cardFixture.destroy();
+    fixture = TestBed.createComponent(PaymentQrcodeComponent);
+    fixture.componentInstance.amountOverride = 0;
+    fixture.detectChanges();
+
+    expect(countdownText(fixture.nativeElement)).toBe('09 : 00');
+    expect(countdownText(fixture.nativeElement)).not.toBe('15 : 00');
+  });
+
+  it('shows 00 : 00 and refuses the hand-off once the hold has expired', async () => {
+    await mountQr(inMinutes(-1));
+
+    expect(countdownText(fixture.nativeElement)).toBe('00 : 00');
+    expect(fixture.componentInstance.isHoldExpired).toBeTrue();
+    expect(payButton().disabled).toBeTrue();
+  });
+
+  /**
+   * OBRS-1984, added at the same scrutinize round that pinned the credit-card twin
+   * (`picks up a deadline that only arrives with the refetched total`). On a REFRESH the
+   * NgRx store is empty, so /payment refetches the booking and only then stores the
+   * deadline - one HTTP round trip after this panel was already built with nothing to
+   * count to. `ngOnChanges` on `totalState -> 'ready'` is the hook that re-derives it.
+   *
+   * The twin's commit message is right that the gap here is SOFTER than on the card panel:
+   * `handlePromptPayResponse` calls `startCountdown()` again when the QR image lands, so a
+   * customer who gets that far self-heals. It is not nothing, though - this block mounts
+   * with `amountOverride = 0`, i.e. exactly the state where no QR is requested and that
+   * second caller never runs, which is also the real state during the round trip the total
+   * is still in flight. So the panel would show no countdown until the image arrived.
+   */
+  it('picks up a deadline that only arrives with the refetched total', async () => {
+    await mountQr(null);
+    expect(countdownText(fixture.nativeElement)).toBeNull();
+
+    const bookingService = TestBed.inject(BookingService) as jasmine.SpyObj<BookingService>;
+    bookingService.getActiveBookingExpiresAt.and.returnValue(inMinutes(9));
+
+    fixture.componentInstance.totalState = 'ready';
+    fixture.componentInstance.ngOnChanges({
+      totalState: new SimpleChange('loading', 'ready', false),
+    });
+    fixture.detectChanges();
+
+    expect(countdownText(fixture.nativeElement)).toBe('09 : 00');
+    expect(payButton().disabled).toBeFalse();
+  });
+
+  it('FALLBACK - with no stored deadline it shows no countdown at all, and still lets the customer pay', async () => {
+    await mountQr(null);
+
+    // Deliberate: the backend half deploys first, so `expiresAt` is absent for a while.
+    // Claiming a deadline we do not know is the defect; claiming none is honest, and the
+    // server still enforces the hold. It must not disable the button either - the booking
+    // is still held.
+    expect(countdownText(fixture.nativeElement)).toBeNull();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.qr-countdown')
+    ).toBeNull();
+    expect(fixture.componentInstance.countdown).toBe('');
+    expect(fixture.componentInstance.isHoldExpired).toBeFalse();
+    expect(payButton().disabled).toBeFalse();
   });
 });

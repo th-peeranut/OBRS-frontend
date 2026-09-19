@@ -32,10 +32,15 @@
     {{ "PAYMENT.CREDIT_CARD.HOSTED_HINT" | translate }}
   </p>
 
-  <div class="countdown" aria-live="polite">
-    {{ "PAYMENT.CREDIT_CARD.COUNTDOWN_LABEL" | translate }}
-    <span class="countdown-value">{{ countdown }}</span>
-  </div>
+  <!-- OBRS-1984: rendered only when the booking's own `expires_at` is known. A countdown
+  with no deadline behind it is the prod defect of 2026-09-19 (a fresh 15:00 on every tab
+  switch and every refresh); showing nothing states nothing. -->
+  @if (countdown) {
+    <div class="countdown" aria-live="polite">
+      {{ "PAYMENT.CREDIT_CARD.COUNTDOWN_LABEL" | translate }}
+      <span class="countdown-value">{{ countdown }}</span>
+    </div>
+  }
 
   <div class="summary-wrapper">
     <app-payment-summary variant="inline" [amountOverride]="amountOverride"></app-payment-summary>
@@ -75,8 +80,8 @@ false alarm. The button is dead in both states either way. -->
       class="payment-btn"
       type="button"
       (click)="submitPayment()"
-      [class.payment-btn-diabled]="isSubmittingPayment || isWaitingForConfirmation || isPaymentLocked || isTotalUnverified"
-      [disabled]="isSubmittingPayment || isWaitingForConfirmation || isPaymentLocked || isTotalUnverified"
+      [class.payment-btn-diabled]="isSubmittingPayment || isWaitingForConfirmation || isPaymentLocked || isTotalUnverified || isHoldExpired"
+      [disabled]="isSubmittingPayment || isWaitingForConfirmation || isPaymentLocked || isTotalUnverified || isHoldExpired"
       [appPending]="isSubmittingPayment || isWaitingForConfirmation"
     >
       {{ "PAYMENT.CREDIT_CARD.PAY_NOW" | translate }}

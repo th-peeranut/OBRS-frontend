@@ -249,7 +249,15 @@ export class PassengerInfoComponent {
           // { bookingId, bookingNumber }; 0/'' mean "not created".
           const bookingId = response.data?.bookingId || null;
           const bookingNumber = response.data?.bookingNumber || null;
-          this.bookingService.setActiveBookingId(bookingId, bookingNumber);
+          // OBRS-1984: the seat-hold deadline travels with the booking it belongs to, so
+          // /payment counts down to the server's own `expires_at` instead of a hardcoded
+          // 15:00. Absent while the backend half is still rolling out — then the payment
+          // panels show no countdown rather than inventing one.
+          this.bookingService.setActiveBookingId(
+            bookingId,
+            bookingNumber,
+            response.data?.expiresAt
+          );
           this.setBookingStore(bookingId, bookingNumber, response.data);
           this.alertService.success(
             this.translateService.instant(

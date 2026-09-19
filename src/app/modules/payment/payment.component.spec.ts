@@ -28,6 +28,7 @@ describe('PaymentComponent', () => {
     bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
       'getBooking',
+      'setActiveBookingExpiresAt',
     ]);
     bookingService.getActiveBookingId.and.returnValue(null);
     bookingService.getBooking.and.returnValue(of({ code: 200, message: 'ok' }));
@@ -217,6 +218,56 @@ describe('PaymentComponent', () => {
 
       expect(component.totalState).toBe('unavailable');
       expect(setBookingActions().length).toBe(0);
+    });
+
+    /**
+     * OBRS-1984 (AC-2/AC-3): the same refetch also brings back the hold deadline, which is
+     * what lets the countdown continue after a refresh instead of restarting at 15:00.
+     * Stored, not just read: both payment panels are rebuilt on every tab switch and read
+     * it back from storage.
+     */
+    it('stores the hold deadline the refetch brought back', () => {
+      buildWith({ booking: null, passengerInfo: null });
+      bookingService.getActiveBookingId.and.returnValue(4242);
+      bookingService.getBooking.and.returnValue(
+        of({
+          code: 200,
+          message: 'ok',
+          data: { ...REFRESHED, expiresAt: '2026-09-19T10:15:00+07:00' },
+        } as ResponseAPI<GuestBookingView>)
+      );
+
+      component.ngOnInit();
+
+      expect(bookingService.setActiveBookingExpiresAt).toHaveBeenCalledWith(
+        '2026-09-19T10:15:00+07:00'
+      );
+    });
+
+    /**
+     * REVERSED at OBRS-1986's signed-in-lane fix. This used to assert the opposite - that a
+     * response without `expiresAt` CLEARS the stored deadline - which was harmless while the
+     * only caller was the guest read, whose projection always carries the field (the column
+     * is NOT NULL) so "absent" could only mean an older backend that had never written the
+     * key either. The signed-in lane reads a different projection that has no `expiresAt`
+     * field at all, and the CREATE call already stored a perfectly good deadline that
+     * survives the refresh. Clearing it there deletes the countdown for every logged-in
+     * customer who reloads /payment.
+     *
+     * An absent field means "this response does not know", never "there is no deadline".
+     */
+    it('leaves the stored deadline alone when the booking comes back without one', () => {
+      buildWith({ booking: null, passengerInfo: null });
+      bookingService.getActiveBookingId.and.returnValue(4242);
+      bookingService.getBooking.and.returnValue(
+        of({ code: 200, message: 'ok', data: REFRESHED } as ResponseAPI<GuestBookingView>)
+      );
+
+      component.ngOnInit();
+
+      expect(bookingService.setActiveBookingExpiresAt).not.toHaveBeenCalled();
+      // The total still lands - the two are independent.
+      expect(component.totalState).toBe('ready');
     });
 
     it('handles an empty localStorage without throwing and without enabling the button', () => {

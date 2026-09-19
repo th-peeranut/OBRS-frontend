@@ -2,9 +2,11 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -31,6 +33,7 @@ import {
   isTrustedPaymentRedirect,
   paymentRedirectOriginForLog,
 } from '../../../lib/payment-redirect';
+import { remainingHoldSeconds } from '../../../lib/payment-hold-countdown';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -40,7 +43,7 @@ type PaymentTab = 'creditcard' | 'qrcode';
     styleUrl: './payment-creditcard.component.scss',
     standalone: false
 })
-export class PaymentCreditcardComponent implements OnInit, OnDestroy {
+export class PaymentCreditcardComponent implements OnInit, OnChanges, OnDestroy {
   @Input() activeTab: PaymentTab = 'creditcard';
   /**
    * Route to navigate to on a completed payment. Defaults to the existing
@@ -72,12 +75,20 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     { name: 'Mastercard', icon: 'icons/payment-brand-mastercard.svg' },
     { name: 'UnionPay', icon: 'icons/payment-brand-unionpay.svg' },
   ];
-  countdown = '15 : 00';
+  /**
+   * OBRS-1984: empty until a hold deadline is known - the template then renders no
+   * countdown at all. It used to be seeded '15 : 00', which is what restarted the clock on
+   * every tab switch (this panel is an `@if` branch, destroyed and rebuilt) and printed a
+   * deadline nobody had checked.
+   */
+  countdown = '';
   isSubmittingPayment = false;
   isWaitingForConfirmation = false;
   private paymentIdempotencyKey = '';
 
-  private countdownTotalSeconds = 15 * 60;
+  private countdownTotalSeconds = 0;
+  /** The booking's own `expires_at`; `null` = unknown, which is NOT "expired". */
+  private holdExpiresAt: string | null = null;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
   private paymentPollingIntervalId?: ReturnType<typeof setInterval>;
   private isCheckingPaymentStatus = false;
@@ -94,6 +105,24 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.startCountdown();
+  }
+
+  /**
+   * OBRS-1984: the deadline can arrive one HTTP round trip after this panel is built -
+   * /payment re-reads `GET /api/bookings/{id}` when the store is empty and stores the
+   * `expiresAt` it brings back. Re-deriving on that transition costs nothing and cannot
+   * restart the clock: `startCountdown` counts to a deadline, not from a duration.
+   *
+   * `firstChange` is skipped so the call sites that never bind `totalState` (parcel
+   * booking, the reschedule and change-stop dialogs) keep their exact `ngOnInit`-only
+   * behaviour - the same rule the QR panel's `ngOnChanges` follows.
+   */
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['totalState'];
+    if (!change || change.firstChange || change.currentValue !== 'ready') {
+      return;
+    }
     this.startCountdown();
   }
 
@@ -125,6 +154,18 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     return this.totalState !== 'ready';
   }
 
+  /**
+   * OBRS-1984 (AC-5): the seat hold this payment is for has run out. Composes with
+   * `isTotalUnverified` and `isPaymentLocked` as a plain OR on the pay button - three
+   * independent reasons the charge must not start, none of which can mask another.
+   *
+   * False while the deadline is unknown: a countdown we cannot state must not lock a
+   * customer out of paying for a booking the server still holds.
+   */
+  get isHoldExpired(): boolean {
+    return this.holdExpiresAt !== null && this.countdownTotalSeconds <= 0;
+  }
+
 
   ngOnDestroy(): void {
     this.clearCountdown();
@@ -144,7 +185,8 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
       this.isSubmittingPayment ||
       this.isWaitingForConfirmation ||
       this.isPaymentLocked ||
-      this.isTotalUnverified
+      this.isTotalUnverified ||
+      this.isHoldExpired
     ) {
       return;
     }
@@ -328,19 +370,38 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
   }
 
+  /**
+   * OBRS-1984: counts to the booking's own `expires_at`, read from storage so a tab switch
+   * or a refresh continues the same countdown. Each tick re-derives from the deadline
+   * rather than decrementing - a backgrounded tab throttles `setInterval`, and a
+   * decremented counter would drift behind the real hold while looking healthy.
+   */
   private startCountdown(): void {
     this.clearCountdown();
-    this.countdownTotalSeconds = 15 * 60;
+    this.holdExpiresAt = this.bookingService.getActiveBookingExpiresAt();
+    const remaining = remainingHoldSeconds(this.holdExpiresAt, Date.now());
+    if (remaining === null) {
+      // No deadline known: show no countdown rather than claim one.
+      this.holdExpiresAt = null;
+      this.countdownTotalSeconds = 0;
+      this.countdown = '';
+      return;
+    }
+
+    this.countdownTotalSeconds = remaining;
     this.updateCountdownLabel();
+    if (remaining <= 0) {
+      return;
+    }
 
     this.countdownIntervalId = setInterval(() => {
+      this.countdownTotalSeconds =
+        remainingHoldSeconds(this.holdExpiresAt, Date.now()) ?? 0;
+      this.updateCountdownLabel();
+
       if (this.countdownTotalSeconds <= 0) {
         this.clearCountdown();
-        return;
       }
-
-      this.countdownTotalSeconds -= 1;
-      this.updateCountdownLabel();
     }, 1000);
   }
 

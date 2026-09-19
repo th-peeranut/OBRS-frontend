@@ -50,7 +50,8 @@ describe('payment panels refuse an unverified total (OBRS-1986)', () => {
     const component = new PaymentCreditcardComponent(
       translateSpy(),
       jasmine.createSpyObj<Router>('Router', ['navigate']),
-      jasmine.createSpyObj<BookingService>('BookingService', ['getActiveBookingId']),
+      jasmine.createSpyObj<BookingService>('BookingService', ['getActiveBookingId',
+      'getActiveBookingExpiresAt',]),
       paymentService,
       jasmine.createSpyObj<OmiseTokenService>('OmiseTokenService', ['requestCardToken']),
       alertSpy(),
@@ -73,6 +74,7 @@ describe('payment panels refuse an unverified total (OBRS-1986)', () => {
     const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
       'getActiveBookingId',
       'getActiveBookingNumber',
+      'getActiveBookingExpiresAt',
     ]);
     bookingService.getActiveBookingNumber.and.returnValue('BK-4242');
     bookingService.getActiveBookingId.and.returnValue(4242);
