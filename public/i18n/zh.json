@@ -482,6 +482,11 @@
       "ASSOC_PROF": "副教授",
       "ASST_PROF": "助理教授"
     },
+    "TICKET_STATUS": {
+      "confirmed": "已确认",
+      "checked_in": "已检票",
+      "no_show": "未乘车"
+    },
     "APP_TITLE": "在线预订巴士车票 | NJ Phuyaipu",
     "NOT_SPECIFIED": "未填写",
     "THEME_TOGGLE": "切换深色模式",
