@@ -91,7 +91,13 @@
 // OBRS-857: the "you can get this back" note under the ticket paper. It lives OUTSIDE
 // `.ticket-paper` — html2canvas captures that element and nothing else — so it does not inherit
 // the ticket's deliberate dark-theme exemption and needs its own surface.
-.ticket-retrieval-note {
+// OBRS-1434 joins `.ticket-conditions-note` to this rule rather than copying it: same
+// box, on the same composited surface, so the contrast measurements below hold for both
+// without a second set to keep in step. The print rule at the bottom of this file still
+// names only `.ticket-retrieval-note` — see the template for why the conditions line
+// stays on a printed ticket.
+.ticket-retrieval-note,
+.ticket-conditions-note {
   width: min(420px, 100%);
   display: flex;
   align-items: flex-start;

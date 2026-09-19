@@ -28,6 +28,11 @@
 }
 
 @if (!isLoading && config) {
+  <!-- OBRS-1434 AC-4.1: above every field, so the owner reads why these numbers are
+  what they are BEFORE a finger reaches one of them. Fed the live config rather than
+  the platform defaults — it is quoting the very inputs below it. -->
+  <app-legal-policy-notice [policy]="config"></app-legal-policy-notice>
+
   <!-- ONE form across three cards: PUT writes all eight keys or none (BR-7),
   so three Save buttons would be three primary buttons advertising a partial
   write the API does not offer. -->

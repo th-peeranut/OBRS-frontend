@@ -1810,6 +1810,13 @@
       "HELPER": "关闭后，即使普通座位已满，工作人员也无法出售加座——对在线渠道无影响。",
       "LOAD_FAILED": "无法加载加座设置。"
     },
+    "LEGAL_POLICY_NOTICE": {
+      "TITLE": "本政策严于 BKS 2547 年联营客车条例第 78/79 条 —— 由业主自行承担风险",
+      "DETAIL": "条例规定最多扣除 10%，并以发车前 1 小时为界。下方的设定扣除 {{earlyDeductPct}}% / {{lateDeductPct}}%，以 {{earlyWindowHours}} 小时为界，并收取迟改签费 {{rescheduleFee}}。第 97 条罚则：罚款 500–2,000 铢或停运 3–7 天。",
+      "POINTER": "相关设定位于本组的「取消与改签」标签页。",
+      "LINK": "前往「取消与改签」标签页",
+      "SOURCE": "决议 2026-08-19 · OBRS-1434 —— 这是有意为之，并非设置错误"
+    },
     "BOOKING_POLICY_CONFIG": {
       "SUBTITLE": "设置公开政策页面显示的在线提前预订上限和最后预订截止时间。",
       "MAX_ADVANCE_DAYS_LABEL": "最长提前预订天数",
@@ -3451,6 +3458,8 @@
   "E_TICKET": {
     "RETRIEVAL_NOTE": "请保存订单编号 {{bookingNumber}}。无需登录即可再次查看此车票，只需输入编号和预订手机号码：",
     "RETRIEVAL_LINK": "查询订单",
+    "CONDITIONS_NOTE": "乘车条件：取消或改签须在规定的发车前时限内提出，并按提出时间扣除相应手续费。",
+    "CONDITIONS_LINK": "查看退款与改签政策",
     "INCOMPLETE_TITLE": "这不是完整的车票",
     "INCOMPLETE_BODY": "此链接只能显示行程信息，没有订单编号、座位和乘车二维码。请使用订单编号和预订手机号码查询真正的车票：",
     "TITLE": "电子票",

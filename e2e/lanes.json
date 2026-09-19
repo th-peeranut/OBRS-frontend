@@ -9,6 +9,12 @@
   },
   "specs": [
     {
+      "spec": "obrs-1434-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs1434capture.config.ts",
+      "why": "OBRS-1434 AC-4.8 / AC-2 BEFORE/AFTER evidence: the BKS clause 78/79 legal notice the owner asked for on both SALES_POLICY settings pages (compact and pointing on booking-policy, full and above the fields on cancel-reschedule-policy), and the clause 83 conditions line the e-ticket gained. CAPTURE and not GATE because the behaviour itself is held by unit assertions in legal-policy-notice.component.spec.ts and the two page specs; this exists so the owner can see the three screens. ONE tree, TWO runs -- the BEFORE run is taken on the pristine checkout before the code is written (OBRS1434_PHASE=before with its own OBRS1434_OUT), not by reverting a finished tree. Each frame asserts what it is evidence OF before shooting: the notice count for the phase, the notice's bottom above the first field's top, no dismiss control, and the routerLink target of the compact box. Hermetic on the gate lane's terms: the admin arms reuse e2e/support/gate-admin-session.ts and the e-ticket arm reuses e2e/support/customer-pages.ts, so every /api/** call is fulfilled in-browser."
+    },
+    {
       "spec": "obrs-863-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs863capture.config.ts",
