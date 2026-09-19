@@ -575,6 +575,17 @@ const PRIVACY_LEDGER = [
     effectiveDate: '2026-08-31',
     fingerprint: 'a0cc3ffaf5717849621404be6ad9b7dd2f28f4af4b0aa9eda316ad101a02bbe4',
   },
+  {
+    // OBRS-1348. Section 2's "Parcel details" bullet never covered the photo WE take of a
+    // parcel: the driver photographs it at the drop-off stop as proof of delivery, and that
+    // photo can incidentally capture the surroundings of a public place. Section 6 gains the
+    // matching retention bullet: a nightly job deletes the photo and NULLs the column 395 days
+    // after the parcel was left there; `left_at_stop_at`/`left_at_stop_by` are not deleted and
+    // stay in the booking's existing 5-year tier.
+    version: '2.7',
+    effectiveDate: '2026-09-16',
+    fingerprint: '113e800d5659d857a395b36334c864f103d3d5847113fd15654ad1bdda707ef9',
+  },
 ];
 
 function privacyFingerprint(json) {
