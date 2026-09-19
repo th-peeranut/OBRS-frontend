@@ -261,26 +261,89 @@ export class BookingService {
    * client-side `pricePerSeat x passengerCount` fallback then printed "0 baht" beside a
    * live pay button while the backend charged the real fare.
    *
+   * <p><b>ONE decision point, two credentials.</b> A signed-in customer has no guest grant
+   * at ALL and never will: `CreateBookingResponse#guestPaymentToken` is null on every
+   * authenticated create by design (ADR-0123 Decision 6 - "a caller the server can already
+   * identify pays through /api/private/payments, so minting a bearer credential for them
+   * would open a second, weaker way into the same action"). So the guest read below cannot
+   * answer for them, and the first cut of this card left them staring at a disabled pay button -
+   * a harder regression than the "0 baht" this card started from.
+   *
    * <p>Guest lane: the SAME booking-scoped `X-Guest-Payment-Token` header
    * `PaymentService.createPayment` and `PaymentService.getQrImage` already send, chosen on
    * the same condition. Never a query string - that writes a credential into every access
    * log between here and Koyeb - and never a new localStorage key.
+   *
+   * <p>Signed-in lane: `GET /api/private/bookings/{id}/tickets`, the read this service
+   * ALREADY makes, authorized by the session the auth interceptor attaches and confined to
+   * the caller's own booking by `BookingService#validateOwnership`. NOT the sibling
+   * `GET /api/private/bookings/{id}`: that one is `@PreAuthorize("hasRole('OWNER')")` - the
+   * back-office detail read - and answers 403 to an ordinary customer.
+   * See `toBookingTotalView` for what that response can and cannot supply.
    *
    * <p>`silentContext()` because the caller renders its own message: a customer must be
    * TOLD the total could not be confirmed, next to a disabled pay button, not shown a
    * generic toast over a screen that still looks payable.
    */
   getBooking(bookingId: number): Observable<ResponseAPI<GuestBookingView>> {
+    if (this.authService.isAuthenticated()) {
+      return this.getBookingTickets(bookingId, true).pipe(
+        map((response) => ({
+          ...response,
+          data: response?.data
+            ? this.toBookingTotalView(response.data, bookingId)
+            : undefined,
+        }))
+      );
+    }
+
     const guestToken = this.getGuestPaymentToken();
-    const headers =
-      !this.authService.isAuthenticated() && guestToken
-        ? new HttpHeaders({ 'X-Guest-Payment-Token': guestToken })
-        : undefined;
+    const headers = guestToken
+      ? new HttpHeaders({ 'X-Guest-Payment-Token': guestToken })
+      : undefined;
 
     return this.http.get<ResponseAPI<GuestBookingView>>(
       `${environment.apiUrl}/api/bookings/${bookingId}`,
       { headers, context: this.silentContext() }
     );
+  }
+
+  /**
+   * OBRS-1986 (follow-up): the signed-in lane's booking read, expressed in the shape the guest read
+   * returns, so /payment keeps ONE `totalState` machine instead of two parallel ones.
+   *
+   * <p><b>The money.</b> `BookingTicketResponse.totalAmount` is populated from
+   * `booking.getNetAmount()` (OBRS-backend `BookingService#getTicketsByBookingId`), i.e. it
+   * carries the field this projection calls `netAmount` under an older name - the figure the
+   * customer is actually charged, after the discount snapshot. It is mapped onto `netAmount`
+   * and NOT onto `totalAmount`, because putting a net figure on the gross line is how a
+   * summary starts printing a discount that does not exist.
+   *
+   * <p>Parsed defensively and left ABSENT when it is missing or not a finite number - never
+   * coerced to `0`. The caller reads "no amount" as unverified and keeps the pay button dead;
+   * a `0` would read as a booking that costs nothing and re-open the defect this card family
+   * exists to close.
+   *
+   * <p><b>What this endpoint cannot supply, and is therefore left absent rather than
+   * invented:</b> the gross `totalAmount`/`discountAmountSnapshot` pair (so the summary shows
+   * no discount line on this lane), `expiresAt` (no hold countdown - OBRS-1984's panels show
+   * none when the deadline is unknown, which is the honest answer), and
+   * `adultCount`/`childCount` (the passenger rows stay hidden, which is already what
+   * `payment-summary`'s `counts$` does with a 0).
+   */
+  private toBookingTotalView(
+    data: BookingTicketsData,
+    bookingId: number
+  ): GuestBookingView {
+    const rawNetAmount = data.totalAmount;
+    const netAmount = rawNetAmount == null ? NaN : Number(rawNetAmount);
+
+    return {
+      bookingId: data.bookingId ?? bookingId,
+      bookingNumber: data.bookingNumber,
+      netAmount: Number.isFinite(netAmount) ? netAmount : undefined,
+      status: data.bookingStatus,
+    };
   }
 
   getBookingTickets(
