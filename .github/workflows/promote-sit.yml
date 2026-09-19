@@ -37,10 +37,21 @@ on:
   # owner's machine does at 22:30 - a 21:00 start finishes at 22:15-22:19 with no rollback room.
   # The credit cost is unchanged in kind and now bounded by the same twice-a-week cadence.
   # Owner decision 2026-08-20 (OBRS-1475).
+  #
+  # That front-loading is what an ON-TIME delivery buys. A late one buys less - a promote that
+  # lands at 00:54 ICT front-loads nothing for that night - but it still stops `sit` drifting
+  # further from `dev`, which is the only thing a refused run guarantees. Owner decision
+  # 2026-09-16 (OBRS-1868) took the second over the first.
   # Full procedure and the measured timings: OBRS-backend `deploy/prod/README.md`.
   schedule:
-    # 11:00 UTC = 18:00 ICT, Mon and Wed. Must stay inside the guard's window below - a manual
-    # dispatch meets the same guard, and a cron firing outside it would fail every time.
+    # 11:00 UTC = 18:00 ICT, Mon and Wed - the hour this ASKS for, not the hour it gets. GitHub
+    # delivers `schedule` best-effort, and measured 2026-09-16 across the 7 runs this cron has
+    # had, the delay ran +27 min to +6 h 55 min: a 6 h 28 min spread against a 4 h window. The two
+    # runs delivered within 29 min landed inside it; the other five were refused by the guard
+    # below. No cron time and no window narrower than ~6.5 h survives that, so OBRS-1868 (owner
+    # decision 2026-09-16) exempts `schedule` from the guard and its clamp rather than moving
+    # either. The cron itself stays at 18:00: an on-time delivery still promotes at 18:00, which
+    # is what the reasoning above is about; a late one now lands instead of dying.
     - cron: '0 11 * * 1,3'
   workflow_dispatch:
     inputs:
@@ -123,9 +134,20 @@ jobs:
       # are on prod now. It holds the promote inside the release slot so that what comes after it
       # - CI on `sit`, `sit` -> `main`, the VM deploy - still fits before the owner's machine, the
       # only one that can roll any of it back, shuts down at 22:30 ICT.
+      #
+      # `schedule` IS EXEMPT (OBRS-1868, owner decision 2026-09-16) and `workflow_dispatch` IS
+      # NOT. The window was never able to bound a cron it does not control the arrival time of:
+      # GitHub delivered this one 4-7 h late on 5 consecutive runs and the guard refused all five,
+      # so what the window actually bought on a cron run was `sit` never moving (measured,
+      # `sit..dev` 224 -> 329 in 3 days). What it buys on a MANUAL dispatch is unchanged and
+      # real - a person is there, they chose the moment, and the prod half that follows still has
+      # to fit before 22:30 - so the guard stays exactly as it was for them, `ignore_window`
+      # included. The half of the original reason that was about SIT's own users died on
+      # 2026-08-20 when they moved to prod; the half about the recovery budget belongs to the
+      # prod promote, which this file does not run (OBRS-1164 owns it).
       # `10#` forces base 10 so that "08"/"09" are not parsed as invalid octal.
       - name: Refuse to promote outside the ICT release window
-        if: ${{ !inputs.ignore_window }}
+        if: ${{ github.event_name != 'schedule' && !inputs.ignore_window }}
         run: |
           set -euo pipefail
           utc_hour=$(date -u +%H)
@@ -200,15 +222,25 @@ jobs:
       # The clamp tracks the window's CLOSE, and the close did not move - the ceiling is still
       # 21:59, so 15:00:00Z is still the right instant. Do not "keep them in sync" by reflex: a
       # floor and a close are different numbers, and the failure mode of getting this one wrong is
-      # silence, not an error (see the paragraph above). From the cron's 11:00Z start the deadline
-      # is 11:40Z, seven hours inside the close, so this clamp is simply inert on a cron run - it
-      # exists for the late manual dispatch, which is the only thing that can approach 22:00.
+      # silence, not an error (see the paragraph above).
+      #
+      # THIS CLAMP IS NOT INERT ON A CRON RUN, whatever the line that used to sit here said. That
+      # line assumed the cron starts at 11:00Z, seven hours inside the close. It does not: GitHub
+      # delivers it 4-7 h late (see the `schedule:` block at the top). Run 33645533337 on
+      # 2026-09-02 arrived at 14:58:31Z, cleared the guard at ICT hour 21, and then died here -
+      # log: `Deadline clamped to the release window: 2026-09-02T15:00:00+00:00`, then
+      # `14:58:40Z dev CI run 33644877323: status=in_progress`, leaving 80 s (derived:
+      # 15:00:00Z - 14:58:40Z) of a 40-minute ceiling. So OBRS-1868 lifts the clamp for
+      # `schedule` too, for the same reason it exempts the guard: a promote admitted at 00:54 is
+      # not made safer by refusing to let it wait for dev CI, it is only made pointless. The
+      # 40-minute poll ceiling still bounds it. `ignore_window` and a manual dispatch keep the
+      # clamp exactly as before - the late dispatch is still the thing it was written for.
       - name: Refuse to promote unless dev's own CI is green
         if: steps.gap.outputs.ahead != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROMOTED_SHA: ${{ steps.gap.outputs.sha }}
-          WINDOW_ENFORCED: ${{ !inputs.ignore_window }}
+          WINDOW_ENFORCED: ${{ github.event_name != 'schedule' && !inputs.ignore_window }}
           POLL_MINUTES: '40'
         run: |
           set -euo pipefail

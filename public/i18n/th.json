@@ -3370,7 +3370,14 @@
       "SEAT_REQUIREMENT_GROUP_ARIA": "เลือกความต้องการที่นั่งพิเศษ",
       "SEAT_REQUIREMENT_WHEELCHAIR": "รองรับรถเข็น",
       "SEAT_REQUIREMENT_EXTRA_LEGROOM": "พื้นที่วางขาเพิ่ม",
-      "EMAIL_OPTIONAL_HINT": "(ไม่บังคับ — ใช้ส่ง e-ticket ให้คุณ)"
+      "EMAIL_OPTIONAL_HINT": "(ไม่บังคับ — ใช้ส่ง e-ticket ให้คุณ)",
+      "EMAIL_ADD": "เพิ่มอีเมลสำหรับรับ e-ticket",
+      "EMAIL_HIDE": "ซ่อนอีเมล",
+      "MIDDLE_NAME_ADD": "เพิ่มชื่อกลาง",
+      "MIDDLE_NAME_HIDE": "ซ่อนชื่อกลาง",
+      "PASSENGER_PHONE_ADD": "เพิ่มเบอร์โทรผู้โดยสาร",
+      "PASSENGER_PHONE_HIDE": "ซ่อนเบอร์โทรผู้โดยสาร",
+      "PASSENGER_PHONE_HINT": "ไม่กรอกก็ได้ — เราจะติดต่อผ่านเบอร์ของผู้จอง"
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "ที่นั่งรองรับรถเข็น",

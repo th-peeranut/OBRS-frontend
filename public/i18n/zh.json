@@ -3370,7 +3370,14 @@
       "SEAT_REQUIREMENT_GROUP_ARIA": "选择特殊座位需求",
       "SEAT_REQUIREMENT_WHEELCHAIR": "轮椅通道",
       "SEAT_REQUIREMENT_EXTRA_LEGROOM": "加大腿部空间",
-      "EMAIL_OPTIONAL_HINT": "（选填 — 用于向您发送电子票）"
+      "EMAIL_OPTIONAL_HINT": "（选填 — 用于向您发送电子票）",
+      "EMAIL_ADD": "添加接收电子票的邮箱",
+      "EMAIL_HIDE": "隐藏邮箱",
+      "MIDDLE_NAME_ADD": "添加中间名",
+      "MIDDLE_NAME_HIDE": "隐藏中间名",
+      "PASSENGER_PHONE_ADD": "添加乘客电话号码",
+      "PASSENGER_PHONE_HIDE": "隐藏乘客电话号码",
+      "PASSENGER_PHONE_HINT": "可不填 — 我们会联系订票人的号码。"
     },
     "SEAT_MAP": {
       "WHEELCHAIR_BADGE_ARIA": "轮椅无障碍座位",

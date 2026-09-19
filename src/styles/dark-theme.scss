@@ -1455,3 +1455,33 @@ body.is-dark {
     }
   }
 }
+
+// =============================================================================
+// 18. Optional-field disclosure links on the booking form (OBRS-1953)
+// =============================================================================
+//
+// These sit on `.card-container`, which section 14 above repaints to
+// `$dk-bg-soft`. `$text-primary` (#3B61A9) is the light-mode link colour and
+// measures 2.47:1 there — the number OBRS-1211 recorded for the identical
+// `.map-hint-btn` link on the identical surface, and under the 4.5:1 text
+// floor. `$dk-accent` is 7.37:1 and `$dk-accent-hover` 6.05:1 on it, the same
+// pair sections 1 and 14 already use for text on this surface.
+//
+// Overriding the two `--bs-*` custom properties rather than `color`, for the
+// same reason `styles.scss` sets them: `.btn-link` derives all three of its own
+// colour states from them, so one declaration themes hover and active too.
+// Both selectors are bare global classes at the same specificity as the ones in
+// `styles.scss`, and this file is imported after it, so source order decides —
+// which is why nothing here needs `!important` (OBRS-1446: a global stylesheet
+// can lose to itself on an equal-specificity, equal-`!important` tie).
+// =============================================================================
+body.is-dark {
+  .optional-disclosure {
+    border-left-color: $dk-border;
+  }
+
+  .optional-disclosure-toggle {
+    --bs-link-color: #{$dk-accent};
+    --bs-link-hover-color: #{$dk-accent-hover};
+  }
+}
