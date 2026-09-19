@@ -97,9 +97,6 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
    *  trip, or the single leg on a one-way) — the only case where the shared
    *  "Seat selection" card title/hint is dropped entirely (no leg has a map). */
   allLegsOpenSeating$: Observable<boolean>;
-  /** min(availableSeats of each OPEN leg, MAX_PASSENGERS_PER_BOOKING) — the
-   *  actual +/- ceiling for the OPEN-seating passenger-count card(s). */
-  openSeatMaxCount$: Observable<number>;
   /** Seats remaining shown on the single shared count card when every leg is
    *  OPEN — the binding constraint across legs, i.e. the smaller of the two. */
   openSeatAvailableShared$: Observable<number>;
@@ -302,24 +299,6 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       map(([isReturn, openOutbound, openReturn]) =>
         isReturn ? openOutbound && openReturn : openOutbound
       ),
-      shareReplay(1)
-    );
-    this.openSeatMaxCount$ = combineLatest([
-      this.isOpenSeatingOutbound$,
-      this.isOpenSeatingReturn$,
-      this.openSeatAvailableOutbound$,
-      this.openSeatAvailableReturn$,
-    ]).pipe(
-      map(([openOutbound, openReturn, availOutbound, availReturn]) => {
-        const caps = [MAX_PASSENGERS_PER_BOOKING];
-        if (openOutbound) {
-          caps.push(availOutbound);
-        }
-        if (openReturn) {
-          caps.push(availReturn);
-        }
-        return Math.min(...caps);
-      }),
       shareReplay(1)
     );
     this.openSeatAvailableShared$ = combineLatest([
@@ -924,33 +903,12 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * OPEN-seating passenger-count stepper (OBRS-323). `maxCount` is the
-   * caller-supplied `openSeatMaxCount$` snapshot — capped in the template so a
-   * stale/slow-to-resolve observable can never let the count exceed it.
-   */
-  addOpenSeatPassenger(maxCount: number): void {
-    if (this.passengerData.length >= maxCount) {
-      return;
-    }
-    this.insertPassenger(true);
-    this.syncPassengerInfoToStore();
-  }
-
-  removeOpenSeatPassenger(): void {
-    if (this.passengerData.length <= 1) {
-      return;
-    }
-    this.deletePassenger(this.passengerData.length - 1);
-    this.syncPassengerInfoToStore();
-  }
-
-  /**
    * `setPassengerData()` wholesale-rebuilds `passengerData` from the
    * passenger-info store on every store emit (see the `passengerInfo`
    * subscription in `ngOnInit`, and its ngOnInit-empty-array-only seed guard).
-   * A +/- click above is a local FormArray mutation via insertPassenger()/
-   * deletePassenger() — NOT persisted to the store — so without this, a later
-   * store re-emit would silently revert the user's adjusted count (OBRS-323).
+   * The search-page seed and every field edit are local FormArray mutations —
+   * NOT persisted to the store — so without this, a later store re-emit would
+   * silently revert them (OBRS-323/OBRS-1226).
    * Mirrors the same dispatch(invokeSetPassengerInfo(...)) call
    * `PassengerInfoComponent.onSubmitPassengerInfo()` already makes on submit.
    */

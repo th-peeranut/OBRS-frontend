@@ -548,11 +548,11 @@
                               </div>
                               <!-- OPEN-seating (OBRS-323/318-c) passenger-count card, reused wherever a
                               leg's seat map is hidden because that leg sells with no fixed seat
-                              (also as the single shared card when every leg is OPEN). Bound to the
-                              `passengerData` FormArray directly (not a DropdownPassenger[]) — reuses
-                              only the `.count-section` +/- markup/disabled-state pattern from
-                              DropdownObrsPassengerComponent for visual consistency. -->
-                              <ng-template #openSeatCountCard let-available="available" let-maxCount="maxCount">
+                              (also as the single shared card when every leg is OPEN). Read-only
+                              since OBRS-1988: the headcount is chosen once on the search page, so
+                              this card only reports what `passengerData` (seeded from
+                              `scheduleFilter`) already holds — ASSIGNED legs work the same way. -->
+                              <ng-template #openSeatCountCard let-available="available">
                                 <div class="open-seat-card">
                                   <div class="text-muted open-seat-card-hint">
                                     {{ "PASSENGER_INFO.FORM.OPEN_SEAT_SECTION_HINT" | translate }}
@@ -568,30 +568,12 @@
                                         </div>
                                       }
                                     </div>
-                                    <div class="count-section gap-2">
-                                      <img
-                                        class="passenger-icon passenger-minus"
-                                        [src]="passengerData.length <= 1 ? 'icons/passenger-minus-disable.svg' : 'icons/passenger-minus.svg'"
-                                        alt="Passenger Minus Icon"
-                                        (click)="removeOpenSeatPassenger()"
-                                        />
-                                        <span class="open-seat-card-count">{{ passengerData.length }}</span>
-                                        <img
-                                          class="passenger-icon passenger-add"
-                                          [class.disabled]="passengerData.length >= maxCount"
-                                          src="icons/passenger-add.svg"
-                                          alt="Passenger Add Icon"
-                                          (click)="addOpenSeatPassenger(maxCount)"
-                                          />
-                                        </div>
-                                      </div>
-                                      @if (passengerData.length >= maxCount) {
-                                        <div class="passenger-max-hint">
-                                          {{ "PASSENGER_INFO.FORM.OPEN_SEAT_MAX_HINT" | translate: { max: maxCount } }}
-                                        </div>
-                                      }
-                                    </div>
-                                  </ng-template>
+                                    <span class="open-seat-card-count">
+                                      {{ passengerData.length }} {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
+                                    </span>
+                                  </div>
+                                </div>
+                              </ng-template>
                                   <!-- Seat selection — ONE shared seat map per leg (OBRS-242), not one per
                                   passenger. An active-passenger selector above each leg's map decides
                                   who a seat click assigns to; the map itself shows every passenger's
@@ -736,8 +718,7 @@
                 *ngTemplateOutlet="
                   openSeatCountCard;
                   context: {
-                    available: openSeatAvailableOutbound$ | async,
-                    maxCount: openSeatMaxCount$ | async
+                    available: openSeatAvailableOutbound$ | async
                   }
                 "
                                             ></ng-container>
@@ -863,8 +844,7 @@
                   *ngTemplateOutlet="
                     openSeatCountCard;
                     context: {
-                      available: openSeatAvailableReturn$ | async,
-                      maxCount: openSeatMaxCount$ | async
+                      available: openSeatAvailableReturn$ | async
                     }
                   "
                                             ></ng-container>
@@ -890,8 +870,7 @@
               *ngTemplateOutlet="
                 openSeatCountCard;
                 context: {
-                  available: openSeatAvailableShared$ | async,
-                  maxCount: openSeatMaxCount$ | async
+                  available: openSeatAvailableShared$ | async
                 }
               "
                                       ></ng-container>

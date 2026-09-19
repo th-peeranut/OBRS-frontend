@@ -67,4 +67,28 @@ misses:
   `ng-template` + `addOpenSeatPassenger`/`removeOpenSeatPassenger` shape),
   not re-derive it or reach for `DropdownObrsPassengerComponent` directly
   (that component is adult/kid-split and `ControlValueAccessor`-shaped, a
-  different contract).
+  different contract). ⛔ **Withdrawn — see the amendment below.**
+
+## Amendment (2026-09-19, OBRS-1988) — the card reports the count, it does not edit it
+
+**Why:** the owner asked why /passenger-info makes the customer state the
+headcount a second time. It does not — the number is seeded from the search
+page (`scheduleFilter.passengerInfo` → `insertPassenger()`). What the card
+added was a second *edit* point for it, and that point was wrong twice over:
+an ASSIGNED leg has no such control at all (its headcount is locked to the
+search page), and `addOpenSeatPassenger()`/`removeOpenSeatPassenger()` wrote
+only to the passenger-info store, never back to `scheduleFilter`, so going
+back to the search page showed a different number.
+
+**Changes:** `openSeatCountCard` renders the count as read-only text in all
+three outlets; `addOpenSeatPassenger`/`removeOpenSeatPassenger` and
+`openSeatMaxCount$` are deleted (`insertPassenger()`/`deletePassenger()` stay
+— the seed path and the store rebuild still use them); the `OPEN_SEAT_MAX_HINT`
+key is gone from th/en/zh; the card's own 1px border is gone, because in the
+all-legs-OPEN case it sat alone inside `.card-container` and read as an empty
+box-in-a-box. The per-leg branch and the ASSIGNED path in the sections above
+are otherwise untouched.
+
+**Standing rule this replaces:** a screen that needs to *change* a passenger
+count belongs on the search filter, not on a booking step downstream of it —
+one source of truth for the number that multiplies the fare.

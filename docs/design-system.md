@@ -948,21 +948,20 @@ enforced rule with a test behind it.
 - **OPEN-seating passenger-count card in place of a leg's seat map** (OBRS-323,
   `PassengerInfoFormComponent`): a schedule with `seatingMode: 'OPEN'` has no fixed
   seat to pick, so that leg's seat map/active-passenger-chip-row/leg-label are hidden
-  and replaced with an inline count card — current count, "เหลือ X ที่นั่ง" (reusing
-  the existing `SCHEDULE_BOOKING.SEAT_REMAIN`/`SEAT_UNIT` keys, not a duplicate), and
-  +/- icon-buttons. The +/- markup and disabled-state visuals are reused from
-  `DropdownObrsPassengerComponent`'s `.count-section` (same class names, scoped by
-  Angular's default view encapsulation — no bleed), but bound to the
-  `passengerData` FormArray directly via `addOpenSeatPassenger()`/
-  `removeOpenSeatPassenger()`, not a `DropdownPassenger[]` — the two controls keep
-  separate contracts. Each leg branches independently (`isOpenSeatingOutbound$`/
-  `isOpenSeatingReturn$`), so a round trip can mix an OPEN outbound with an ASSIGNED
-  return; the shared "Seat selection" card title/hint is dropped only when every leg
-  on the booking is OPEN. See `docs/adr/0019-open-seating-passenger-count-card-per-leg-branch.md`.
-  Reuse this pattern (the `openSeatCountCard` template + add/remove methods) for the
-  next passenger-count stepper outside the home-page search filter, instead of
-  reaching for `DropdownObrsPassengerComponent` (adult/kid-split,
-  `ControlValueAccessor`-shaped — a different contract) or inventing a third one.
+  and replaced with an inline count card — the headcount as **read-only text**, and
+  "เหลือ X ที่นั่ง" (reusing the existing `SCHEDULE_BOOKING.SEAT_REMAIN`/`SEAT_UNIT`
+  keys, not a duplicate) only while the leg is near full. ⛔ **The card reports the
+  count, it does not edit it** (OBRS-1988): it carried a +/- stepper until that proved
+  to be a second edit point for a number ASSIGNED legs could not edit at all, and one
+  that never wrote back to `scheduleFilter` — so the search page and this page could
+  disagree. The headcount is chosen once, on the home-page search filter, and the card
+  renders whatever `passengerData` was seeded with. It has no border of its own: in the
+  all-legs-OPEN case it is alone inside `.card-container`, and a second frame there
+  reads as an empty box-in-a-box. Each leg branches independently
+  (`isOpenSeatingOutbound$`/`isOpenSeatingReturn$`), so a round trip can mix an OPEN
+  outbound with an ASSIGNED return; the shared "Seat selection" card title/hint is
+  dropped only when every leg on the booking is OPEN. See
+  `docs/adr/0019-open-seating-passenger-count-card-per-leg-branch.md`.
 
 - **Inline `admin-modal-backdrop` dialog inside a `shared/` component** (OBRS-272,
   `BoardingListComponent`'s delay-ETA dialog): the first `*ngIf`-gated
