@@ -1,5 +1,13 @@
+import {
+  HttpClientTestingModule,
+  HttpTestingController,
+} from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
 import { Action } from '@ngrx/store';
 import { of, throwError } from 'rxjs';
+
+import { AuthService } from '../../auth/auth.service';
+import { environment } from '../../../environments/environment';
 
 import { PaymentComponent } from './payment.component';
 import { AnalyticsService } from '../../services/analytics/analytics.service';
@@ -220,6 +228,101 @@ describe('PaymentComponent', () => {
       expect(() => component.ngOnInit()).not.toThrow();
       expect(bookingService.getBooking).not.toHaveBeenCalled();
       expect(component.totalState).toBe('unavailable');
+    });
+  });
+
+  /**
+   * OBRS-1986 regression, found by the hermetic E2E lane on PR #530 (three reds, one cause).
+   *
+   * Every case above stubs `BookingService` wholesale, so all of them stayed green while a
+   * SIGNED-IN customer could not reach a total at all: `getBooking` sent them to the guest
+   * endpoint, which takes the booking-scoped grant as a REQUIRED header and which they can
+   * never hold (`CreateBookingResponse#guestPaymentToken` is null on every authenticated
+   * create - ADR-0123 Decision 6). The result was `totalState = 'unavailable'` for good: a
+   * dead pay button and a QR that is never even asked for. That is a harder failure than the
+   * "0 baht" this card started from, and no stub of the service can see it.
+   *
+   * So these two drive the REAL `BookingService` over `HttpTestingController` and assert on
+   * the URL that goes out. They are red before the fix - the request that arrives is
+   * `/api/bookings/4242` with no credential.
+   */
+  describe('the signed-in lane reaches its own total (OBRS-1986 regression)', () => {
+    let httpMock: HttpTestingController;
+    let realBookingService: BookingService;
+    let dispatched: Action[];
+
+    const PRIVATE_TICKETS_URL = `${environment.apiUrl}/api/private/bookings/4242/tickets`;
+
+    function buildSignedIn(): PaymentComponent {
+      dispatched = [];
+      const store = {
+        pipe: () => of(null),
+        select: (selector: (s: unknown) => unknown) =>
+          of(selector({ booking: null, passengerInfo: null })),
+        dispatch: (action: Action) => dispatched.push(action),
+      } as any;
+      return new PaymentComponent(
+        store,
+        createRouterStub(),
+        analytics,
+        realBookingService
+      );
+    }
+
+    beforeEach(() => {
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          BookingService,
+          { provide: AuthService, useValue: { isAuthenticated: () => true } },
+        ],
+      });
+      httpMock = TestBed.inject(HttpTestingController);
+      realBookingService = TestBed.inject(BookingService);
+      localStorage.setItem('active_booking_id', '4242');
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('active_booking_id');
+      httpMock.verify();
+    });
+
+    it('refills the store from the private read and enables the pay button', () => {
+      const signedIn = buildSignedIn();
+
+      signedIn.ngOnInit();
+
+      // The guest endpoint is not merely unnecessary here - it is unanswerable.
+      httpMock.expectNone(`${environment.apiUrl}/api/bookings/4242`);
+      httpMock.expectOne(PRIVATE_TICKETS_URL).flush({
+        code: 200,
+        message: 'ok',
+        // `totalAmount` on this response is the backend's `booking.getNetAmount()`.
+        data: { bookingId: 4242, bookingNumber: 'B-004242', totalAmount: 360 },
+      });
+
+      const setBooking = dispatched.find(
+        (a) => a.type === '[Booking API] Invoke set Booking'
+      ) as unknown as { booking: Record<string, unknown> } | undefined;
+      expect(setBooking?.booking).toEqual(
+        jasmine.objectContaining({ bookingId: 4242, netAmount: 360 })
+      );
+      expect(signedIn.totalState).toBe('ready');
+    });
+
+    it('keeps the pay button dead and the message up when the private read fails', () => {
+      const signedIn = buildSignedIn();
+
+      signedIn.ngOnInit();
+
+      httpMock
+        .expectOne(PRIVATE_TICKETS_URL)
+        .flush({ code: 403, message: 'forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+      expect(signedIn.totalState).toBe('unavailable');
+      expect(
+        dispatched.filter((a) => a.type === '[Booking API] Invoke set Booking').length
+      ).toBe(0);
     });
   });
 });
